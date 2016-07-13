@@ -275,5 +275,36 @@
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
 #endif /* CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION */
 
+/* CONF_6LOWPAN_ND specifies if 6LoWPAN-ND protocol is disbale or not. */
+#ifndef CONF_6LOWPAN_ND
+#define CONF_6LOWPAN_ND 0
+#endif /* CONF_6LOWPAN_ND */
+
+#ifndef CONF_6LOWPAN_ND_6CO
+#if CONF_6LOWPAN_ND
+#define CONF_6LOWPAN_ND_6CO 1
+#else /* CONF_6LOWPAN_ND */
+#define CONF_6LOWPAN_ND_6CO 0
+#endif /* CONF_6LOWPAN_ND */
+#endif /* CONF_6LOWPAN_ND_6CO */
+
+/* Start RPL only when 6LoWPAN-ND has successfully get the global
+   IPv6 address. */
+#ifndef CONF_6LOWPAN_ND_OPTI_START
+#if CONF_6LOWPAN_ND
+#define CONF_6LOWPAN_ND_OPTI_START 1
+#else /* CONF_6LOWPAN_ND */
+#define CONF_6LOWPAN_ND_OPTI_START 0
+#endif /* CONF_6LOWPAN_ND */
+#endif /* CONF_6LOWPAN_ND_OPTI_START */
+
+#if CONF_6LOWPAN_ND
+#ifndef UIP_CONF_DYN_HOST_ROUTER
+#define UIP_CONF_DYN_HOST_ROUTER 0
+#endif /* UIP_CONF_DYN_HOST_ROUTER */
+#else /* CONF_6LOWPAN_ND */
+#undef UIP_CONF_DYN_HOST_ROUTER
+#define UIP_CONF_DYN_HOST_ROUTER 0
+#endif /* CONF_6LOWPAN_ND */
 
 #endif /* CONTIKI_DEFAULT_CONF_H */

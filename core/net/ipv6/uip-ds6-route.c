@@ -86,8 +86,13 @@ MEMB(defaultroutermemb, uip_ds6_defrt_t, UIP_DS6_DEFRT_NB);
 LIST(notificationlist);
 #endif
 
+#if CONF_6LOWPAN_ND
+uip_ds6_border_router_t uip_ds6_br_list[UIP_DS6_BR_NB];  /** \brief Border router list */
+static uip_ds6_border_router_t *locbr;
+#endif /* CONF_6LOWPAN_ND */
+
 #undef DEBUG
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -718,4 +723,139 @@ uip_ds6_defrt_list_head(void)
   return list_head(defaultrouterlist);
 }
 /*---------------------------------------------------------------------------*/
+
+uip_ds6_defrt_t*
+uip_ds6_defrt_list_head(void)
+{
+  return list_head(defaultrouterlist);
+}
+
+/*---------------------------------------------------------------------------*/
+
+uip_ds6_defrt_t*
+uip_ds6_defrt_list_head(void)
+{
+  return list_head(defaultrouterlist);
+}
+
+#if CONF_6LOWPAN_ND
+/*---------------------------------------------------------------------------*/
+uip_ds6_border_router_t *
+uip_ds6_br_add(uint32_t version, uint16_t lifetime, uip_ipaddr_t *ipaddr)
+{
+  if(ipaddr == NULL) {
+    return NULL;
+  }
+  for(locbr = uip_ds6_br_list;
+      locbr < uip_ds6_br_list + UIP_DS6_BR_NB;
+      locbr++) {
+    if(locbr->state == BR_ST_FREE) {
+      locbr->state = BR_ST_USED;
+      locbr->version = version;
+      locbr->lifetime = lifetime;
+      stimer_set(&(locbr->timeout), (lifetime == 0 ? 10000 : lifetime) * 60);
+      stimer_set(&locbr->rs_timer, 0);
+      uip_ipaddr_copy(&locbr->ipaddr, ipaddr);
+      return locbr;
+    }
+  }
+
+  return NULL;
+}
+/*---------------------------------------------------------------------------*/
+void
+uip_ds6_br_rm(uip_ds6_border_router_t *br)
+{
+  if(br != NULL) {
+    br->state = BR_ST_FREE;
+    uip_ds6_prefix_rm_all(br);
+#if CONF_6LOWPAN_ND && CONF_6LOWPAN_ND_6CO
+    uip_ds6_context_pref_rm_all(br);
+#endif
+  }
+}
+/*---------------------------------------------------------------------------*/
+/*
+ * get border router structur associated to ipaddr
+ * ipaddr == NULL => find first border router
+ */
+uip_ds6_border_router_t *
+uip_ds6_br_lookup(uip_ipaddr_t *ipaddr)
+{
+  for(locbr = uip_ds6_br_list;
+      locbr < uip_ds6_br_list + UIP_DS6_BR_NB;
+      locbr++) {
+    if(locbr->state != BR_ST_FREE &&
+       (ipaddr == NULL || uip_ip6addr_cmp(ipaddr, &locbr->ipaddr))) {
+      return locbr;
+    }
+  }
+  return NULL;
+}
+/*---------------------------------------------------------------------------*/
+void
+uip_ds6_br_periodic(void)
+{
+  for(locbr = uip_ds6_br_list;
+      locbr < uip_ds6_br_list + UIP_DS6_BR_NB;
+      locbr++) {
+    if(locbr->state == BR_ST_USED && stimer_expired(&locbr->timeout)) {
+      /* remove all thing associate to border router */
+      PRINTF("Removing BR ");
+      PRINT6ADDR(&locbr->ipaddr);
+      PRINTF("\n");
+      uip_ds6_br_rm(locbr);
+    } else if(stimer_expired(&locbr->rs_timer) &&
+              (locbr->state == BR_ST_MUST_SEND_RS || locbr->state == BR_ST_SENDING_RS)) {
+      PRINTF("RS needed to BR ");
+      PRINT6ADDR(&locbr->ipaddr);
+      PRINTF("\n");
+      /* Send RS if needed well before all timer expired */
+      uip_ds6_defrt_t *d;
+      d = list_head(defaultrouterlist);
+      uint8_t allnotdone = 0;
+      while(d != NULL) {
+        if(d->br == locbr) {
+          if(d->state != DEFRT_ST_SENDING_RS && locbr->state == BR_ST_MUST_SEND_RS) {
+            /* Init defrt to send unicast RS */
+            d->state = DEFRT_ST_SENDING_RS;
+          }
+          if(d->state == DEFRT_ST_SENDING_RS) {
+            if(locbr->rscount > UIP_ND6_MAX_RTR_SOLICITATIONS) {
+              PRINTF("Too many RS to ");
+              PRINT6ADDR(&locbr->ipaddr);
+              PRINTF("\n");
+              uip_ds6_defrt_rm(d);
+            } else {
+              /* Must send unicast RS */
+              PRINTF("Scheduling RS to ");
+              PRINT6ADDR(&d->ipaddr);
+              PRINTF("\n");
+              uip_nd6_rs_unicast_output(&d->ipaddr);
+              allnotdone = 1;
+            }
+          }
+        }
+        d = list_item_next(d);
+      }
+      if(list_head(defaultrouterlist) == NULL) {
+        uip_ds6_send_rs();
+        locbr->state = BR_ST_USED;
+        return;
+      }
+      if(locbr->state == BR_ST_MUST_SEND_RS) {
+        locbr->state = BR_ST_SENDING_RS;
+        locbr->rscount = 1;
+      } else if(!allnotdone) {
+        locbr->state = BR_ST_USED;
+      } else {
+        locbr->rscount++;
+      }
+      stimer_set(&locbr->rs_timer, UIP_ND6_MAX_RTR_SOLICITATION_DELAY);
+    }
+  }
+}
+/*---------------------------------------------------------------------------*/
+#endif /* CONF_6LOWPAN_ND */
+
 /** @} */
