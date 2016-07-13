@@ -100,6 +100,12 @@ else
     CFLAGS += -DUIP_CONF_IPV6_RPL=0
 endif
 
+ifeq ($(CONTIKI_WITH_6LOWPAN_ND),1)
+    CFLAGS += -DCONF_6LOWPAN_ND=1
+else
+    CFLAGS += -DCONF_6LOWPAN_ND=0
+endif
+
 CONTIKI_SOURCEFILES += $(CONTIKIFILES)
 
 CONTIKIDIRS += ${addprefix $(CONTIKI)/core/,dev lib net net/llsec net/mac net/rime \

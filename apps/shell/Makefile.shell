@@ -29,11 +29,18 @@ endif
 
 ifeq ($(SHELL_WITH_IP),1)
 shell_src += shell-wget.c shell-httpd.c shell-irc.c \
-            shell-tcpsend.c shell-udpsend.c shell-ping.c shell-netstat.c
+            shell-tcpsend.c shell-udpsend.c shell-ping.c shell-netstat.c shell-ifconfig.c
 APPS += webserver
 include $(CONTIKI)/apps/webserver/Makefile.webserver
 ifndef PLATFORM_BUILD
   override webserver_src = http-strings.c psock.c memb.c httpd-cfs.c urlconv.c webserver-nogui.c
+# otherwise there is an error of function redefined 
+ifeq ($(findstring cc2538dk,$(TARGET)),cc2538dk)
+  override webserver_src = http-strings.c psock.c memb.c httpd-cfs.c urlconv.c
+endif
+ifeq ($(findstring ssipv6s_v1,$(TARGET)),ssipv6s_v1)
+  override webserver_src = http-strings.c psock.c memb.c httpd-cfs.c urlconv.c
+endif
 endif
 
 APPS += webbrowser

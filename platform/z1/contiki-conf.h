@@ -176,7 +176,9 @@
 #define UIP_CONF_LL_802154           1
 #define UIP_CONF_LLH_LEN             0
 
+#ifndef UIP_CONF_ROUTER
 #define UIP_CONF_ROUTER              1
+#endif
 
 /* Handle 10 neighbors */
 #ifndef NBR_TABLE_CONF_MAX_NEIGHBORS
@@ -212,10 +214,6 @@
 #else /* NETSTACK_CONF_WITH_IPV6 */
 #define UIP_CONF_IP_FORWARD                     1
 
-#ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE                    108
-#endif
-
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 
 #define UIP_CONF_ICMP_DEST_UNREACH              1
@@ -226,7 +224,6 @@
 #define UIP_CONF_TCP_MSS                        48
 #define UIP_CONF_MAX_CONNECTIONS                4
 #define UIP_CONF_MAX_LISTENPORTS                8
-#define UIP_CONF_UDP_CONNS                      12
 #define UIP_CONF_FWCACHE_SIZE                   30
 #define UIP_CONF_BROADCAST                      1
 #define UIP_ARCH_IPCHKSUM                       1
@@ -234,6 +231,10 @@
 #define UIP_CONF_UDP_CHECKSUMS                  1
 #define UIP_CONF_PINGADDRCONF                   0
 #define UIP_CONF_LOGGING                        0
+
+#ifndef UIP_CONF_UDP_CONNS 
+#define UIP_CONF_UDP_CONNS                      12
+#endif
 
 #define UIP_CONF_TCP_SPLIT                      0
 

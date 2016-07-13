@@ -52,7 +52,7 @@
 #include "net/packetbuf.h"
 #include "net/ipv6/uip-ds6-nbr.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #ifdef UIP_CONF_DS6_NEIGHBOR_STATE_CHANGED
@@ -71,6 +71,12 @@ void LINK_NEIGHBOR_CALLBACK(const linkaddr_t *addr, int status, int numtx);
 
 NBR_TABLE_GLOBAL(uip_ds6_nbr_t, ds6_neighbors);
 
+#if CONF_6LOWPAN_ND && (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+uip_ds6_dar_t uip_ds6_dar_list[UIP_DS6_DAR_NB]; /* \brief Duplication addresse request list */
+static uip_ds6_dar_t *locdar;
+extern uint32_t aro_registration_lifetime;
+#endif /* CONF_6LOWPAN_ND && UIP_CONF_ROUTER */
+
 /*---------------------------------------------------------------------------*/
 void
 uip_ds6_neighbors_init(void)
@@ -88,7 +94,7 @@ uip_ds6_nbr_add(const uip_ipaddr_t *ipaddr, const uip_lladdr_t *lladdr,
                                             , reason, data);
   if(nbr) {
     uip_ipaddr_copy(&nbr->ipaddr, ipaddr);
-#if UIP_ND6_SEND_NA || UIP_ND6_SEND_RA || !UIP_CONF_ROUTER
+#if UIP_ND6_SEND_NA || UIP_ND6_SEND_RA || !UIP_CONF_ROUTER || CONF_6LOWPAN_ND
     nbr->isrouter = isrouter;
 #endif /* UIP_ND6_SEND_NA || UIP_ND6_SEND_RA || !UIP_CONF_ROUTER */
     nbr->state = state;
@@ -247,11 +253,126 @@ uip_ds6_link_neighbor_callback(int status, int numtx)
 void
 uip_ds6_neighbor_periodic(void)
 {
+  uip_ds6_defrt_t *locdefrt;
   uip_ds6_nbr_t *nbr = nbr_table_head(ds6_neighbors);
   while(nbr != NULL) {
     switch(nbr->state) {
+#if CONF_6LOWPAN_ND
+    case NBR_GARBAGE_COLLECTIBLE:
+      if(stimer_expired(&nbr->reachable)) {
+        PRINTF("GARBAGE_COLLECTIBLE: remove entry (");
+        PRINT6ADDR(&nbr->ipaddr);
+        PRINTF(")\n");
+        uip_ds6_nbr_rm(nbr);
+      }
+      break;
+    case NBR_REGISTERED:
+      if(stimer_expired(&nbr->reachable)) {
+        PRINTF("REGISTERED: remove entry (");
+        PRINT6ADDR(&nbr->ipaddr);
+        PRINTF(")\n");
+        uip_ds6_nbr_rm(nbr);
+      } else if(is_timeout_percent(&nbr->reachable, UIP_DS6_NS_PERCENT_LIFETIME_RETRAN,
+                                   UIP_DS6_NS_MINLIFETIME_RETRAN)) {
+        PRINTF("REGISTERED: move to TENTATIVE (");
+        PRINT6ADDR(&nbr->ipaddr);
+        PRINTF(")\n");
+        nbr->state = NBR_TENTATIVE;
+        nbr->nscount = 0;
+      }
+      break;
+    case NBR_TENTATIVE:
+      if(nbr->isrouter == ISROUTER_YES) {
+        if(nbr->nscount >= UIP_ND6_MAX_UNICAST_SOLICIT && 
+          uip_ds6_get_global(ADDR_PREFERRED) != NULL && 
+          stimer_expired(&nbr->sendns)) 
+        {
+          /* Need to remove the default router too. */
+          if((locdefrt = uip_ds6_defrt_lookup(&nbr->ipaddr)) != NULL) {
+            uip_ds6_defrt_rm(locdefrt);
+          }
+          uip_ds6_nbr_rm(nbr);
+          PRINTF("Registration failed: remove neighbor (");
+          PRINT6ADDR(&nbr->ipaddr);
+          PRINTF(")\n");
+        } else if(stimer_expired(&nbr->sendns) && (uip_len == 0)) {
+          nbr->nscount++;
+
+          uip_ds6_addr_t *addgl = uip_ds6_get_global_br(-1, uip_ds6_defrt_lookup(&nbr->ipaddr)->br);
+          if(addgl != NULL) {
+            PRINTF("Sending NS (%d) with ARO with global address: ", nbr->nscount);
+            PRINT6ADDR(&addgl->ipaddr);
+            PRINTF("\n");
+            uip_nd6_ns_output_aro(&(addgl->ipaddr), &nbr->ipaddr, &nbr->ipaddr,
+                UIP_ND6_REGISTRATION_LIFETIME, 1);
+          }
+#if DEBUG
+          else{
+            PRINTF("No global address configured with the border router from the default router ");
+            PRINT6ADDR(&nbr->ipaddr);
+            PRINTF(".\n");
+          }
+#endif
+#if CONF_6LOWPAN_ND_OPTI_NS
+          uint16_t r = ((uint16_t)random_rand()) % ((2 << (nbr->nscount - 1) - 1) + 1);
+          r = r * UIP_ND6_RTR_SOLICITATION_INTERVAL;
+          if(r >= UIP_ND6_MAX_RTR_SOLICITATION_INTERVAL) {
+            r = UIP_ND6_MAX_RTR_SOLICITATION_INTERVAL;
+          } else if(r < uip_ds6_if.retrans_timer / 1000) {
+            r = uip_ds6_if.retrans_timer / 1000;
+          }
+          stimer_set(&nbr->sendns, r);
+#else /* CONF_6LOWPAN_ND_OPTI_NS */
+          stimer_set(&nbr->sendns, uip_ds6_if.retrans_timer / 1000);
+#endif /* CONF_6LOWPAN_ND_OPTI_NS */
+        }
+      } else {
+        if(stimer_expired(&nbr->reachable)) {
+          uip_ds6_nbr_rm(nbr);
+        }
+      }
+      break;
+
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+    case NBR_TENTATIVE_DAD:
+      // not really necessary to test if it is a router
+      if( NODE_TYPE_ROUTER ){
+        locdar = uip_ds6_dar_lookup_by_nbr(nbr);
+        if(nbr->nscount >= UIP_ND6_MAX_UNICAST_SOLICIT) {
+        uip_ds6_dar_rm(locdar);
+        nbr->state = NBR_GARBAGE_COLLECTIBLE;
+        } else if(stimer_expired(&nbr->sendns) && (uip_len == 0)) {
+        nbr->nscount++;
+        uip_nd6_dar_output(&uip_ds6_prefix_lookup_from_ipaddr(&locdar->ipaddr)->br->ipaddr,
+                   UIP_ND6_ARO_STATUS_SUCCESS,
+                   &locdar->ipaddr,
+                   (uip_lladdr_t *)uip_ds6_nbr_get_ll(nbr),
+                   locdar->lifetime);
+        stimer_set(&nbr->sendns, uip_ds6_if.retrans_timer / 1000);
+        }
+      }
+      break;
+#endif /* UIP_CONF_ROUTER */
+#endif /* CONF_6LOWPAN_ND */
+
     case NBR_REACHABLE:
       if(stimer_expired(&nbr->reachable)) {
+#if CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+        /**
+         * \sixlowpanndrpl  When RPL is activated and the node is receiving a DIO,
+         *                  an NCE will be created in RECHEABLE state. As this state
+         *                  must not exist for a 6lowpan-nd host and we wouldn't prevent 
+         *                  the host to find new router via RPL, the host send an RS to 
+         *                  add and register itself to this new router. 
+         */
+        if(NODE_TYPE_HOST){
+          nbr->state = NBR_TENTATIVE;
+          nbr->nscount = 0;
+          nbr->isrouter = ISROUTER_YES;
+          uip_nd6_rs_unicast_output(&nbr->ipaddr);
+          tcpip_ipv6_output();
+        }
+#else /* CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL */
 #if UIP_CONF_IPV6_RPL
         /* when a neighbor leave its REACHABLE state and is a default router,
            instead of going to STALE state it enters DELAY state in order to
@@ -278,6 +399,7 @@ uip_ds6_neighbor_periodic(void)
         PRINTF(")\n");
         nbr->state = NBR_STALE;
 #endif /* UIP_CONF_IPV6_RPL */
+#endif /* CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL */
       }
       break;
     case NBR_INCOMPLETE:
@@ -300,7 +422,6 @@ uip_ds6_neighbor_periodic(void)
       break;
     case NBR_PROBE:
       if(nbr->nscount >= UIP_ND6_MAX_UNICAST_SOLICIT) {
-        uip_ds6_defrt_t *locdefrt;
         PRINTF("PROBE END\n");
         if((locdefrt = uip_ds6_defrt_lookup(&nbr->ipaddr)) != NULL) {
           if (!locdefrt->isinfinite) {
@@ -340,6 +461,56 @@ uip_ds6_get_least_lifetime_neighbor(void)
   }
   return nbr_expiring;
 }
+
+#if CONF_6LOWPAN_ND && (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+uip_ds6_dar_t *
+uip_ds6_dar_add(uip_ipaddr_t *ipaddr, uip_ds6_nbr_t *nbr, uint16_t lifetime)
+{
+  for(locdar = uip_ds6_dar_list;
+      locdar < uip_ds6_dar_list + UIP_DS6_DAR_NB;
+      locdar++) {
+    if(locdar->nbr == NULL) {
+      uip_ipaddr_copy(&locdar->ipaddr, ipaddr);
+      locdar->nbr = nbr;
+      locdar->lifetime = lifetime;
+      return locdar;
+    }
+  }
+  return NULL;
+}
+/*---------------------------------------------------------------------------*/
+void
+uip_ds6_dar_rm(uip_ds6_dar_t *dar)
+{
+  dar->nbr = NULL;
+}
+/*---------------------------------------------------------------------------*/
+uip_ds6_dar_t *
+uip_ds6_dar_lookup(uip_ipaddr_t *ipaddr)
+{
+  for(locdar = uip_ds6_dar_list;
+      locdar < uip_ds6_dar_list + UIP_DS6_DAR_NB;
+      locdar++) {
+    if(locdar->nbr != NULL && uip_ipaddr_cmp(&locdar->ipaddr, ipaddr)) {
+      return locdar;
+    }
+  }
+  return NULL;
+}
+/*---------------------------------------------------------------------------*/
+uip_ds6_dar_t *
+uip_ds6_dar_lookup_by_nbr(uip_ds6_nbr_t *nbr)
+{
+  for(locdar = uip_ds6_dar_list;
+      locdar < uip_ds6_dar_list + UIP_DS6_DAR_NB;
+      locdar++) {
+    if(locdar->nbr != NULL && locdar->nbr == nbr) {
+      return locdar;
+    }
+  }
+  return NULL;
+}
+#endif /* CONF_6LOWPAN_ND && UIP_CONF_ROUTER */
 #endif /* UIP_ND6_SEND_NA */
 /*---------------------------------------------------------------------------*/
 /** @} */

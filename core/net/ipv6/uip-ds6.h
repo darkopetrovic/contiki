@@ -108,6 +108,33 @@
 #endif
 #define UIP_DS6_PREFIX_NB UIP_DS6_PREFIX_NBS + UIP_DS6_PREFIX_NBU
 
+#if CONF_6LOWPAN_ND
+
+/* Context Prefix list */
+#ifndef UIP_CONF_DS6_CONTEXT_PREF_NB
+#define UIP_DS6_CONTEXT_PREF_NB  UIP_DS6_PREFIX_NBU
+#else
+#define UIP_DS6_CONTEXT_PREF_NB UIP_CONF_DS6_CONTEXT_PREF_NB
+#endif
+
+/* Border router list */
+#ifndef UIP_CONF_DS6_BR_NB
+#define UIP_DS6_BR_NB  1
+#else
+#define UIP_DS6_BR_NB UIP_CONF_DS6_BR_NB
+#endif
+
+/* Duplication Adresse Request list */
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+#ifndef UIP_CONF_DS6_DAR_NB
+#define UIP_DS6_DAR_NB 2
+#else /* UIP_CONF_DS6_DAR_NB */
+#define UIP_DS6_DAR_NB UIP_CONF_DS6_DAR_NB
+#endif /* UIP_CONF_DS6_DAR_NB */
+#endif /* UIP_CONF_ROUTER */
+
+#endif /* CONF_6LOWPAN_ND */
+
 /* Unicast address list*/
 #define UIP_DS6_ADDR_NBS 1
 #ifndef UIP_CONF_DS6_ADDR_NBU
@@ -118,7 +145,7 @@
 #define UIP_DS6_ADDR_NB UIP_DS6_ADDR_NBS + UIP_DS6_ADDR_NBU
 
 /* Multicast address list */
-#if UIP_CONF_ROUTER
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
 #define UIP_DS6_MADDR_NBS 2 + UIP_DS6_ADDR_NB   /* all routers + all nodes + one solicited per unicast */
 #else
 #define UIP_DS6_MADDR_NBS 1 + UIP_DS6_ADDR_NB   /* all nodes + one solicited per unicast */
@@ -173,6 +200,61 @@
 #define FOUND 0
 #define FREESPACE 1
 #define NOSPACE 2
+
+#if CONF_6LOWPAN_ND
+
+/** \brief Possible states for context prefix states */
+#define CONTEXT_PREF_ST_FREE 0
+#define CONTEXT_PREF_ST_COMPRESS 1
+#define CONTEXT_PREF_ST_UNCOMPRESSONLY 2
+#define CONTEXT_PREF_ST_SENDING 3
+#define CONTEXT_PREF_ST_ADD 4
+#define CONTEXT_PREF_ST_RM 5
+#define CONTEXT_PREF_USE_COMPRESS(X) (X == CONTEXT_PREF_ST_COMPRESS || X == CONTEXT_PREF_ST_SENDING)
+#define CONTEXT_PREF_USE_UNCOMPRESS(X) (X != CONTEXT_PREF_ST_FREE)
+
+/** \brief Possible states for border router states */
+#define BR_ST_FREE 0
+#define BR_ST_USED 1
+#define BR_ST_NEW_VERSION 2
+#define BR_ST_MUST_SEND_RS 3
+#define BR_ST_SENDING_RS 4
+
+/** \brief Possible states for default router */
+#define DEFRT_ST_RA_RCV 0
+#define DEFRT_ST_SENDING_RS 1
+
+/** \brief Genereal timer delay */
+
+#ifndef UIP_CONF_DS6_RS_MINLIFETIME_RETRAN
+#define UIP_DS6_RS_MINLIFETIME_RETRAN 60
+#else
+#define UIP_DS6_RS_MINLIFETIME_RETRAN UIP_CONF_DS6_RS_MINLIFETIME_RETRAN
+#endif
+
+#ifndef UIP_CONF_DS6_RS_PERCENT_LIFETIME_RETRAN
+#define UIP_DS6_RS_PERCENT_LIFETIME_RETRAN 10
+#else
+#define UIP_DS6_RS_PERCENT_LIFETIME_RETRAN UIP_CONF_DS6_RS_PERCENT_LIFETIME_RETRAN
+#endif
+
+#ifndef UIP_CONF_DS6_NS_MINLIFETIME_RETRAN
+#define UIP_DS6_NS_MINLIFETIME_RETRAN 60
+#else
+#define UIP_DS6_NS_MINLIFETIME_RETRAN UIP_CONF_DS6_NS_MINLIFETIME_RETRAN
+#endif
+
+#ifndef UIP_CONF_DS6_NS_PERCENT_LIFETIME_RETRAN
+#define UIP_DS6_NS_PERCENT_LIFETIME_RETRAN 10
+#else
+#define UIP_DS6_NS_PERCENT_LIFETIME_RETRAN UIP_CONF_DS6_RS_PERCENT_LIFETIME_RETRAN
+#endif
+
+#define is_timeout_percent(timer, per, bound) ( \
+    (100 - per) * stimer_remaining(timer) < per * stimer_elapsed(timer) || \
+    stimer_remaining(timer) < bound)
+
+#endif /* CONF_6LOWPAN_ND */
 /*--------------------------------------------------*/
 
 #if UIP_CONF_IPV6_QUEUE_PKT
@@ -180,15 +262,24 @@
 #endif                          /*UIP_CONF_QUEUE_PKT */
 
 /** \brief A prefix list entry */
-#if UIP_CONF_ROUTER
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
 typedef struct uip_ds6_prefix {
   uint8_t isused;
   uip_ipaddr_t ipaddr;
   uint8_t length;
   uint8_t advertise;
+#if CONF_6LOWPAN_ND
+  uint32_t vlifetime_val;
+  struct stimer vlifetime;
+#else
   uint32_t vlifetime;
+#endif /* CONF_6LOWPAN_ND */
+  uint8_t isinfinite;
   uint32_t plifetime;
   uint8_t l_a_reserved; /**< on-link and autonomous flags + 6 reserved bits */
+#if CONF_6LOWPAN_ND
+  uip_ds6_border_router_t *br;
+#endif /* CONF_6LOWPAN_ND */
 } uip_ds6_prefix_t;
 #else /* UIP_CONF_ROUTER */
 typedef struct uip_ds6_prefix {
@@ -197,8 +288,25 @@ typedef struct uip_ds6_prefix {
   uint8_t length;
   struct stimer vlifetime;
   uint8_t isinfinite;
+#if CONF_6LOWPAN_ND
+  uip_ds6_border_router_t *br;
+#endif /* CONF_6LOWPAN_ND */
 } uip_ds6_prefix_t;
 #endif /*UIP_CONF_ROUTER */
+
+/** \brief A Context prefix list entry */
+#if CONF_6LOWPAN_ND
+typedef struct uip_ds6_context_pref {
+  uint8_t state;
+  uip_ipaddr_t ipaddr;
+  uint8_t length;
+  uint8_t cid;
+  struct stimer lifetime;
+  uint16_t vlifetime;
+  uint16_t router_lifetime;
+  uip_ds6_border_router_t *br;
+} uip_ds6_context_pref_t;
+#endif /* CONF_6LOWPAN_ND */
 
 /** * \brief Unicast address structure */
 typedef struct uip_ds6_addr {
@@ -225,6 +333,22 @@ typedef struct uip_ds6_maddr {
   uint8_t isused;
   uip_ipaddr_t ipaddr;
 } uip_ds6_maddr_t;
+
+#if CONF_6LOWPAN_ND
+/*myTODO: is this the good place for this code?*/
+/** \brief define some additional RPL related route state and
+ *  neighbor callback for RPL - if not a DS6_ROUTE_STATE is already set */
+#ifndef UIP_DS6_ROUTE_STATE_TYPE
+#define UIP_DS6_ROUTE_STATE_TYPE rpl_route_entry_t
+/* Needed for the extended route entry state when using ContikiRPL */
+typedef struct rpl_route_entry {
+  uint32_t lifetime;
+  uint32_t saved_lifetime;
+  void *dag;
+  uint8_t learned_from;
+} rpl_route_entry_t;
+#endif /* UIP_DS6_ROUTE_STATE_TYPE */
+#endif /* CONF_6LOWPAN_ND */
 
 /* only define the callback if RPL is active */
 #if UIP_CONF_IPV6_RPL
@@ -269,13 +393,15 @@ typedef struct uip_ds6_element {
 /*---------------------------------------------------------------------------*/
 extern uip_ds6_netif_t uip_ds6_if;
 extern struct etimer uip_ds6_timer_periodic;
-
-#if UIP_CONF_ROUTER
 extern uip_ds6_prefix_t uip_ds6_prefix_list[UIP_DS6_PREFIX_NB];
-#else /* UIP_CONF_ROUTER */
-extern struct etimer uip_ds6_timer_rs;
-#endif /* UIP_CONF_ROUTER */
 
+#if !UIP_CONF_ROUTER || CONF_6LOWPAN_ND
+extern struct etimer uip_ds6_timer_rs;
+#endif /* UIP_CONF_ROUTER || CONF_6LOWPAN_ND */
+#if CONF_6LOWPAN_ND
+extern uip_ds6_context_pref_t uip_ds6_context_pref_list[UIP_DS6_CONTEXT_PREF_NB];
+extern uip_ds6_border_router_t uip_ds6_br_list[UIP_DS6_BR_NB];
+#endif /* CONF_6LOWPAN_ND */
 
 /*---------------------------------------------------------------------------*/
 /** \brief Initialize data structures */
@@ -296,7 +422,7 @@ uint8_t uip_ds6_list_loop(uip_ds6_element_t *list, uint8_t size,
 
 /** \name Prefix list basic routines */
 /** @{ */
-#if UIP_CONF_ROUTER
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
 uip_ds6_prefix_t *uip_ds6_prefix_add(uip_ipaddr_t *ipaddr, uint8_t length,
                                      uint8_t advertise, uint8_t flags,
                                      unsigned long vtime,
@@ -309,8 +435,26 @@ void uip_ds6_prefix_rm(uip_ds6_prefix_t *prefix);
 uip_ds6_prefix_t *uip_ds6_prefix_lookup(uip_ipaddr_t *ipaddr,
                                         uint8_t ipaddrlen);
 uint8_t uip_ds6_is_addr_onlink(uip_ipaddr_t *ipaddr);
+#if CONF_6LOWPAN_ND
+void uip_ds6_prefix_rm_all(uip_ds6_border_router_t *border_router);
+uip_ds6_prefix_t *uip_ds6_prefix_lookup_from_ipaddr(uip_ipaddr_t *ipaddr);
+#endif /* CONF_6LOWPAN_ND */
+/** @} */
+
+#if CONF_6LOWPAN_ND
+/** \name Context prefix list basic routines */
+/** @{ */
+uip_ds6_context_pref_t *uip_ds6_context_pref_add(uip_ipaddr_t *ipaddr, uint8_t length,
+                                                 uint8_t c_cid, uint16_t lifetime,
+                                                 uint16_t router_lifetime);
+void uip_ds6_context_pref_rm(uip_ds6_context_pref_t *prefix);
+void uip_ds6_context_pref_rm_all(uip_ds6_border_router_t *br);
+uip_ds6_context_pref_t *uip_ds6_context_pref_lookup(uip_ipaddr_t *ipaddr);
+uip_ds6_context_pref_t *uip_ds6_context_pref_lookup_by_cid(uint8_t cid);
 
 /** @} */
+
+#endif /* CONF_6LOWPAN_ND */
 
 /** \name Unicast address list basic routines */
 /** @{ */
@@ -321,7 +465,9 @@ void uip_ds6_addr_rm(uip_ds6_addr_t *addr);
 uip_ds6_addr_t *uip_ds6_addr_lookup(uip_ipaddr_t *ipaddr);
 uip_ds6_addr_t *uip_ds6_get_link_local(int8_t state);
 uip_ds6_addr_t *uip_ds6_get_global(int8_t state);
-
+#if CONF_6LOWPAN_ND
+uip_ds6_addr_t * uip_ds6_get_global_br(int8_t state, uip_ds6_border_router_t *br);
+#endif
 /** @} */
 
 /** \name Multicast address list basic routines */
@@ -358,18 +504,24 @@ int uip_ds6_dad_failed(uip_ds6_addr_t *ifaddr);
 /** \brief Source address selection, see RFC 3484 */
 void uip_ds6_select_src(uip_ipaddr_t *src, uip_ipaddr_t *dst);
 
-#if UIP_CONF_ROUTER
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
 #if UIP_ND6_SEND_RA
 /** \brief Send a RA as an asnwer to a RS */
 void uip_ds6_send_ra_sollicited(void);
-
+#if CONF_6LOWPAN_ND
+void uip_ds6_send_ra_unicast_sollicited(uip_ipaddr_t *dest);
+#endif /* CONF_6LOWPAN_ND */
+#if !CONF_6LOWPAN_ND
 /** \brief Send a periodic RA */
 void uip_ds6_send_ra_periodic(void);
+#else /* !CONF_6LOWPAN_ND */
+void uip_ds6_send_rs(void);
+#endif /* !CONF_6LOWPAN_ND */
 #endif /* UIP_ND6_SEND_RA */
-#else /* UIP_CONF_ROUTER */
+#else /* UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER */
 /** \brief Send periodic RS to find router */
 void uip_ds6_send_rs(void);
-#endif /* UIP_CONF_ROUTER */
+#endif /* UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER */
 
 /** \brief Compute the reachable time based on base reachable time, see RFC 4861*/
 uint32_t uip_ds6_compute_reachable_time(void); /** \brief compute random reachable timer */
@@ -381,5 +533,9 @@ uint32_t uip_ds6_compute_reachable_time(void); /** \brief compute random reachab
 #define uip_ds6_is_my_aaddr(addr) (uip_ds6_aaddr_lookup(addr) != NULL)
 /** @} */
 /** @} */
+
+#if CONF_6LOWPAN_ND || UIP_CONF_ROUTER
+#define non_router() (uip_ds6_get_global(ADDR_PREFERRED) == NULL)
+#endif
 
 #endif /* UIP_DS6_H_ */

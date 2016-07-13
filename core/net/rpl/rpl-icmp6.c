@@ -59,8 +59,7 @@
 #include <limits.h>
 #include <string.h>
 
-#define DEBUG DEBUG_NONE
-
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -189,6 +188,11 @@ rpl_icmp6_update_nbr_table(uip_ipaddr_t *from, nbr_table_reason_t reason, void *
 {
   uip_ds6_nbr_t *nbr;
 
+  /**
+   * \sixlowpanndrpl  The 6lowpan-nd host doesn't go here because it discard
+   *                  DIO from router not in the neighbor cache. 
+   */
+
   if((nbr = uip_ds6_nbr_lookup(from)) == NULL) {
     if((nbr = uip_ds6_nbr_add(from, (uip_lladdr_t *)
                               packetbuf_addr(PACKETBUF_ADDR_SENDER),
@@ -202,10 +206,30 @@ rpl_icmp6_update_nbr_table(uip_ipaddr_t *from, nbr_table_reason_t reason, void *
   }
 
   if(nbr != NULL) {
+    /**
+     * \sixlowpanndrpl  For the router, do not update the NCE of a registered 
+     *                  router (assuming that they register each other with ARO)
+     *                  or host in a 6lowpan-nd states. 
+     */
+#if CONF_6LOWPAN_ND
+    if (nbr->state == NBR_REGISTERED || nbr->state == NBR_GARBAGE_COLLECTIBLE
+       || nbr->state == NBR_TENTATIVE || nbr->state == NBR_TENTATIVE_DAD)
+    {
+      return nbr;
+    }
+#endif /* CONF_6LOWPAN_ND */
+
 #if UIP_ND6_SEND_NA
+
+#if CONF_6LOWPAN_ND && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+    if(NODE_TYPE_HOST){
+      stimer_set(&nbr->reachable, UIP_ND6_TENTATIVE_NCE_LIFETIME);
+    }
+#else
     /* set reachable timer if we added or found the nbr entry - and update
        neighbor entry to reachable to avoid sending NS/NA, etc.  */
     stimer_set(&nbr->reachable, UIP_ND6_REACHABLE_TIME / 1000);
+#endif
     nbr->state = NBR_REACHABLE;
 #endif /* UIP_ND6_SEND_NA */
   }
@@ -217,6 +241,13 @@ dis_input(void)
 {
   rpl_instance_t *instance;
   rpl_instance_t *end;
+
+/** \sixlowpanndrpl As a leaf ignores DIS messages (RFC 6550, 16.2).*/
+#if CONF_6LOWPAN_ND && (RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER)
+  if(NODE_TYPE_HOST){
+    return;
+  }
+#endif /* CONF_6LOWPAN_ND */
 
   /* DAG Information Solicitation */
   PRINTF("RPL: Received a DIS from ");
@@ -294,6 +325,27 @@ dio_input(void)
   int i;
   int len;
   uip_ipaddr_t from;
+
+  /** \sixlowpanndrpl Once registered to a router, an host can receive a DIO from 
+   * another close router which isn't in the neighbor cache yet. Accept DIO
+   * only from registered router. Otherwise the router is added in the neighbor 
+   * cache in REACHEABLE state and this isn't permitted for a 6lowpan-nd device.
+   *
+   * However the host can register to this router if the default route list isn't
+   * full. 
+   */
+// #if CONF_6LOWPAN_ND && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+//   if(NODE_TYPE_HOST && uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr) == NULL){
+//     PRINTF("RPL: Received a DIO from ");
+//     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
+//     PRINTF(" but not a default router -> discard.\n");
+//     /** 
+//      * \feature From here we may send an NS to register to this router whether the
+//      *          router list is not full. 
+//      */
+//     return;
+//   }
+// #endif
 
   memset(&dio, 0, sizeof(dio));
 
@@ -481,14 +533,12 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   int pos;
   int is_root;
   rpl_dag_t *dag = instance->current_dag;
-#if !RPL_LEAF_ONLY
   uip_ipaddr_t addr;
-#endif /* !RPL_LEAF_ONLY */
 
-#if RPL_LEAF_ONLY
+#if RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
   /* In leaf mode, we only send DIO messages as unicasts in response to
      unicast DIS messages. */
-  if(uc_addr == NULL) {
+  if(uc_addr == NULL && NODE_TYPE_HOST) {
     PRINTF("RPL: LEAF ONLY have multicast addr: skip dio_output\n");
     return;
   }
@@ -502,9 +552,13 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   buffer[pos++] = dag->version;
   is_root = (dag->rank == ROOT_RANK(instance));
 
-#if RPL_LEAF_ONLY
-  PRINTF("RPL: LEAF ONLY DIO rank set to INFINITE_RANK\n");
-  set16(buffer, pos, INFINITE_RANK);
+#if RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
+  if(NODE_TYPE_HOST){
+    PRINTF("RPL: LEAF ONLY DIO rank set to INFINITE_RANK\n");
+    set16(buffer, pos, INFINITE_RANK);
+  } else {
+    set16(buffer, pos, dag->rank);
+  }
 #else /* RPL_LEAF_ONLY */
   set16(buffer, pos, dag->rank);
 #endif /* RPL_LEAF_ONLY */
@@ -535,8 +589,8 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   memcpy(buffer + pos, &dag->dag_id, sizeof(dag->dag_id));
   pos += 16;
 
-#if !RPL_LEAF_ONLY
-  if(instance->mc.type != RPL_DAG_MC_NONE) {
+#if !RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
+  if(instance->mc.type != RPL_DAG_MC_NONE && NODE_TYPE_ROUTER) {
     instance->of->update_metric_container(instance);
 
     buffer[pos++] = RPL_OPTION_DAG_METRIC_CONTAINER;
@@ -602,17 +656,33 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
            dag->prefix_info.length);
   }
 
-#if RPL_LEAF_ONLY
+#if RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
 #if (DEBUG) & DEBUG_PRINT
-  if(uc_addr == NULL) {
+  if(uc_addr == NULL && NODE_TYPE_HOST) {
     PRINTF("RPL: LEAF ONLY sending unicast-DIO from multicast-DIO\n");
   }
 #endif /* DEBUG_PRINT */
-  PRINTF("RPL: Sending unicast-DIO with rank %u to ",
-      (unsigned)dag->rank);
-  PRINT6ADDR(uc_addr);
-  PRINTF("\n");
-  uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+  if(NODE_TYPE_HOST){
+    PRINTF("RPL: Sending unicast-DIO with rank %u to ",
+        (unsigned)dag->rank);
+    PRINT6ADDR(uc_addr);
+    PRINTF("\n");
+    uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+  } else if (NODE_TYPE_ROUTER){
+    /* Unicast requests get unicast replies! */
+    if(uc_addr == NULL) {
+      PRINTF("RPL: Sending a multicast-DIO with rank %u\n",
+          (unsigned)instance->current_dag->rank);
+      uip_create_linklocal_rplnodes_mcast(&addr);
+      uip_icmp6_send(&addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+    } else {
+      PRINTF("RPL: Sending unicast-DIO with rank %u to ",
+          (unsigned)instance->current_dag->rank);
+      PRINT6ADDR(uc_addr);
+      PRINTF("\n");
+      uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+    }
+  }
 #else /* RPL_LEAF_ONLY */
   /* Unicast requests get unicast replies! */
   if(uc_addr == NULL) {
@@ -1006,6 +1076,13 @@ dao_input(void)
 {
   rpl_instance_t *instance;
   uint8_t instance_id;
+
+/** \sixlowpanndrpl As a leaf ignores DAO messages (RFC 6550, 16.2).*/
+#if CONF_6LOWPAN_ND && (RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER)
+  if(NODE_TYPE_HOST){
+    return;
+  }
+#endif /* CONF_6LOWPAN_ND */
 
   /* Destination Advertisement Object */
   PRINTF("RPL: Received a DAO from ");

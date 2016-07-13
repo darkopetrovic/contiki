@@ -84,6 +84,7 @@ static const char proc_name[] = /*  "processes"*/
 {0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73,
  0x65, 0x73, 0};
 
+#if UIP_TCP
 static const char *states[] = {
   closed,
   syn_rcvd,
@@ -97,6 +98,7 @@ static const char *states[] = {
   none,
   running,
   called};
+#endif /* UIP_TCP */
 
 #define BUFLEN 100
 
@@ -109,11 +111,14 @@ SHELL_COMMAND(netstat_command,
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(shell_netstat_process, ev, data)
 {
+#if UIP_TCP
   char buf[BUFLEN];
   int i;
   struct uip_conn *conn;
+#endif /* UIP_TCP */
   PROCESS_BEGIN();
 
+#if UIP_TCP
   for(i = 0; i < UIP_CONNS; ++i) {
     conn = &uip_conns[i];
     snprintf(buf, BUFLEN,
@@ -131,6 +136,7 @@ PROCESS_THREAD(shell_netstat_process, ev, data)
 	     (uip_stopped(conn))? '!':' ');
     shell_output_str(&netstat_command, "TCP ", buf);
   }
+#endif /* UIP_TCP */
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/

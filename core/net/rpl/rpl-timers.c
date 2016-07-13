@@ -49,7 +49,7 @@
 #include "lib/random.h"
 #include "sys/ctimer.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /* A configurable function called after update of the RPL DIO interval */
@@ -100,9 +100,18 @@ handle_periodic_timer(void *ptr)
   if(dag == NULL && next_dis >= RPL_DIS_INTERVAL) {
     next_dis = 0;
     dis_output(NULL);
+    PRINTF("RPL: DIS output from periodic timer.\n");
   }
 #endif
   ctimer_reset(&periodic_timer);
+}
+/*---------------------------------------------------------------------------*/
+/* Required by the custom RDC to be able to enable the RDC when DIS message 
+ * is going to be sent. */
+uint16_t
+rpl_get_next_dis(void)
+{
+  return next_dis;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -214,13 +223,15 @@ rpl_reset_periodic_timer(void)
 void
 rpl_reset_dio_timer(rpl_instance_t *instance)
 {
-#if !RPL_LEAF_ONLY
-  /* Do not reset if we are already on the minimum interval,
-     unless forced to do so. */
-  if(instance->dio_intcurrent > instance->dio_intmin) {
-    instance->dio_counter = 0;
-    instance->dio_intcurrent = instance->dio_intmin;
-    new_dio_interval(instance);
+#if !RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
+  if(NODE_TYPE_ROUTER){
+    /* Do not reset if we are already on the minimum interval,
+       unless forced to do so. */
+    if(instance->dio_intcurrent > instance->dio_intmin) {
+      instance->dio_counter = 0;
+      instance->dio_intcurrent = instance->dio_intmin;
+      new_dio_interval(instance);
+    }
   }
 #if RPL_CONF_STATS
   rpl_stats.resets++;
