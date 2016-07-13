@@ -464,7 +464,7 @@ eventhandler(process_event_t ev, process_data_t data)
           uip_ds6_periodic();
           tcpip_ipv6_output();
         }*/
-#if !UIP_CONF_ROUTER
+#if !UIP_CONF_ROUTER || CONF_6LOWPAN_ND
     if(data == &uip_ds6_timer_rs &&
         etimer_expired(&uip_ds6_timer_rs)) {
       uip_ds6_send_rs();
@@ -661,9 +661,36 @@ tcpip_ipv6_output(void)
     /* End of next hop determination */
 
     nbr = uip_ds6_nbr_lookup(nexthop);
+
+#if CONF_6LOWPAN_ND && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+    /*
+   * I-D.ietf.6lowpan-nd 5.7: As all prefixes but the link-local prefix are
+   * always assumed to be off-link, multicast-based address resolution between
+   * neighbors is not needed.
+   * In addition, there are neither INCOMPLETE, STALE, DELAY, nor PROBE NCEs
+   * in 6LoWPAN-ND.
+   */
+    if( NODE_TYPE_HOST ){
+      if(nbr == NULL) {
+        PRINTF("tcpip_ipv6_output: Impossible to find nexthop (");
+        PRINT6ADDR(nexthop);
+        PRINTF(") in nbr\n");
+        return;
+      } else{
+        tcpip_output(uip_ds6_nbr_get_ll(nbr));
+        uip_len = 0;
+        return;
+      }
+    }
+#endif /* CONF_6LOWPAN_ND */
+
     if(nbr == NULL) {
 #if UIP_ND6_SEND_NA
+#if CONF_6LOWPAN_ND
+      if((nbr = uip_ds6_nbr_add(nexthop, NULL, ISROUTER_YES, NBR_TENTATIVE, NBR_TABLE_REASON_IPV6_ND, NULL)) == NULL) {
+#else /* CONF_6LOWPAN_ND */
       if((nbr = uip_ds6_nbr_add(nexthop, NULL, 0, NBR_INCOMPLETE, NBR_TABLE_REASON_IPV6_ND, NULL)) == NULL) {
+#endif /* CONF_6LOWPAN_ND */
         uip_clear_buf();
         PRINTF("tcpip_ipv6_output: failed to add neighbor to cache\n");
         return;
@@ -698,7 +725,11 @@ tcpip_ipv6_output(void)
 #endif /* UIP_ND6_SEND_NA */
     } else {
 #if UIP_ND6_SEND_NA
+#if CONF_6LOWPAN_ND
+      if(nbr->state == -1) {
+#else /* CONF_6LOWPAN_ND */
       if(nbr->state == NBR_INCOMPLETE) {
+#endif /* CONF_6LOWPAN_ND */
         PRINTF("tcpip_ipv6_output: nbr cache entry incomplete\n");
 #if UIP_CONF_IPV6_QUEUE_PKT
         /* Copy outgoing pkt in the queuing buffer for later transmit and set
@@ -711,6 +742,7 @@ tcpip_ipv6_output(void)
         uip_clear_buf();
         return;
       }
+#if !CONF_6LOWPAN_ND
       /* Send in parallel if we are running NUD (nbc state is either STALE,
          DELAY, or PROBE). See RFC 4861, section 7.3.3 on node behavior. */
       if(nbr->state == NBR_STALE) {
@@ -719,6 +751,7 @@ tcpip_ipv6_output(void)
         nbr->nscount = 0;
         PRINTF("tcpip_ipv6_output: nbr cache entry stale moving to delay\n");
       }
+#endif /* !CONF_6LOWPAN_ND */
 #endif /* UIP_ND6_SEND_NA */
 
       tcpip_output(uip_ds6_nbr_get_ll(nbr));
@@ -741,6 +774,12 @@ tcpip_ipv6_output(void)
       uip_clear_buf();
       return;
     }
+
+#if CONF_6LOWPAN_ND
+    tcpip_output(NULL);
+    return;
+#endif /* CONF_6LOWPAN_ND */
+
   }
   /* Multicast IP destination address. */
   tcpip_output(NULL);
@@ -836,7 +875,15 @@ PROCESS_THREAD(tcpip_process, ev, data)
 #endif
   /* initialize RPL if configured for using RPL */
 #if NETSTACK_CONF_WITH_IPV6 && UIP_CONF_IPV6_RPL
+#if CONF_6LOWPAN_ND
+#if !CONF_6LOWPAN_ND_OPTI_START
   rpl_init();
+#endif /* !CONF_6LOWPAN_ND_OPTI_START */
+#else /* CONF_6LOWPAN_ND */
+  rpl_init();
+#endif /* CONF_6LOWPAN_ND */
+
+
 #endif /* UIP_CONF_IPV6_RPL */
 
   while(1) {

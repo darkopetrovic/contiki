@@ -144,6 +144,19 @@ struct uip_ds6_route_neighbor_routes {
   LIST_STRUCT(route_list);
 };
 
+/** \brief A border router list entry */
+#if CONF_6LOWPAN_ND
+typedef struct uip_ds6_border_router {
+  uint8_t state;
+  uint32_t version;
+  uint16_t lifetime;        /* in 60sec */
+  struct stimer timeout;
+  uint8_t rscount;
+  struct stimer rs_timer;
+  uip_ipaddr_t ipaddr;
+} uip_ds6_border_router_t;
+#endif /* CONF_6LOWPAN_ND */
+
 /** \brief An entry in the routing table */
 typedef struct uip_ds6_route {
   struct uip_ds6_route *next;
@@ -153,6 +166,9 @@ typedef struct uip_ds6_route {
      belong to the neighbor table entry that this routing table entry
      uses. */
   struct uip_ds6_route_neighbor_routes *neighbor_routes;
+#if CONF_6LOWPAN_ND
+  uint8_t isused;
+#endif /* CONF_6LOWPAN_ND */
   uip_ipaddr_t ipaddr;
 #ifdef UIP_DS6_ROUTE_STATE_TYPE
   UIP_DS6_ROUTE_STATE_TYPE state;
@@ -170,10 +186,28 @@ struct uip_ds6_route_neighbor_route {
 /** \brief An entry in the default router list */
 typedef struct uip_ds6_defrt {
   struct uip_ds6_defrt *next;
+#if CONF_6LOWPAN_ND
+  uint8_t isused;
+  uip_ds6_border_router_t *br;
+  uint8_t state;
+#endif /* CONF_6LOWPAN_ND */
   uip_ipaddr_t ipaddr;
   struct stimer lifetime;
   uint8_t isinfinite;
 } uip_ds6_defrt_t;
+
+uip_ds6_defrt_t* uip_ds6_defrt_list_head(void);
+
+/** \name Border router list basic routines */
+/** @{ */
+#if CONF_6LOWPAN_ND
+uip_ds6_border_router_t *uip_ds6_br_add(uint32_t version, uint16_t lifetime,
+                                        uip_ipaddr_t *ipaddr);
+void uip_ds6_br_rm(uip_ds6_border_router_t *br);
+uip_ds6_border_router_t *uip_ds6_br_lookup(uip_ipaddr_t *ipaddr);
+void uip_ds6_br_periodic(void);
+#endif /* CONF_6LOWPAN_ND */
+/** @} */
 
 /** \name Default router list basic routines */
 /** @{ */

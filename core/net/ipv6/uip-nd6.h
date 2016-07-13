@@ -47,6 +47,10 @@
 
 #include "net/ip/uip.h"
 #include "sys/stimer.h"
+#if CONF_6LOWPAN_ND
+#include "net/ipv6/uip-ds6-route.h"
+#endif /* CONF_6LOWPAN_ND */
+
 /**
  *  \name General
  * @{
@@ -61,14 +65,26 @@
 /** @{ */
 /** \brief Maximum router solicitation delay */
 #define UIP_ND6_MAX_RTR_SOLICITATION_DELAY 1
+#if CONF_6LOWPAN_ND
 /** \brief Router solicitation interval */
+#define UIP_ND6_RTR_SOLICITATION_INTERVAL  10
+#define UIP_ND6_MAX_RTR_SOLICITATION_INTERVAL  60
+#else
 #define UIP_ND6_RTR_SOLICITATION_INTERVAL  4
+#endif /* CONF_6LOWPAN_ND */
 /** \brief Maximum router solicitations */
 #define UIP_ND6_MAX_RTR_SOLICITATIONS      3
 /** @} */
 
 /** \name RFC 4861 Router constants */
 /** @{ */
+#if CONF_6LOWPAN_ND
+#undef UIP_CONF_ND6_SEND_RA
+#undef UIP_CONF_ND6_SEND_NA
+#define UIP_CONF_ND6_SEND_RA                1
+#define UIP_CONF_ND6_SEND_NA                1
+#endif
+
 #ifndef UIP_CONF_ND6_SEND_RA
 #define UIP_ND6_SEND_RA                     1   /* enable/disable RA sending */
 #else
@@ -102,6 +118,17 @@
 #endif
 //#define UIP_ND6_MAX_RA_DELAY_TIME           0.5 /*seconds*/
 #define UIP_ND6_MAX_RA_DELAY_TIME_MS        500 /*milli seconds*/
+/** @} */
+
+/** \name RFC 6775 Router constant */
+#define UIP_ND6_MAX_RTR_ADVERTISEMENTS      3
+#define UIP_ND6_MAX_RA_DELAY_TIME           2  /*seconds*/
+#define UIP_ND6_TENTATIVE_NCE_LIFETIME      20 /*seconds*/
+#define UIP_ND6_MULTIHOP_HOPLIMIT           64
+
+#if CONF_6LOWPAN_ND
+#define UIP_ND6_MIN_CONTEXT_CHANGE_DELAY    300 /*seconds*/
+#endif /* CONF_6LOWPAN_ND */
 /** @} */
 
 #ifndef UIP_CONF_ND6_DEF_MAXDADNS
@@ -139,8 +166,17 @@
 #define UIP_ND6_DELAY_FIRST_PROBE_TIME 5
 #define UIP_ND6_MIN_RANDOM_FACTOR(x)   (x / 2)
 #define UIP_ND6_MAX_RANDOM_FACTOR(x)   ((x) + (x) / 2)
-/** @} */
 
+#if CONF_6LOWPAN_ND
+/* This is the lifetime a host puts into the registration lifetime of its ARO options */
+#ifdef UIP_CONF_ND6_REGISTRATION_LIFETIME
+#define UIP_ND6_REGISTRATION_LIFETIME   UIP_CONF_ND6_REGISTRATION_LIFETIME
+#else
+#define UIP_ND6_REGISTRATION_LIFETIME   60  /* In units of 60 seconds, 1 hour */
+#endif /* UIP_CONF_ND6_REGISTRATION_LIFETIME */
+#endif /* CONF_6LOWPAN_ND */
+
+/** @} */
 
 /** \name RFC 6106 RA DNS Options Constants  */
 /** @{ */
@@ -168,6 +204,23 @@
 #define UIP_ND6_OPT_MTU                 5
 #define UIP_ND6_OPT_RDNSS               25
 #define UIP_ND6_OPT_DNSSL               31
+#if CONF_6LOWPAN_ND
+/*
+ * 6LoWPAN-ND option types. Note that this values are temporary and may change.
+ * UIP_ND6_OPT_ARO has a value of 31 in draft-ietf-6lowpan-nd, however, Wireshark's
+ * dissectors needs 131 in order to identify the ARO option (due to a conflict with
+ * the "DNS Search List Option" defined in RFC6106 which also has type 31 already
+ * assgned by IANA.
+ *
+ * Options type number changed as per RFC6775.
+ */
+#define UIP_ND6_OPT_ARO                 33
+#if CONF_6LOWPAN_ND_6CO
+#define UIP_ND6_OPT_6CO                 34
+#endif /* CONF_6LOWPAN_ND_6CO */
+#define UIP_ND6_OPT_ABRO                35
+#endif /* CONF_6LOWPAN_ND */
+
 /** @} */
 
 /** \name ND6 option types */
@@ -182,6 +235,10 @@
 #define UIP_ND6_NS_LEN                  20
 #define UIP_ND6_RA_LEN                  12
 #define UIP_ND6_RS_LEN                  4
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+// myFIXME: not defined originally
+#define UIP_ND6_DA_LEN                  28
+#endif /* UIP_CONF_ROUTER */
 /** @} */
 
 
@@ -192,7 +249,18 @@
 #define UIP_ND6_OPT_MTU_LEN            8
 #define UIP_ND6_OPT_RDNSS_LEN          1
 #define UIP_ND6_OPT_DNSSL_LEN          1
+#if CONF_6LOWPAN_ND
+#define UIP_ND6_OPT_ARO_LEN            16
+#define UIP_ND6_OPT_ABRO_LEN           24
+#endif /* CONF_6LOWPAN_ND */
 
+/* 6LoWPAN ND assignement */
+#if CONF_6LOWPAN_ND
+/* ARO value of status field */
+#define UIP_ND6_ARO_STATUS_SUCCESS      0
+#define UIP_ND6_ARO_STATUS_DUPLICATE    1
+#define UIP_ND6_ARO_STATUS_CACHE_FULL   2
+#endif /* CONF_6LOWPAN_ND */
 
 /* Length of TLLAO and SLLAO options, it is L2 dependant */
 #if UIP_CONF_LL_802154
@@ -219,8 +287,24 @@
 #define UIP_ND6_NA_FLAG_ROUTER          0x80
 #define UIP_ND6_NA_FLAG_SOLICITED       0x40
 #define UIP_ND6_NA_FLAG_OVERRIDE        0x20
+/** @} */
+
+/** \name Router Advertisement flags masks */
+/** @{ */
 #define UIP_ND6_RA_FLAG_ONLINK          0x80
 #define UIP_ND6_RA_FLAG_AUTONOMOUS      0x40
+#if CONF_6LOWPAN_ND && CONF_6LOWPAN_ND_6CO
+#define UIP_ND6_RA_FLAG_COMPRESSION     0x10
+#define UIP_ND6_RA_CID                            0x0F
+#endif /* CONF_6LOWPAN_ND && CONF_6LOWPAN_ND_6CO */
+/** @} */
+
+/** \name 6LoWPAN Context Option flags masks */
+/** @{ */
+#if CONF_6LOWPAN_ND
+#define UIP_ND6_6CO_FLAG_C        0x10
+#define UIP_ND6_6CO_FLAG_CID      0x0f
+#endif /* CONF_6LOWPAN_ND */
 /** @} */
 
 /**
@@ -283,6 +367,22 @@ typedef struct uip_nd6_redirect {
 } uip_nd6_redirect;
 /** @} */
 
+#if CONF_6LOWPAN_ND && (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+/**
+ * \brief A Duplicate Address constant part
+ *
+ * Possible option is: /
+ */
+typedef struct uip_nd6_da {
+  uint8_t status;
+  uint8_t reserved;
+  uint16_t lifetime;
+  uip_lladdr_t eui64;
+  uip_ipaddr_t regipaddr;
+} uip_nd6_da;
+#endif /* CONF_6LOWPAN_ND && UIP_CONF_ROUTER */
+/** @} */
+
 /**
  * \name ND Option structures
  * @{
@@ -305,6 +405,40 @@ typedef struct uip_nd6_opt_prefix_info {
   uint32_t reserved2;
   uip_ipaddr_t prefix;
 } uip_nd6_opt_prefix_info ;
+
+#if CONF_6LOWPAN_ND
+/** \brief ND option address registration */
+typedef struct uip_nd6_opt_aro {
+  uint8_t type;
+  uint8_t len;
+  uint8_t status;
+  uint8_t reserved1;
+  uint16_t reserved2;
+  uint16_t lifetime;
+  uip_lladdr_t eui64;
+} uip_nd6_opt_aro;
+
+/** \brief ND option 6LoWPAN context */
+typedef struct uip_nd6_opt_6co {
+  uint8_t type;
+  uint8_t len;
+  uint8_t contlen;
+  uint8_t res_c_cid;
+  uint16_t reserved;
+  uint16_t lifetime;
+  uip_ipaddr_t prefix;
+} uip_nd6_opt_6co;
+
+typedef struct uip_nd6_opt_abro {
+  uint8_t type;
+  uint8_t len;
+  uint16_t verlow;
+  uint16_t verhigh;
+  uint16_t lifetime;
+  uip_ipaddr_t address;
+} uip_nd6_opt_abro;
+
+#endif /* CONF_6LOWPAN_ND */
 
 /** \brief ND option MTU */
 typedef struct uip_nd6_opt_mtu {
@@ -330,6 +464,25 @@ typedef struct uip_nd6_opt_redirected_hdr {
   uint8_t reserved[6];
 } uip_nd6_opt_redirected_hdr;
 /** @} */
+
+#if UIP_CONF_DYN_HOST_ROUTER
+typedef enum {
+  HOST,
+  ROUTER,
+  BORDER_ROUTER
+} nd_node_type_t;
+extern nd_node_type_t node_type;
+#define NODE_TYPE_ROUTER  (node_type == ROUTER)
+#define NODE_TYPE_HOST    (node_type == HOST)
+#else /* UIP_CONF_DYN_HOST_ROUTER */
+#if UIP_CONF_ROUTER
+#define NODE_TYPE_ROUTER  1
+#define NODE_TYPE_HOST    0
+#else
+#define NODE_TYPE_ROUTER  0
+#define NODE_TYPE_HOST    1
+#endif
+#endif /* UIP_CONF_DYN_HOST_ROUTER */
 
 /**
  * \name ND Messages Processing and Generation
@@ -379,17 +532,34 @@ uip_nd6_ns_input(void);
  * - we check if it is a NS for Address resolution  or NUD, if yes we include
  *   a SLLAO option, otherwise no.
  */
+#if CONF_6LOWPAN_ND
+void uip_nd6_ns_output_aro(uip_ipaddr_t * src, uip_ipaddr_t * dest, uip_ipaddr_t * tgt, uint16_t lifetime, uint8_t sendaro);
+#endif
 void
 uip_nd6_ns_output(uip_ipaddr_t *src, uip_ipaddr_t *dest, uip_ipaddr_t *tgt);
 
-#if UIP_CONF_ROUTER
+/**
+ * \brief Send a Neighbor Advertisement
+ *
+ */
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+void uip_nd6_na_output(uint8_t flags, uint8_t aro_state);
+#else /* UIP_CONF_ROUTER */
+void uip_nd6_na_output(uint8_t flags);
+#endif /* UIP_CONF_ROUTER */
+
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
 #if UIP_ND6_SEND_RA
 /**
  * \brief send a Router Advertisement
  *
  * Only for router, for periodic as well as sollicited RA
  */
+#if CONF_6LOWPAN_ND
+void uip_nd6_ra_output(uip_ipaddr_t * dest, uip_ds6_border_router_t *locbr);
+#else
 void uip_nd6_ra_output(uip_ipaddr_t *dest);
+#endif /* CONF_6LOWPAN_ND */
 #endif /* UIP_ND6_SEND_RA */
 #endif /*UIP_CONF_ROUTER*/
 
@@ -404,7 +574,33 @@ void uip_nd6_ra_output(uip_ipaddr_t *dest);
  * possible option is SLLAO, MUST NOT be included if source = unspecified
  * SHOULD be included otherwise
  */
+#if CONF_6LOWPAN_ND
+void uip_nd6_rs_unicast_output(uip_ipaddr_t *ipaddr);
+#endif /* CONF_6LOWPAN_ND */
 void uip_nd6_rs_output(void);
+
+/**
+ *
+ * \brief process a Duplication Address
+ *
+ * \param destipaddr the entity to send the request or the confirmation.
+ *        With DAR it is the Border Router address
+ * \param type of the message DAR of DAM (ICMPv6 value)
+ * \param status state of Duplication Address Detection
+ * \param hostipaddr IPv6 address to register (host IP)
+ * \param eui64 unique identifier by the EUI-64
+ * \param lifetime registration time, determined by the host
+ *
+ * Send DAR or DAM message to solve Duplication Address Detection in
+ * 6LoWPAN-ND
+ */
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+void uip_nd6_da_output(uip_ipaddr_t *destipaddr, uint8_t type, uint8_t status,
+                       uip_ipaddr_t *hostipaddr, uip_lladdr_t *eui64, uint16_t lifetime);
+void uip_nd6_dar_output(uip_ipaddr_t *destipaddr, uint8_t status,
+                        uip_ipaddr_t *hostipaddr, uip_lladdr_t *eui64, uint16_t lifetime);
+
+#endif /* UIP_CONF_ROUTER */
 
 /**
  * \brief Initialise the uIP ND core
@@ -415,6 +611,10 @@ void uip_nd6_init(void);
 
 void
 uip_appserver_addr_get(uip_ipaddr_t *ipaddr);
+
+#if UIP_CONF_DYN_HOST_ROUTER
+void set_node_type(nd_node_type_t type);
+#endif /* UIP_CONF_DYN_HOST_ROUTER */
 /*--------------------------------------*/
 /******* ANNEX - message formats ********/
 /*--------------------------------------*/
