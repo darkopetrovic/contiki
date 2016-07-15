@@ -711,5 +711,11 @@ uip_ds6_defrt_periodic(void)
     }
   }
 }
+
+uip_ds6_defrt_t*
+uip_ds6_defrt_list_head(void)
+{
+  return list_head(defaultrouterlist);
+}
 /*---------------------------------------------------------------------------*/
 /** @} */
