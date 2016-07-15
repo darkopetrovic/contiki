@@ -45,6 +45,7 @@
 #include "shell-ifconfig.h"
 
 #include "net/ipv6/uip-ds6.h"
+#include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
 PROCESS(shell_ifconfig_process, "ifconfig");
@@ -87,19 +88,23 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
       uip_debug_ipaddr_print(&prefix->ipaddr);
       printf("/%d", prefix->length);
 
-#if UIP_CONF_ROUTER
       printf(" - lifetime: ");
-      printf("%lus", prefix->vlifetime);
-#else
-      printf(" - lifetime: ");
+
       if( prefix->isinfinite ) {
         printf("infinite");
       } else {
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER || CONF_6LOWPAN_ND
+#if CONF_6LOWPAN_ND
         printf("%lus", prefix->vlifetime.interval);
         printf(" (expiring in: %lus)", stimer_remaining(&prefix->vlifetime));
+#else /* CONF_6LOWPAN_ND */
+        printf("%lus", prefix->vlifetime);
+#endif /* CONF_6LOWPAN_ND */
+#else /* UIP_CONF_ROUTER */
+        printf("%lus", prefix->vlifetime.interval);
+        printf(" (expiring in: %lus)", stimer_remaining(&prefix->vlifetime));
+#endif /* UIP_CONF_ROUTER */
       }
-#endif
-
       printf("\n");
     }
   }
@@ -186,16 +191,16 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
     switch (nbr->state) {
 #if CONF_6LOWPAN_ND
     case NBR_GARBAGE_COLLECTIBLE:
-    printf("GARBAGE COLLECTIBLE");
+      printf("GARBAGE COLLECTIBLE");
       break;
     case NBR_REGISTERED:
-    printf("REGISTERED");
+      printf("REGISTERED");
       break;
     case NBR_TENTATIVE:
-    printf("TENTATIVE");
+      printf("TENTATIVE");
       break;
     case NBR_TENTATIVE_DAD:
-    printf("TENTATIVE DAD");
+      printf("TENTATIVE DAD");
       break;
 #else /* CONF_6LOWPAN_ND */
     case NBR_INCOMPLETE:
@@ -214,7 +219,8 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
       printf("PROBE");
       break;
 #endif /* CONF_6LOWPAN_ND */
-
+    default:
+      printf("%d", nbr->state);
     }
 
 #if UIP_ND6_SEND_NA || UIP_ND6_SEND_RA
@@ -239,7 +245,7 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
     uip_debug_ipaddr_print(&br->ipaddr);
     printf(" - version: %lu", br->version);
     printf(" - lifetime: %lus", (uint32_t)((br->lifetime == 0 ? 10000 : br->lifetime) * 60));
-    printf(" (expiring in: %lus)", stimer_remaining(&br->timeout));
+    printf(" (expiring in: %lus)\n", stimer_remaining(&br->timeout));
   }
 #endif /* CONF_6LOWPAN_ND */
 

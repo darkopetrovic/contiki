@@ -200,7 +200,6 @@ typedef struct uip_ds6_defrt {
   uint8_t isinfinite;
 } uip_ds6_defrt_t;
 
-uip_ds6_defrt_t* uip_ds6_defrt_list_head(void);
 
 /** \name Border router list basic routines */
 /** @{ */

@@ -92,7 +92,7 @@ static uip_ds6_border_router_t *locbr;
 #endif /* CONF_6LOWPAN_ND */
 
 #undef DEBUG
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -723,20 +723,6 @@ uip_ds6_defrt_list_head(void)
   return list_head(defaultrouterlist);
 }
 /*---------------------------------------------------------------------------*/
-
-uip_ds6_defrt_t*
-uip_ds6_defrt_list_head(void)
-{
-  return list_head(defaultrouterlist);
-}
-
-/*---------------------------------------------------------------------------*/
-
-uip_ds6_defrt_t*
-uip_ds6_defrt_list_head(void)
-{
-  return list_head(defaultrouterlist);
-}
 
 #if CONF_6LOWPAN_ND
 /*---------------------------------------------------------------------------*/
