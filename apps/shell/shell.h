@@ -408,6 +408,7 @@ struct shell_input {
 #include "shell-udpsend.h"
 #include "shell-vars.h"
 #include "shell-wget.h"
+#include "shell-ifconfig.h"
 
 #endif /* SHELL_H_ */
 
