@@ -38,7 +38,8 @@
 #ifndef PROJECT_CONF_H_
 #define PROJECT_CONF_H_
 
-#define NETSTACK_CONF_RDC     nullrdc_driver
+#define CONF_6LOWPAN_ND               1
+#define USB_SERIAL_CONF_ENABLE        1
 
 #endif /* PROJECT_CONF_H_ */
 

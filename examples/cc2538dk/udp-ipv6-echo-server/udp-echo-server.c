@@ -51,6 +51,12 @@
 #include "dev/watchdog.h"
 #include "dev/leds.h"
 #include "net/rpl/rpl.h"
+
+#include "usb/usb-serial.h"
+#include "dev/serial-line.h"
+#include "apps/shell/shell.h"
+#include "apps/serial-shell/serial-shell.h"
+
 /*---------------------------------------------------------------------------*/
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
@@ -92,10 +98,18 @@ PROCESS_THREAD(udp_echo_server_process, ev, data)
   PROCESS_BEGIN();
   PRINTF("Starting UDP echo server\n");
 
-  server_conn = udp_new(NULL, UIP_HTONS(0), NULL);
-  udp_bind(server_conn, UIP_HTONS(3000));
+  serial_shell_init();
 
-  PRINTF("Listen port: 3000, TTL=%u\n", server_conn->ttl);
+  shell_ping_init();
+  //shell_power_init();
+  shell_ps_init();
+  //shell_config_init();
+  shell_ifconfig_init();
+  //shell_stackusage_init();
+  shell_file_init();
+  shell_coffee_init();
+
+
 
   while(1) {
     PROCESS_YIELD();
