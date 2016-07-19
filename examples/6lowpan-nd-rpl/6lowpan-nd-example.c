@@ -28,17 +28,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/** \addtogroup cc2538-examples
+/** \addtogroup
  * @{
  *
- * \defgroup cc2538-echo-server cc2538dk UDP Echo Server Project
+ * \defgroup
  *
- *  Tests that a node can correctly join an RPL network and also tests UDP
- *  functionality
+ *
  * @{
  *
  * \file
- *  An example of a simple UDP echo server for the cc2538dk platform
+ *
  */
 #include "contiki.h"
 #include "contiki-lib.h"
@@ -46,62 +45,57 @@
 
 #include <string.h>
 
+#if CONTIKI_TARGET_CC2538DK
+#include "dev/button-sensor.h"
+#include "usb/usb-serial.h"
+#include "dev/serial-line.h"
+#include "apps/shell/shell.h"
+#include "apps/serial-shell/serial-shell.h"
+#endif /* CONTIKI_TARGET_CC2538DK */
+
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
-#include "dev/watchdog.h"
-#include "dev/leds.h"
-#include "net/rpl/rpl.h"
-/*---------------------------------------------------------------------------*/
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 
-#define MAX_PAYLOAD_LEN 120
 /*---------------------------------------------------------------------------*/
-static struct uip_udp_conn *server_conn;
-static char buf[MAX_PAYLOAD_LEN];
-static uint16_t len;
+PROCESS(nd_optimization_example, "6lowpan-nd example");
+AUTOSTART_PROCESSES(&nd_optimization_example);
 /*---------------------------------------------------------------------------*/
-PROCESS(udp_echo_server_process, "UDP echo server process");
-AUTOSTART_PROCESSES(&udp_echo_server_process);
 /*---------------------------------------------------------------------------*/
-static void
-tcpip_handler(void)
-{
-  memset(buf, 0, MAX_PAYLOAD_LEN);
-  if(uip_newdata()) {
-    leds_on(LEDS_RED);
-    len = uip_datalen();
-    memcpy(buf, uip_appdata, len);
-    PRINTF("%u bytes from [", len);
-    PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
-    PRINTF("]:%u\n", UIP_HTONS(UIP_UDP_BUF->srcport));
-    uip_ipaddr_copy(&server_conn->ripaddr, &UIP_IP_BUF->srcipaddr);
-    server_conn->rport = UIP_UDP_BUF->srcport;
-
-    uip_udp_packet_send(server_conn, buf, len);
-    uip_create_unspecified(&server_conn->ripaddr);
-    server_conn->rport = 0;
-  }
-  leds_off(LEDS_RED);
-  return;
-}
-/*---------------------------------------------------------------------------*/
-PROCESS_THREAD(udp_echo_server_process, ev, data)
+PROCESS_THREAD(nd_optimization_example, ev, data)
 {
 
   PROCESS_BEGIN();
-  PRINTF("Starting UDP echo server\n");
+  PRINTF("Starting 6lowpan-nd-rpl example process\n");
 
-  server_conn = udp_new(NULL, UIP_HTONS(0), NULL);
-  udp_bind(server_conn, UIP_HTONS(3000));
+#if CONTIKI_TARGET_CC2538DK
+  serial_shell_init();
 
-  PRINTF("Listen port: 3000, TTL=%u\n", server_conn->ttl);
+  shell_ping_init();
+  //shell_power_init();
+  shell_ps_init();
+  //shell_config_init();
+  shell_ifconfig_init();
+  //shell_stackusage_init();
+  shell_file_init();
+  shell_coffee_init();
+#endif /* CONTIKI_TARGET_CC2538DK */
 
   while(1) {
     PROCESS_YIELD();
-    if(ev == tcpip_event) {
-      tcpip_handler();
+
+#if CONTIKI_TARGET_CC2538DK
+    if( ev == sensors_event ) {
+      if(data == &button_select_sensor) {
+        if(node_type==ROUTER){
+          set_node_type(HOST);
+          PRINTF("Device set as HOST.\n");
+        } else if(node_type==HOST){
+          set_node_type(ROUTER);
+          PRINTF("Device set as ROUTER.\n");
+        }
+      }
     }
+#endif /* CONTIKI_TARGET_CC2538DK */
   }
 
   PROCESS_END();
