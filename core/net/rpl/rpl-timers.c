@@ -49,7 +49,7 @@
 #include "lib/random.h"
 #include "sys/ctimer.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /* A configurable function called after update of the RPL DIO interval */
@@ -214,13 +214,16 @@ rpl_reset_periodic_timer(void)
 void
 rpl_reset_dio_timer(rpl_instance_t *instance)
 {
-#if !RPL_LEAF_ONLY
-  /* Do not reset if we are already on the minimum interval,
-     unless forced to do so. */
-  if(instance->dio_intcurrent > instance->dio_intmin) {
-    instance->dio_counter = 0;
-    instance->dio_intcurrent = instance->dio_intmin;
-    new_dio_interval(instance);
+#if !RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
+  if(NODE_TYPE_ROUTER){
+    /* Do not reset if we are already on the minimum interval,
+       unless forced to do so. */
+    PRINTF("Current int %d, intmin %d\n", instance->dio_intcurrent,  instance->dio_intmin);
+    if(instance->dio_intcurrent > instance->dio_intmin) {
+      instance->dio_counter = 0;
+      instance->dio_intcurrent = instance->dio_intmin;
+      new_dio_interval(instance);
+    }
   }
 #if RPL_CONF_STATS
   rpl_stats.resets++;

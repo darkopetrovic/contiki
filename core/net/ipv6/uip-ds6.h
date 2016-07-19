@@ -393,10 +393,7 @@ typedef struct uip_ds6_element {
 /*---------------------------------------------------------------------------*/
 extern uip_ds6_netif_t uip_ds6_if;
 extern struct etimer uip_ds6_timer_periodic;
-
-#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
 extern uip_ds6_prefix_t uip_ds6_prefix_list[UIP_DS6_PREFIX_NB];
-#endif /* UIP_CONF_ROUTER */
 
 #if !UIP_CONF_ROUTER || CONF_6LOWPAN_ND
 extern struct etimer uip_ds6_timer_rs;

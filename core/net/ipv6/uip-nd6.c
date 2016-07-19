@@ -75,6 +75,11 @@
 #include "net/ip/uip-nameserver.h"
 #include "lib/random.h"
 
+#if UIP_CONF_IPV6_RPL
+#include "net/rpl/rpl.h"
+#include "net/rpl/rpl-private.h"
+#endif /* UIP_CONF_IPV6_RPL */
+
 /*------------------------------------------------------------------*/
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
@@ -153,12 +158,28 @@ set_node_type(nd_node_type_t type)
 {
   uip_ipaddr_t loc_fipaddr;
   uip_ds6_maddr_t *locmaddr;
+#if UIP_CONF_IPV6_RPL
+  rpl_instance_t *instance;
+  rpl_instance_t *end;
+#endif /* UIP_CONF_IPV6_RPL */
 
   if(node_type != type){
+    node_type = type;
     if(type == ROUTER){
       // Add the FF02::02 all router multicast address to the interface
       uip_create_linklocal_allrouters_mcast(&loc_fipaddr);
       uip_ds6_maddr_add(&loc_fipaddr);
+#if UIP_CONF_IPV6_RPL
+      PRINTF("Try to Reset DIO timer.\n");
+      for(instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES;
+            instance < end; ++instance) {
+          if(instance->used == 1) {
+            PRINTF("Reset DIO timer.\n");
+            //instance->dio_intcurrent = instance->dio_intmin+1;
+            rpl_reset_dio_timer(instance);
+          }
+      }
+#endif /* UIP_CONF_IPV6_RPL */
     } else if (type == HOST){
       // Remove FF02::02 address added previously
       uip_create_linklocal_allrouters_mcast(&loc_fipaddr);
@@ -166,7 +187,6 @@ set_node_type(nd_node_type_t type)
         uip_ds6_maddr_rm(locmaddr);
       }
     }
-    node_type = type;
   }
 }
 #endif /* UIP_CONF_DYN_HOST_ROUTER */
