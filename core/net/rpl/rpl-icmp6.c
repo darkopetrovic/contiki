@@ -59,7 +59,7 @@
 #include <limits.h>
 #include <string.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 
 #include "net/ip/uip-debug.h"
 
@@ -217,6 +217,13 @@ dis_input(void)
 {
   rpl_instance_t *instance;
   rpl_instance_t *end;
+
+#if CONF_6LOWPAN_ND && (RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER)
+  if(NODE_TYPE_HOST){
+    /* As a leaf ignores DIS messages (RFC 6550, 16.2).*/
+    return;
+  }
+#endif /* CONF_6LOWPAN_ND */
 
   /* DAG Information Solicitation */
   PRINTF("RPL: Received a DIS from ");
@@ -481,14 +488,14 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   int pos;
   int is_root;
   rpl_dag_t *dag = instance->current_dag;
-#if !RPL_LEAF_ONLY
+#if !RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER || CONF_6LOWPAN_ND
   uip_ipaddr_t addr;
 #endif /* !RPL_LEAF_ONLY */
 
-#if RPL_LEAF_ONLY
+#if RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
   /* In leaf mode, we only send DIO messages as unicasts in response to
      unicast DIS messages. */
-  if(uc_addr == NULL) {
+  if(uc_addr == NULL && NODE_TYPE_HOST) {
     PRINTF("RPL: LEAF ONLY have multicast addr: skip dio_output\n");
     return;
   }
@@ -502,9 +509,13 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   buffer[pos++] = dag->version;
   is_root = (dag->rank == ROOT_RANK(instance));
 
-#if RPL_LEAF_ONLY
-  PRINTF("RPL: LEAF ONLY DIO rank set to INFINITE_RANK\n");
-  set16(buffer, pos, INFINITE_RANK);
+#if RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
+  if(NODE_TYPE_HOST){
+    PRINTF("RPL: LEAF ONLY DIO rank set to INFINITE_RANK\n");
+    set16(buffer, pos, INFINITE_RANK);
+  } else {
+    set16(buffer, pos, dag->rank);
+  }
 #else /* RPL_LEAF_ONLY */
   set16(buffer, pos, dag->rank);
 #endif /* RPL_LEAF_ONLY */
@@ -535,8 +546,8 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   memcpy(buffer + pos, &dag->dag_id, sizeof(dag->dag_id));
   pos += 16;
 
-#if !RPL_LEAF_ONLY
-  if(instance->mc.type != RPL_DAG_MC_NONE) {
+#if !RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
+  if(instance->mc.type != RPL_DAG_MC_NONE && NODE_TYPE_ROUTER) {
     instance->of->update_metric_container(instance);
 
     buffer[pos++] = RPL_OPTION_DAG_METRIC_CONTAINER;
@@ -602,17 +613,33 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
            dag->prefix_info.length);
   }
 
-#if RPL_LEAF_ONLY
+#if RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
 #if (DEBUG) & DEBUG_PRINT
-  if(uc_addr == NULL) {
+  if(uc_addr == NULL && NODE_TYPE_HOST) {
     PRINTF("RPL: LEAF ONLY sending unicast-DIO from multicast-DIO\n");
   }
 #endif /* DEBUG_PRINT */
-  PRINTF("RPL: Sending unicast-DIO with rank %u to ",
-      (unsigned)dag->rank);
-  PRINT6ADDR(uc_addr);
-  PRINTF("\n");
-  uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+  if(NODE_TYPE_HOST){
+    PRINTF("RPL: Sending unicast-DIO with rank %u to ",
+        (unsigned)dag->rank);
+    PRINT6ADDR(uc_addr);
+    PRINTF("\n");
+    uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+  } else if (NODE_TYPE_ROUTER){
+    /* Unicast requests get unicast replies! */
+    if(uc_addr == NULL) {
+      PRINTF("RPL: Sending a multicast-DIO with rank %u\n",
+          (unsigned)instance->current_dag->rank);
+      uip_create_linklocal_rplnodes_mcast(&addr);
+      uip_icmp6_send(&addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+    } else {
+      PRINTF("RPL: Sending unicast-DIO with rank %u to ",
+          (unsigned)instance->current_dag->rank);
+      PRINT6ADDR(uc_addr);
+      PRINTF("\n");
+      uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+    }
+  }
 #else /* RPL_LEAF_ONLY */
   /* Unicast requests get unicast replies! */
   if(uc_addr == NULL) {
@@ -1006,6 +1033,13 @@ dao_input(void)
 {
   rpl_instance_t *instance;
   uint8_t instance_id;
+
+#if CONF_6LOWPAN_ND && (RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER)
+  if(NODE_TYPE_HOST){
+    /* As a leaf ignores DAO messages (RFC 6550, 16.2).*/
+    return;
+  }
+#endif /* CONF_6LOWPAN_ND */
 
   /* Destination Advertisement Object */
   PRINTF("RPL: Received a DAO from ");
