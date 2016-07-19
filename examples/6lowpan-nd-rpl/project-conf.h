@@ -38,7 +38,11 @@
 #ifndef PROJECT_CONF_H_
 #define PROJECT_CONF_H_
 
-#define NETSTACK_CONF_RDC     nullrdc_driver
+#define CONF_6LOWPAN_ND               1
+#define USB_SERIAL_CONF_ENABLE        1
+#undef UIP_CONF_ROUTER
+#define UIP_CONF_ROUTER               0
+#define UIP_CONF_DYN_HOST_ROUTER      1
 
 #endif /* PROJECT_CONF_H_ */
 
