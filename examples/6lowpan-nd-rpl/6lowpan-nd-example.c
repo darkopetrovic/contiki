@@ -83,7 +83,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   while(1) {
     PROCESS_YIELD();
 
-#if CONTIKI_TARGET_CC2538DK
+#if CONTIKI_TARGET_CC2538DK && UIP_CONF_DYN_HOST_ROUTER
     if( ev == sensors_event ) {
       if(data == &button_select_sensor) {
         if(node_type==ROUTER){

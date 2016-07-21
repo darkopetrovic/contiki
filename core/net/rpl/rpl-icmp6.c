@@ -488,9 +488,7 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   int pos;
   int is_root;
   rpl_dag_t *dag = instance->current_dag;
-#if !RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER || CONF_6LOWPAN_ND
   uip_ipaddr_t addr;
-#endif /* !RPL_LEAF_ONLY */
 
 #if RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER
   /* In leaf mode, we only send DIO messages as unicasts in response to

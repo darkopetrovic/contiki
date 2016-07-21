@@ -546,7 +546,7 @@ uip_nd6_ns_output(uip_ipaddr_t *src, uip_ipaddr_t *dest, uip_ipaddr_t *tgt);
  * \brief Send a Neighbor Advertisement
  *
  */
-#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+#if (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER) && CONF_6LOWPAN_ND
 void uip_nd6_na_output(uint8_t flags, uint8_t aro_state);
 #else /* UIP_CONF_ROUTER */
 void uip_nd6_na_output(uint8_t flags);

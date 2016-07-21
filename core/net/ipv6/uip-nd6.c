@@ -231,7 +231,7 @@ create_aro(uint8_t *aro, uint8_t status, uint8_t lifetime, uip_lladdr_t *lladdr)
 /*------------------------------------------------------------------*/
 
 #if UIP_ND6_SEND_NA
-#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+#if (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER) && CONF_6LOWPAN_ND
 void
 uip_nd6_na_output(uint8_t flags, uint8_t aro_state)
 #else /* UIP_CONF_ROUTER */
@@ -324,7 +324,7 @@ uip_nd6_na_output(uint8_t flags)
   PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
   PRINTF("] with target address ");
   PRINT6ADDR(&UIP_ND6_NA_BUF->tgtipaddr);
-#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+#if (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER) && CONF_6LOWPAN_ND
   if(NODE_TYPE_ROUTER){
   PRINTF(" with aro status:%d ", aro_state);
   }
@@ -1139,11 +1139,16 @@ uip_nd6_ra_output(uip_ipaddr_t * dest)
       UIP_ND6_OPT_PREFIX_BUF->len = UIP_ND6_OPT_PREFIX_INFO_LEN / 8;
       UIP_ND6_OPT_PREFIX_BUF->preflen = prefix->length;
       UIP_ND6_OPT_PREFIX_BUF->flagsreserved1 = prefix->l_a_reserved;
+#if CONF_6LOWPAN_ND
       if( prefix->isinfinite ){
         UIP_ND6_OPT_PREFIX_BUF->validlt = UIP_ND6_INFINITE_LIFETIME;
       } else {
         UIP_ND6_OPT_PREFIX_BUF->validlt = uip_htons(stimer_remaining(&prefix->vlifetime));
       }
+#else /* CONF_6LOWPAN_ND */
+      UIP_ND6_OPT_PREFIX_BUF->validlt = uip_htons(prefix->vlifetime);
+#endif /* CONF_6LOWPAN_ND */
+
       UIP_ND6_OPT_PREFIX_BUF->preferredlt = uip_htonl(prefix->plifetime);
       UIP_ND6_OPT_PREFIX_BUF->reserved2 = 0;
       uip_ipaddr_copy(&(UIP_ND6_OPT_PREFIX_BUF->prefix), &(prefix->ipaddr));
@@ -1695,6 +1700,7 @@ ra_input(void)
 
 #if CONF_6LOWPAN_ND
   if(defrt == NULL) {
+    PRINTF("RA input: default router lifetime set to 0. Neighbor set as garbage collectible.\n");
     nbr->state = NBR_GARBAGE_COLLECTIBLE;
     goto discard;
   } else {
