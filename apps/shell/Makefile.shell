@@ -34,6 +34,10 @@ APPS += webserver
 include $(CONTIKI)/apps/webserver/Makefile.webserver
 ifndef PLATFORM_BUILD
   override webserver_src = http-strings.c psock.c memb.c httpd-cfs.c urlconv.c webserver-nogui.c
+# otherwise there is an error of function redefined 
+ifeq ($(findstring cc2538dk,$(TARGET)),cc2538dk)
+  override webserver_src = http-strings.c psock.c memb.c httpd-cfs.c urlconv.c
+endif
 endif
 
 APPS += webbrowser

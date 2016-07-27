@@ -33,7 +33,7 @@
  * @{
  *
  * \file
- * Project specific configuration defines for the basic cc2538dk examples
+ * Project specific configuration
  */
 #ifndef PROJECT_CONF_H_
 #define PROJECT_CONF_H_

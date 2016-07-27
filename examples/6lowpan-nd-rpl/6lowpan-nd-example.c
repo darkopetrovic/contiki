@@ -45,13 +45,21 @@
 
 #include <string.h>
 
-#if CONTIKI_TARGET_CC2538DK
 #include "dev/button-sensor.h"
+
+#if CONTIKI_TARGET_CC2538DK
 #include "usb/usb-serial.h"
+#endif /* CONTIKI_TARGET_CC2538DK */
+
+#ifdef CONTIKI_TARGET_Z1
+#include "dev/uart0.h"
+#endif
+
+#if SHELL
 #include "dev/serial-line.h"
 #include "apps/shell/shell.h"
 #include "apps/serial-shell/serial-shell.h"
-#endif /* CONTIKI_TARGET_CC2538DK */
+#endif /* SHELL */
 
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
@@ -67,7 +75,12 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   PROCESS_BEGIN();
   PRINTF("Starting 6lowpan-nd-rpl example process\n");
 
-#if CONTIKI_TARGET_CC2538DK
+#if SHELL
+// we use the Z1 platform in cooja
+#ifdef CONTIKI_TARGET_Z1
+  uart0_set_input(serial_line_input_byte);
+  serial_line_init();
+#endif
   serial_shell_init();
 
   shell_ping_init();
@@ -78,14 +91,18 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   //shell_stackusage_init();
   shell_file_init();
   shell_coffee_init();
-#endif /* CONTIKI_TARGET_CC2538DK */
+#endif /* SHELL */
+
+#ifndef CONTIKI_TARGET_CC2538DK
+  SENSORS_ACTIVATE(button_sensor);
+#endif
 
   while(1) {
     PROCESS_YIELD();
 
-#if CONTIKI_TARGET_CC2538DK && UIP_CONF_DYN_HOST_ROUTER
     if( ev == sensors_event ) {
-      if(data == &button_select_sensor) {
+      if(data == &button_sensor) {
+#if UIP_CONF_DYN_HOST_ROUTER
         if(node_type==ROUTER){
           set_node_type(HOST);
           PRINTF("Device set as HOST.\n");
@@ -93,10 +110,10 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
           set_node_type(ROUTER);
           PRINTF("Device set as ROUTER.\n");
         }
+#endif /* UIP_CONF_DYN_HOST_ROUTER */
       }
     }
-#endif /* CONTIKI_TARGET_CC2538DK */
-  }
+  } /* while(1) */
 
   PROCESS_END();
 }

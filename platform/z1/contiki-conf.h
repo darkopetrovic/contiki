@@ -176,7 +176,9 @@
 #define UIP_CONF_LL_802154           1
 #define UIP_CONF_LLH_LEN             0
 
+#ifndef UIP_CONF_ROUTER
 #define UIP_CONF_ROUTER              1
+#endif
 
 /* Handle 10 neighbors */
 #ifndef NBR_TABLE_CONF_MAX_NEIGHBORS
