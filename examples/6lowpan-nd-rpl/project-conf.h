@@ -39,10 +39,14 @@
 #define PROJECT_CONF_H_
 
 #define CONF_6LOWPAN_ND               1
-#define USB_SERIAL_CONF_ENABLE        1
+#define USB_SERIAL_CONF_ENABLE        0
 #undef UIP_CONF_ROUTER
 #define UIP_CONF_ROUTER               0
 #define UIP_CONF_DYN_HOST_ROUTER      1
+
+#define UIP_CONF_TCP				0
+
+//#define	WATCHDOG_CONF_ENABLE		0
 
 #endif /* PROJECT_CONF_H_ */
 

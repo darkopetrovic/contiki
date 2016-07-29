@@ -51,7 +51,7 @@
 #include "usb/usb-serial.h"
 #endif /* CONTIKI_TARGET_CC2538DK */
 
-#ifdef CONTIKI_TARGET_Z1
+#if CONTIKI_TARGET_Z1
 #include "dev/uart0.h"
 #endif
 
@@ -59,6 +59,7 @@
 #include "dev/serial-line.h"
 #include "apps/shell/shell.h"
 #include "apps/serial-shell/serial-shell.h"
+#include "dev/watchdog.h"
 #endif /* SHELL */
 
 #define DEBUG DEBUG_PRINT
@@ -67,6 +68,14 @@
 /*---------------------------------------------------------------------------*/
 PROCESS(nd_optimization_example, "6lowpan-nd example");
 AUTOSTART_PROCESSES(&nd_optimization_example);
+
+#if SHELL
+PROCESS(shell_fast_reboot_process, "reboot");
+SHELL_COMMAND(fast_reboot_command,
+        "reboot",
+        "reboot: reboot the system",
+        &shell_fast_reboot_process);
+#endif /* SHELL */
 /*---------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(nd_optimization_example, ev, data)
@@ -82,6 +91,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   serial_line_init();
 #endif
   serial_shell_init();
+  shell_register_command(&fast_reboot_command);
 
   shell_ping_init();
   //shell_power_init();
@@ -89,8 +99,8 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   //shell_config_init();
   shell_ifconfig_init();
   //shell_stackusage_init();
-  shell_file_init();
-  shell_coffee_init();
+  //shell_file_init();
+  //shell_coffee_init();
 #endif /* SHELL */
 
 #ifndef CONTIKI_TARGET_CC2538DK
@@ -117,6 +127,20 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
 
   PROCESS_END();
 }
+
+#if SHELL
+PROCESS_THREAD(shell_fast_reboot_process, ev, data)
+{
+  PROCESS_BEGIN();
+
+  shell_output_str(&fast_reboot_command,
+       "Rebooting the node...", "");
+
+  watchdog_reboot();
+
+  PROCESS_END();
+}
+#endif /* SHELL */
 /*---------------------------------------------------------------------------*/
 /**
  * @}
