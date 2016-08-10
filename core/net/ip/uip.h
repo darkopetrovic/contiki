@@ -2020,6 +2020,15 @@ CCIF extern uip_lladdr_t uip_lladdr;
   ((a)->u8[0] == 0xfe &&                         \
    (a)->u8[1] == 0x80)
 
+/**
+ * \brief is addr (a) a unique local unicast address, see RFC4193
+ *  i.e. is (a) on prefix FD00::/8
+ *  a is of type uip_ipaddr_t*
+ */
+#define uip_is_addr_uniquelocal(a)                 \
+  ((a)->u8[0] == 0xfd &&                         \
+   (a)->u8[1] == 0x00)
+
 /** \brief set IP address a to unspecified */
 #define uip_create_unspecified(a) uip_ip6addr(a, 0, 0, 0, 0, 0, 0, 0, 0)
 

@@ -960,7 +960,7 @@ rs_input(void)
 
 #if CONF_6LOWPAN_ND
   if(non_router() || NODE_TYPE_HOST) {
-    PRINTF("RS discard because no yet router\n");
+    PRINTF("RS discard because no yet router or always host.\n");
     goto discard;
   }
 #endif /* CONF_6LOWPAN_ND */
@@ -1143,10 +1143,10 @@ uip_nd6_ra_output(uip_ipaddr_t * dest)
       if( prefix->isinfinite ){
         UIP_ND6_OPT_PREFIX_BUF->validlt = UIP_ND6_INFINITE_LIFETIME;
       } else {
-        UIP_ND6_OPT_PREFIX_BUF->validlt = uip_htons(stimer_remaining(&prefix->vlifetime));
+        UIP_ND6_OPT_PREFIX_BUF->validlt = uip_htonl(stimer_remaining(&prefix->vlifetime));
       }
 #else /* CONF_6LOWPAN_ND */
-      UIP_ND6_OPT_PREFIX_BUF->validlt = uip_htons(prefix->vlifetime);
+      UIP_ND6_OPT_PREFIX_BUF->validlt = uip_htonl(prefix->vlifetime);
 #endif /* CONF_6LOWPAN_ND */
 
       UIP_ND6_OPT_PREFIX_BUF->preferredlt = uip_htonl(prefix->plifetime);
