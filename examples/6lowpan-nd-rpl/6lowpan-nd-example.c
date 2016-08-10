@@ -82,7 +82,20 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
 {
 
   PROCESS_BEGIN();
-  PRINTF("Starting 6lowpan-nd-rpl example process\n");
+
+  PRINTF("Starting as ");
+
+#if CONF_6LOWPAN_ND
+  PRINTF("6lowpan-nd ");
+#else
+  PRINTF("standard ");
+#endif
+
+#if UIP_CONF_ROUTER
+  PRINTF("ROUTER.\n");
+#else
+  PRINTF("HOST.\n");
+#endif
 
 #if SHELL
 // we use the Z1 platform in cooja

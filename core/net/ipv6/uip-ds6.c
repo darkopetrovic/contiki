@@ -697,7 +697,8 @@ uip_ds6_get_global(int8_t state)
   for(locaddr = uip_ds6_if.addr_list;
       locaddr < uip_ds6_if.addr_list + UIP_DS6_ADDR_NB; locaddr++) {
     if(locaddr->isused && (state == -1 || locaddr->state == state)
-       && !(uip_is_addr_linklocal(&locaddr->ipaddr))) {
+       && !(uip_is_addr_linklocal(&locaddr->ipaddr))
+       && !(uip_is_addr_uniquelocal(&locaddr->ipaddr))) {
       return locaddr;
     }
   }
