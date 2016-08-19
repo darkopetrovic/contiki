@@ -55,7 +55,7 @@
 #include "net/rpl/rpl.h"
 #endif
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 struct etimer uip_ds6_timer_periodic;                           /**< Timer for maintenance of data structures */
@@ -233,9 +233,10 @@ uip_ds6_periodic(void)
    d = uip_ds6_defrt_list_head();
 
    /* whenever the default router list is empty we send RS */
-   if(d == NULL && etimer_expired(&uip_ds6_timer_rs)){
+   /*if(d == NULL && etimer_expired(&uip_ds6_timer_rs)){
+     PRINTF("uip_ds6_defrt_periodic: default router list is empty we send RS\n");
      uip_ds6_send_rs();
-   }
+   }*/
 
    while(d != NULL) {
      if(!d->isinfinite &&
@@ -1000,22 +1001,22 @@ uip_ds6_send_ra_periodic(void)
 }
 #endif /* !CONF_6LOWPAN_ND */
 #endif /* UIP_ND6_SEND_RA */
+#endif /* UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER */
 
 #if CONF_6LOWPAN_ND
 void
 uip_ds6_send_rs(void)
 {
   uint16_t r;
-
-  if((uip_ds6_defrt_choose() == NULL)
-     && (rscount < UIP_ND6_MAX_RTR_SOLICITATIONS)) {
+  uip_ipaddr_t * defrt;
+  defrt = uip_ds6_defrt_choose();
+  if(defrt == NULL && rscount < UIP_ND6_MAX_RTR_SOLICITATIONS) {
     PRINTF("Sending RS %u\n", rscount);
     uip_nd6_rs_output();
     rscount++;
     etimer_set(&uip_ds6_timer_rs,
                UIP_ND6_RTR_SOLICITATION_INTERVAL * CLOCK_SECOND);
-
-  } else if(uip_ds6_defrt_choose() == NULL) {
+  } else if(defrt == NULL) {
     /* Slower retransmissions */
     PRINTF("Sending RS slower %u\n", rscount);
     uip_nd6_rs_output();
@@ -1025,7 +1026,6 @@ uip_ds6_send_rs(void)
       r = UIP_ND6_MAX_RTR_SOLICITATION_INTERVAL;
     }
     etimer_set(&uip_ds6_timer_rs, r * CLOCK_SECOND);
-
   } else {
     PRINTF("Router found ? (boolean): %u\n",
            (uip_ds6_defrt_choose() != NULL));
@@ -1035,10 +1035,8 @@ uip_ds6_send_rs(void)
   return;
 }
 #endif /* CONF_6LOWPAN_ND */
-
-
-#else /* UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER */
 /*---------------------------------------------------------------------------*/
+#if !CONF_6LOWPAN_ND && !UIP_CONF_ROUTER
 void
 uip_ds6_send_rs(void)
 {
@@ -1057,7 +1055,8 @@ uip_ds6_send_rs(void)
   return;
 }
 
-#endif /* UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER */
+#endif /* !CONF_6LOWPAN_ND && !UIP_CONF_ROUTER */
+
 /*---------------------------------------------------------------------------*/
 uint32_t
 uip_ds6_compute_reachable_time(void)

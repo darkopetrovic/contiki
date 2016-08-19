@@ -1,0 +1,22 @@
+CFLAGS = -mcpu=cortex-m3 -mthumb -mlittle-endian
+CFLAGS += -ffunction-sections -fdata-sections
+CFLAGS += -fshort-enums -fomit-frame-pointer -fno-strict-aliasing
+CFLAGS += -Wall -DLPM_CONF_MAX_PM=2 -DLPM_CONF_ENABLE
+
+LDGENFLAGS = $(CFLAGS)
+LDGENFLAGS += -imacros "contiki-conf.h" -imacros "dev/cc2538-dev.h"
+LDGENFLAGS += -imacros "dev/flash.h" -imacros "cfs-coffee-arch.h"
+LDGENFLAGS += -x c -P -E
+
+SOURCEDIRS = "../cpu/cc2538" "../platform/cc2538dk" "../platform/cc2538dk/dev" "../core"
+
+# This target is added as pre-build step as follow:
+# ${CCS_UTILS_DIR}/bin/gmake -j 8 cc2538.ld
+cc2538.ld: ../cpu/cc2538/cc2538.lds
+	@echo 'Building file: $<'
+	"$(CG_TOOL_ROOT)/bin/arm-none-eabi-gcc.exe" ${addprefix -I,$(SOURCEDIRS)} $(LDGENFLAGS) $< -o $@
+	@echo 'Finished building: $<'
+	@echo ' '
+
+clean-cc2538.ld:
+	-$(RM) "cc2538.ld"

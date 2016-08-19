@@ -62,6 +62,8 @@
 #include "dev/watchdog.h"
 #endif /* SHELL */
 
+#include "custom-rdc.h"
+
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
@@ -125,6 +127,8 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
 
     if( ev == sensors_event ) {
       if(data == &button_sensor) {
+        PRINTF("Button select pushed.\n");
+        crdc_period_start(10);
 #if UIP_CONF_DYN_HOST_ROUTER
         if(node_type==ROUTER){
           set_node_type(HOST);
