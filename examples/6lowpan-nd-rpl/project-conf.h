@@ -41,12 +41,25 @@
 #define CONF_6LOWPAN_ND               1
 //#define USB_SERIAL_CONF_ENABLE        0
 //#undef UIP_CONF_ROUTER
-//#define UIP_CONF_ROUTER               0
+#define UIP_CONF_ROUTER               0
 //#define UIP_CONF_DYN_HOST_ROUTER      0
+
+/** Enable the external 32k oscillator */
+#define SYS_CTRL_CONF_OSC32K_USE_XTAL         1
+
+//#define NETSTACK_CONF_RDC     nullrdc_driver
+
+#define UIP_CONF_ND6_SEND_NA              1
+#define UIP_CONF_IPV6_RPL                         0
+
+
+#define CC2538_RF_CONF_CHANNEL              25
+#define LPM_CONF_MAX_PM                   2
+#define UIP_DS6_CONF_PERIOD               CLOCK_SECOND*10
 
 #define UIP_CONF_TCP				0
 
-//#define	WATCHDOG_CONF_ENABLE		0
+#define	WATCHDOG_CONF_ENABLE		0
 
 #endif /* PROJECT_CONF_H_ */
 

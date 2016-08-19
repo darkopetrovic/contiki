@@ -70,6 +70,9 @@
 #include "ieee-addr.h"
 #include "lpm.h"
 
+#include "custom-rdc.h"
+#include "net/ipv6/uip-ds6.h"
+
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -232,6 +235,10 @@ main(void)
   watchdog_start();
   fade(LEDS_ORANGE);
 
+#if ENABLE_CUSTOM_RDC
+  crdc_init();
+#endif /* ENABLE_CUSTOM_RDC */
+
   while(1) {
     uint8_t r;
     do {
@@ -242,7 +249,13 @@ main(void)
     } while(r > 0);
 
     /* We have serviced all pending events. Enter a Low-Power mode. */
+#if ENABLE_CUSTOM_RDC && !UIP_CONF_ROUTER
+    if(NODE_TYPE_HOST && !USB_IS_PLUGGED()){
+      crdc_lpm_enter();
+    }
+#else /* ENABLE_CUSTOM_RDC */
     lpm_enter();
+#endif /* ENABLE_CUSTOM_RDC */
   }
 }
 /*---------------------------------------------------------------------------*/

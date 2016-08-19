@@ -92,7 +92,7 @@ static uip_ds6_border_router_t *locbr;
 #endif /* CONF_6LOWPAN_ND */
 
 #undef DEBUG
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
