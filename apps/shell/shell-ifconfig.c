@@ -181,11 +181,27 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
     printf("   ");
     uip_debug_ipaddr_print(&nbr->ipaddr);
     printf(" - router: ");
+
+#if CONF_6LOWPAN_ND
+    switch (nbr->isrouter) {
+      case ISROUTER_RPL:
+      case ISROUTER_YES:
+        printf("YES");
+        break;
+      case ISROUTER_NO:
+        printf("NO");
+        break;
+      case ISROUTER_NODEFINE:
+        printf("UNDEFINED YET");
+        break;
+    }
+#else /* CONF_6LOWPAN_ND */
     if (nbr->isrouter) {
       printf("YES");
     } else {
       printf("NO");
     }
+#endif /* CONF_6LOWPAN_ND */
 
     printf(" - state: ");
     switch (nbr->state) {

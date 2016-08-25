@@ -400,7 +400,11 @@ ns_input(void)
           goto  discard;
         }
 
+#if UIP_CONF_LL_802154
+        nbr->state = NBR_REGISTERED;
+#else
         nbr->state = NBR_TENTATIVE_DAD;
+#endif
         nbr->nscount = 0;
 
         if(nbr != NULL) {

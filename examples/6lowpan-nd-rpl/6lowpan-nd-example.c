@@ -49,7 +49,7 @@
 
 #if CONTIKI_TARGET_CC2538DK
 #include "usb/usb-serial.h"
-#endif /* CONTIKI_TARGET_CC2538DK */
+#endif
 
 #if CONTIKI_TARGET_Z1
 #include "dev/uart0.h"
@@ -63,9 +63,24 @@
 #endif /* SHELL */
 
 #include "custom-rdc.h"
+#include "apps/smart-blink/smart-blink.h"
 
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
+
+#if CONTIKI_TARGET_Z1
+/* Used to verify network status and turn on the leds in cooja.
+ * Note that green is blue, red is green in the network view.
+ */
+#include "dev/leds.h"
+#include "net/ipv6/uip-ds6.h"
+#if UIP_CONF_IPV6_RPL 
+#include "net/rpl/rpl-private.h"
+#endif
+#define LEDS_COOJA_BLUE     LEDS_GREEN
+#define LEDS_COOJA_GREEN    LEDS_RED
+#define LEDS_COOJA_RED      LEDS_YELLOW
+#endif /* CONTIKI_TARGET_Z1 */
 
 /*---------------------------------------------------------------------------*/
 PROCESS(nd_optimization_example, "6lowpan-nd example");
@@ -78,10 +93,18 @@ SHELL_COMMAND(fast_reboot_command,
         "reboot: reboot the system",
         &shell_fast_reboot_process);
 #endif /* SHELL */
+
+static struct etimer status_timer;
+
 /*---------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(nd_optimization_example, ev, data)
 {
+
+#if CONTIKI_TARGET_Z1
+  uip_ds6_nbr_t *nbr;
+  uip_ipaddr_t *defrt_addr;
+#endif
 
   PROCESS_BEGIN();
 
@@ -122,8 +145,70 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   SENSORS_ACTIVATE(button_sensor);
 #endif
 
+#if CONTIKI_TARGET_Z1
+  etimer_set(&status_timer, CLOCK_SECOND);
+#endif
+
+  
   while(1) {
     PROCESS_YIELD();
+
+#if CONTIKI_TARGET_Z1
+    /* ------------------------------------------------------------------------------------ *
+     * Show network status in cooja with the leds.                                          *
+     * Blue led starts blinking when the node found a router. Then turn-on permanently      *
+     * when registered successfully to this router when receiving NA with status 0.         *
+     * Green led starts blinking when the node send DIS message and turn-on permanently     *
+     * when successfully joined a DAG instance.                                             *
+     * ------------------------------------------------------------------------------------ */
+    if( ev == PROCESS_EVENT_TIMER )
+    {
+      if( data == &status_timer &&
+        etimer_expired(&status_timer) )
+      {
+
+        defrt_addr = uip_ds6_defrt_choose();
+
+        /* Node found a router. */
+        if(defrt_addr != NULL){
+          blink_leds(LEDS_COOJA_BLUE, CLOCK_SECOND, 0);
+        } else {
+          leds_off(LEDS_COOJA_BLUE);
+        }
+
+        /* Node received an NA message and successfully registered 
+         * to the router (6lowpan-nd) or resolved address with this latter (ndp). */
+        nbr = uip_ds6_nbr_lookup(defrt_addr);
+#if CONF_6LOWPAN_ND
+        if(nbr != NULL && nbr->state == NBR_REGISTERED)
+#else /* CONF_6LOWPAN_ND */
+        if(nbr != NULL && (nbr->state == NBR_REACHABLE || nbr->state == NBR_STALE))
+#endif /* CONF_6LOWPAN_ND */
+        {
+          blink_leds_stop();
+          leds_on(LEDS_COOJA_BLUE);
+        } else {
+          leds_off(LEDS_COOJA_BLUE);
+        }
+#if UIP_CONF_IPV6_RPL
+        /* Find that a DIS message is going to be send. */
+        if(rpl_get_any_dag() == NULL && rpl_get_next_dis() >= RPL_DIS_INTERVAL-1){
+          blink_leds(LEDS_COOJA_GREEN, CLOCK_SECOND, 0);
+        }
+
+        /* Node joined a DODAG instance. */
+        if(rpl_get_any_dag() != NULL){
+          leds_on(LEDS_COOJA_GREEN);
+        } else {
+          leds_off(LEDS_COOJA_GREEN);
+        }
+#endif
+
+        etimer_restart(&status_timer);
+      }
+    }
+    /* ----------------------------------------------------------------------------------- */
+#endif /* CONTIKI_TARGET_Z1 */
 
     if( ev == sensors_event ) {
       if(data == &button_sensor) {

@@ -57,8 +57,11 @@
 #define PLATFORM_HAS_RADIO   1
 #define PLATFORM_HAS_BATTERY 1
 
-/* CPU target speed in Hz */
-#define F_CPU 8000000uL /* 8MHz by default */
+/* CPU target speed in Hz 
+ * \note Changed from 8MHz to fix timing issue in cooja simulation
+ *		 where the scheduled timer are doubled.
+ */
+#define F_CPU 3900000uL
 
 /* Our clock resolution, this is the same as Unix HZ. */
 #define CLOCK_CONF_SECOND 128UL

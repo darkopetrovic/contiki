@@ -1011,7 +1011,7 @@ uip_ds6_send_rs(void)
   uip_ipaddr_t * defrt;
   defrt = uip_ds6_defrt_choose();
   if(defrt == NULL && rscount < UIP_ND6_MAX_RTR_SOLICITATIONS) {
-    PRINTF("Sending RS %u\n", rscount);
+    PRINTF("Sending RS (%u)\n", rscount);
     uip_nd6_rs_output();
     rscount++;
     etimer_set(&uip_ds6_timer_rs,

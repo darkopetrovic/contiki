@@ -202,7 +202,7 @@ rpl_icmp6_update_nbr_table(uip_ipaddr_t *from, nbr_table_reason_t reason, void *
   }
 
   if(nbr != NULL) {
-#if UIP_ND6_SEND_NA
+#if UIP_ND6_SEND_NA && !CONF_6LOWPAN_ND
     /* set reachable timer if we added or found the nbr entry - and update
        neighbor entry to reachable to avoid sending NS/NA, etc.  */
     stimer_set(&nbr->reachable, UIP_ND6_REACHABLE_TIME / 1000);

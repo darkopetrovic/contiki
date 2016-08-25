@@ -77,6 +77,8 @@ extern struct uip_fallback_interface UIP_FALLBACK_INTERFACE;
 #include "rpl/rpl.h"
 #endif
 
+#include "custom-rdc.h"
+
 process_event_t tcpip_event;
 #if UIP_CONF_ICMP6
 process_event_t tcpip_icmp6_event;
@@ -121,6 +123,7 @@ tcpip_output(const uip_lladdr_t *a)
 {
   int ret;
   if(outputfunc != NULL) {
+    crdc_period_start(0);
     ret = outputfunc(a);
     return ret;
   }
@@ -687,6 +690,7 @@ tcpip_ipv6_output(void)
     if(nbr == NULL) {
 #if UIP_ND6_SEND_NA
 #if CONF_6LOWPAN_ND
+      /* myTodo: is it right to use ISROUTER_YES instead of ISROUTER_NODEFINE ? */
       if((nbr = uip_ds6_nbr_add(nexthop, NULL, ISROUTER_YES, NBR_TENTATIVE, NBR_TABLE_REASON_IPV6_ND, NULL)) == NULL) {
 #else /* CONF_6LOWPAN_ND */
       if((nbr = uip_ds6_nbr_add(nexthop, NULL, 0, NBR_INCOMPLETE, NBR_TABLE_REASON_IPV6_ND, NULL)) == NULL) {

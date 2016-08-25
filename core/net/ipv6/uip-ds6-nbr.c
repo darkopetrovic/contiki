@@ -273,17 +273,21 @@ uip_ds6_neighbor_periodic(void)
         uip_ds6_nbr_rm(nbr);
       } else if(is_timeout_percent(&nbr->reachable, UIP_DS6_NS_PERCENT_LIFETIME_RETRAN,
                                    UIP_DS6_NS_MINLIFETIME_RETRAN)) {
-        PRINTF("REGISTERED: move to TENTATIVE\n");
+        PRINTF("REGISTERED: move to TENTATIVE (");
+        PRINT6ADDR(&nbr->ipaddr);
+        PRINTF(")\n");
         nbr->state = NBR_TENTATIVE;
         nbr->nscount = 0;
       }
       break;
     case NBR_TENTATIVE:
       if(nbr->isrouter == ISROUTER_YES) {
-        PRINTF("TENTATIVE: ");
-        if(nbr->nscount >= UIP_ND6_MAX_UNICAST_SOLICIT && uip_ds6_get_global(ADDR_PREFERRED) != NULL) {
+        if(nbr->nscount >= UIP_ND6_MAX_UNICAST_SOLICIT && 
+          uip_ds6_get_global(ADDR_PREFERRED) != NULL && 
+          stimer_expired(&nbr->sendns)) 
+        {
           uip_ds6_nbr_rm(nbr);
-          PRINTF("remove neighbor (");
+          PRINTF("Registration failed: remove neighbor (");
           PRINT6ADDR(&nbr->ipaddr);
           PRINTF(")\n");
         } else if(stimer_expired(&nbr->sendns) && (uip_len == 0)) {
@@ -291,7 +295,7 @@ uip_ds6_neighbor_periodic(void)
 
           uip_ds6_addr_t *addgl = uip_ds6_get_global_br(-1, uip_ds6_defrt_lookup(&nbr->ipaddr)->br);
           if(addgl != NULL) {
-            PRINTF("Sending NS with ARO with global address: ");
+            PRINTF("Sending NS (%d) with ARO with global address: ", nbr->nscount);
             PRINT6ADDR(&addgl->ipaddr);
             PRINTF("\n");
             uip_nd6_ns_output_aro(&(addgl->ipaddr), &nbr->ipaddr, &nbr->ipaddr,
