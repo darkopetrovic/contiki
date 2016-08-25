@@ -25,7 +25,9 @@
 #define ENABLE_CUSTOM_RDC             CRDC_CONF_ENABLE_CUSTOM_RDC
 #endif
 
+#ifndef ENTER_SLEEP_MODE
 #define ENTER_SLEEP_MODE()            do { asm("wfi"::); } while(0)
+#endif
 
 #ifndef CRDC_CONF_DEFAULT_DURATION
 #define CRDC_DEFAULT_DURATION         1 // in seconds
@@ -37,22 +39,22 @@
  * the RDC if this is the case.
  * */
 #ifndef CRDC_CONF_COAP_IS_ENALBED
-#define CRDC_COAP_IS_ENALBED              0
+#define CRDC_COAP_IS_ENALBED          0
 #else
-#define CRDC_COAP_IS_ENALBED              CRDC_CONF_COAP_IS_ENALBED
+#define CRDC_COAP_IS_ENALBED          CRDC_CONF_COAP_IS_ENALBED
+#endif
+
+/* The duration in seconds the system keeps the RDC on to receive
+ * a packet in response. */
+#ifndef CRDC_CONF_WAIT_RESPONSE
+#define CRDC_WAIT_RESPONSE          3 // second(s)
+#else
+#define CRDC_WAIT_RESPONSE          CRDC_CONF_WAIT_RESPONSE
 #endif
 
 #ifndef USB_IS_PLUGGED
-#define USB_IS_PLUGGED()    0
+#define USB_IS_PLUGGED()              0
 #endif
-
-/* This is for the CC2538 chip. */
-#ifndef SET_DEEP_SLEEP_MODE
-#define SET_DEEP_SLEEP_MODE()         REG(SYS_CTRL_PMCTL) = LPM_CONF_MAX_PM
-#endif
-
-#define MAX_WAKEUP_INTERVAL           20
-#define RDC_SAFE_PERIOD               10  // seconds
 
 extern void rtimer_isr(void);
 
@@ -64,7 +66,7 @@ extern void rtimer_isr(void);
  * Furthermore, we call rtimer_isr() to properly finish the LPL cycle. */
 #define disableRDC(x)     NETSTACK_RDC.off(x);\
                           rtimer_arch_schedule(0);\
-                          rtimer_isr();\
+                          rtimer_run_next();\
                           rdc_is_on = 0
 /**
  * \brief   Initialize the custom RDC system.
@@ -97,12 +99,6 @@ void crdc_disable_rdc(uint8_t keep_radio);
 void crdc_clear_stop_rdc_timer(void);
 
 extern uint8_t crdc_battery_level;
-
-enum {
-  BATLEV_SAFE,
-  BATLEV_LOW,
-  BATLEV_CRITICAL
-};
 
 #endif /* __CUSTOMRDC_H */
 

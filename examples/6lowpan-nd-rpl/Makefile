@@ -11,16 +11,18 @@ ifeq ($(findstring $(TARGET_NAME_HOST),$(MAKECMDGOALS)),$(TARGET_NAME_HOST))
   DEFINES+=UIP_CONF_ROUTER=0
 else
   DEFINES+=UIP_CONF_ROUTER=1
+  APPS = serial-shell
+	CFLAGS += -DSHELL=1
 endif
 
-APPS = serial-shell
-CFLAGS += -DSHELL=1
+APPS += smart
+APPS += smart-blink
 
 SMALL=1
 
 CONTIKI = ../..
 CONTIKI_WITH_IPV6 = 1
-CONTIKI_WITH_RPL = 1
+CONTIKI_WITH_RPL = 0
 include $(CONTIKI)/Makefile.include
 
 6lowpan-nd-host.$(TARGET): $(CONTIKI_PROJECT) 6lowpan-nd-host-rename

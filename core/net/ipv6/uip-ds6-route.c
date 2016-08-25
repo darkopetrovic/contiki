@@ -92,7 +92,7 @@ static uip_ds6_border_router_t *locbr;
 #endif /* CONF_6LOWPAN_ND */
 
 #undef DEBUG
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -685,14 +685,23 @@ uip_ds6_defrt_choose(void)
     PRINT6ADDR(&d->ipaddr);
     PRINTF("\n");
     bestnbr = uip_ds6_nbr_lookup(&d->ipaddr);
-    if(bestnbr != NULL && bestnbr->state != NBR_INCOMPLETE) {
+#if CONF_6LOWPAN_ND
+    if(bestnbr != NULL && bestnbr->state == NBR_REGISTERED)
+#else /* CONF_6LOWPAN_ND */
+    if(bestnbr != NULL && bestnbr->state != NBR_INCOMPLETE)
+#endif /* CONF_6LOWPAN_ND */
+    {
       PRINTF("Defrt found, IP address ");
       PRINT6ADDR(&d->ipaddr);
       PRINTF("\n");
       return &d->ipaddr;
     } else {
       addr = &d->ipaddr;
+#if CONF_6LOWPAN_ND
+      PRINTF("Defrt TENTATIVE/GARBAGE_COLLECTIBLE found, IP address ");
+#else /* CONF_6LOWPAN_ND */
       PRINTF("Defrt INCOMPLETE found, IP address ");
+#endif /* CONF_6LOWPAN_ND */
       PRINT6ADDR(&d->ipaddr);
       PRINTF("\n");
     }

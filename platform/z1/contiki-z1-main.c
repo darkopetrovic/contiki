@@ -62,6 +62,9 @@
 #include "dev/button-sensor.h"
 #include "dev/sht11/sht11-sensor.h"
 
+#include "custom-rdc.h"
+#include "net/ipv6/uip-ds6.h"
+
 SENSORS(&button_sensor);
 
 extern unsigned char node_mac[8];
@@ -423,6 +426,11 @@ main(int argc, char **argv)
 #if DCOSYNCH_CONF_ENABLED
   timer_set(&mgt_timer, DCOSYNCH_PERIOD * CLOCK_SECOND);
 #endif
+
+#if ENABLE_CUSTOM_RDC
+  crdc_init();
+#endif /* ENABLE_CUSTOM_RDC */
+
   watchdog_start();
   /*  watchdog_stop();*/
   while(1) {
@@ -450,26 +458,33 @@ main(int argc, char **argv)
         msp430_sync_dco();
       }
 #endif
-
       /* Re-enable interrupts and go to sleep atomically. */
       ENERGEST_SWITCH(ENERGEST_TYPE_CPU, ENERGEST_TYPE_LPM);
       /* We only want to measure the processing done in IRQs when we
          are asleep, so we discard the processing time done when we
          were awake. */
       energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
+
       watchdog_stop();
+#if ENABLE_CUSTOM_RDC && !UIP_CONF_ROUTER
+    /* Doesn't use the custom RDC if a ROUTER. 
+     * If a HOST, the RDC is constantly enabled if USB is plugged in. */
+    if(NODE_TYPE_HOST && !USB_IS_PLUGGED()){
+      crdc_lpm_enter();
+    }
+#else /* ENABLE_CUSTOM_RDC */
       _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF); /* LPM3 sleep. This
                                               statement will block
                                               until the CPU is
                                               woken up by an
                                               interrupt that sets
                                               the wake up flag. */
-
+#endif /* ENABLE_CUSTOM_RDC */
       /* We get the current processing time for interrupts that was
          done during the LPM and store it for next time around.  */
       dint();
       irq_energest = energest_type_time(ENERGEST_TYPE_IRQ);
-      eint();
+      eint();                                     
       watchdog_start();
       ENERGEST_SWITCH(ENERGEST_TYPE_LPM, ENERGEST_TYPE_CPU);
     }

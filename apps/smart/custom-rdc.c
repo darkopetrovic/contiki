@@ -14,32 +14,24 @@
 #if ENABLE_CUSTOM_RDC
 
 #include "net/netstack.h"
-#include "lpm.h"
-#include "dev/sys-ctrl.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ipv6/uip-icmp6.h"
 
-#define DEBUG DEBUG_PRINT
+#ifdef CONTIKI_TARGET_CC2538DK
+#include "lpm.h"
+#include "dev/sys-ctrl.h"
+#define DEEP_SLEEP_PM2_THRESHOLD    100
+#endif /* CONTIKI_TARGET_CC2538DK */
+
+#if UIP_CONF_IPV6_RPL
+#include "net/rpl/rpl-private.h"
+#endif
+
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #if DEBUG
 #include "dev/leds.h"
-#endif
-
-#define DIFF(a,b) ((a)-(b))
-
-#define DEEP_SLEEP_PM2_THRESHOLD    100
-
-#if ENERGEST_CONF_ON
-static unsigned long irq_energest = 0;
-
-#define ENERGEST_IRQ_SAVE(a) do { \
-    a = energest_type_time(ENERGEST_TYPE_IRQ); } while(0)
-#define ENERGEST_IRQ_RESTORE(a) do { \
-    energest_type_set(ENERGEST_TYPE_IRQ, a); } while(0)
-#else
-#define ENERGEST_IRQ_SAVE(a) do {} while(0)
-#define ENERGEST_IRQ_RESTORE(a) do {} while(0)
 #endif
 
 #if CRDC_COAP_IS_ENALBED
@@ -50,18 +42,19 @@ static unsigned long irq_energest = 0;
 #define resource_pending_msg()                0
 #endif
 
-#define DEEP_SLEEP_PM2_THRESHOLD    100
+#define UIP_ICMP_BUF ((struct uip_icmp_hdr *)&uip_buf[UIP_LLIPH_LEN + uip_ext_len])
 
 static struct ctimer ct_rdc;
 static rtimer_clock_t finish_time;
 static uint8_t rdc_is_on;
 
-uint8_t crdc_battery_level;
-
 // we restart the engine once the CRDC is initilized
 extern struct process rest_engine_process;
 extern struct process tcpip_process;
 
+#if ENERGEST_CONF_ON && CONTIKI_TARGET_CC2538DK
+static unsigned long irq_energest;
+#endif /* CONTIKI_TARGET_CC2538DK */
 
 char *
 float2str(float num, uint8_t preci)
@@ -95,6 +88,11 @@ float2str(float num, uint8_t preci)
 static void
 stop_rdc(void *ptr)
 {
+#if UIP_ND6_SEND_NA
+  uip_ds6_nbr_t *nbr;
+  uint8_t ns_msg_is_sent;
+#endif /* UIP_ND6_SEND_NA */
+
 #if DEBUG && CRDC_COAP_IS_ENALBED
   if( coap_confirmable_transaction_exist() ){
     PRINTF("CRDC: > Confirmable notification found!\n");
@@ -109,20 +107,37 @@ stop_rdc(void *ptr)
           timer_remaining(&(m->lifetime.etimer.timer)));
     }
   }
-#endif
+#endif /* DEBUG && CRDC_COAP_IS_ENALBED */
+
+  /* Check whether the node has sent an NS message to register
+   * to a router (6lowpan-nd) or resolve address (ndp). */
+#if UIP_ND6_SEND_NA
+  ns_msg_is_sent = 0;
+  nbr = nbr_table_head(ds6_neighbors);
+  while(nbr != NULL) {
+#if CONF_6LOWPAN_ND
+    if(nbr->state == NBR_TENTATIVE && nbr->nscount)
+#else /* CONF_6LOWPAN_ND */
+    if((nbr->state == NBR_INCOMPLETE || nbr->state == NBR_PROBE) && nbr->nscount)
+#endif /* CONF_6LOWPAN_ND */
+    {
+      ns_msg_is_sent = 1;
+      break;
+    }
+    nbr = nbr_table_next(ds6_neighbors, nbr);
+  }
+
+#endif /* UIP_ND6_SEND_NA */
 
   /* Don't stop the RDC if:
    *  - the server is waiting a CoAP acknowledge (after confirmable message)
    *  - if a RS or NS message has been sent, and thus waiting on RA or NA
    *  - blockwise transfer is not finished, wait the client to get from complete message */
-  if ( !coap_confirmable_transaction_exist() &&
-      !resource_pending_msg() )
+  if ( !coap_confirmable_transaction_exist() && !resource_pending_msg() 
+      && !ns_msg_is_sent)
   {
       crdc_disable_rdc(0);
       PRINTF("CRDC: The RDC is DISABLED.\n");
-#if DEBUG
-      leds_off(LEDS_YELLOW);
-#endif
   } else {
     // we prolong the rdc
     crdc_period_start( CRDC_DEFAULT_DURATION );
@@ -134,7 +149,7 @@ crdc_init(void)
 {
 #if UIP_CONF_ROUTER
   rdc_is_on = 1;
-#else /* UIP_CONF_ROUTER */
+#else 
   rdc_is_on = 0;
   disableRDC(0);
 #endif
@@ -146,7 +161,7 @@ crdc_lpm_enter(void)
   static clock_time_t next_expiration_old;
   clock_time_t next_expiration;
   rtimer_clock_t next_wakeup_time;
-  uip_ds6_nbr_t *nbr;
+  //uip_ds6_nbr_t *nbr;
 
   if( !rdc_is_on ){
     next_expiration = etimer_next_expiration_time();
@@ -163,35 +178,51 @@ crdc_lpm_enter(void)
       next_wakeup_time = (float)(next_expiration / CLOCK_SECOND) * RTIMER_SECOND;
       // schedule the next wake-up time -> we can go to sleep
       rtimer_arch_schedule( next_wakeup_time );
-      SET_DEEP_SLEEP_MODE();
+
+#ifdef CONTIKI_TARGET_CC2538DK
+      REG(SYS_CTRL_PMCTL) = LPM_CONF_MAX_PM
       if(next_wakeup_time <= RTIMER_NOW() ||
           next_wakeup_time-RTIMER_NOW() < DEEP_SLEEP_PM2_THRESHOLD){
         return;
       }
+#endif /* CONTIKI_TARGET_CC2538DK */
 
 #if 0
-      PRINTF("CRDC: Next wake-up in %s second(s) (next: %lu) (now: %lu) (clock: %lu).\n",
-              float2str((float)(next_wakeup_time-RTIMER_NOW())/RTIMER_SECOND, 2),
+      PRINTF("CRDC: Next wake-up in %s second(s) (next: %X) (now: %u) (clock: %lu).\n",
+              float2str((float)(next_expiration-clock_time())/CLOCK_SECOND, 2),
               next_wakeup_time, RTIMER_NOW(), next_expiration);
 #else
       PRINTF("CRDC: Next wake-up in %s second(s).\n",
-                    float2str((float)(next_wakeup_time-RTIMER_NOW())/RTIMER_SECOND, 2));
+                    float2str((float)(next_expiration-clock_time())/CLOCK_SECOND, 2));
 #endif
 
     } else {
       PRINTF("CRDC: Sleep indefinitely...\n");
     }
+#if CONTIKI_TARGET_CC2538DK
 #if DEBUG
     clock_delay_usec(5000); // to display correctly PRINTF before sleep
 #endif
+    ENERGEST_SWITCH(ENERGEST_TYPE_CPU, ENERGEST_TYPE_LPM);
+    energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
+#endif /* CONTIKI_TARGET_CC2538DK */
 
     ENTER_SLEEP_MODE();
     /* ZzZZzZZzZZZzzzZzzZZzzzzzzzZzZZzZzzzzzzzzzzzZZzZZZzzZZzZZZzzzZZzzzz
      * The wake-up can come from the rtimer or the gpio, nothing else.
      * ZzZZzZZzZZZzzzZzzZZzzzzzzzZzZZzZzzzzzzzzzzzZZzZZZzzZZzZZZzzzZZzzzz */
 
+#if CONTIKI_TARGET_CC2538DK
+    irq_energest = energest_type_time(ENERGEST_TYPE_IRQ);
+    ENERGEST_SWITCH(ENERGEST_TYPE_LPM, ENERGEST_TYPE_CPU);
+#endif /* CONTIKI_TARGET_CC2538DK */
+
+
+
+#if 0
     /* Enable RDC for some seconds to receive RA in response to RS or ... */
     if(timer_remaining(&(uip_ds6_timer_rs.timer)) < CLOCK_SECOND){
+      PRINTF("CRDC: Sending RS...\n");
       crdc_period_start(3);
     }
 #if UIP_ND6_SEND_NA
@@ -206,6 +237,7 @@ crdc_lpm_enter(void)
             && stimer_remaining(&nbr->sendns) < CLOCK_SECOND)
 #endif /* CONF_6LOWPAN_ND */
         {
+          PRINTF("CRDC: Sending NS...\n");
           crdc_period_start(3);
           break;
         }
@@ -214,9 +246,23 @@ crdc_lpm_enter(void)
     }
 #endif /* UIP_ND6_SEND_NA */
 
-    PRINTF("CRDC:  *** RTimer time: %lu ***\n", RTIMER_NOW()/RTIMER_ARCH_SECOND);
+#if UIP_CONF_IPV6_RPL
+    if(rpl_get_any_dag() == NULL && rpl_get_next_dis() >= RPL_DIS_INTERVAL-1) {
+      PRINTF("CRDC: Sending DIS...\n");
+      crdc_period_start(3);
+    } 
+#endif
+
+#endif
+
+    PRINTF("CRDC: *** Time: %lu *** (%d, %d)\n", clock_time());
   } else {
+    /* RDC is enabled -> normal behaviour. */
+#if CONTIKI_TARGET_CC2538DK
     lpm_enter();
+#else
+    ENTER_SLEEP_MODE();
+#endif
   }
 }
 
@@ -252,7 +298,7 @@ crdc_disable_rdc(uint8_t keep_radio)
   } else {
     // Deccelerate DS periodic
     PROCESS_CONTEXT_BEGIN(&tcpip_process);
-    etimer_set(&uip_ds6_timer_periodic, UIP_DS6_CONF_PERIOD);
+    etimer_set(&uip_ds6_timer_periodic, UIP_DS6_PERIOD);
     PROCESS_CONTEXT_END(&tcpip_process);
   }
   disableRDC(keep_radio);
@@ -262,6 +308,23 @@ void
 crdc_clear_stop_rdc_timer(void)
 {
   ctimer_stop(&ct_rdc);
+}
+
+static uint8_t
+expect_response(void)
+{
+#if UIP_CONF_IPV6_RPL
+  if(UIP_ICMP_BUF->type == ICMP6_RS || UIP_ICMP_BUF->type == ICMP6_NS ||
+      (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_DIS) ||
+      (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_SEC_DIS))
+#else /* UIP_CONF_IPV6_RPL */
+  if(UIP_ICMP_BUF->type == ICMP6_RS || UIP_ICMP_BUF->type == ICMP6_NS)
+#endif /* UIP_CONF_IPV6_RPL */
+  {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 void
@@ -275,27 +338,24 @@ crdc_period_start(uint32_t seconds)
    */
 
 #if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
-  /* When usb cable is plugged in, the radio is constantly on. */
+  /* When usb cable is plugged in, the RDC is constantly on. */
   if(NODE_TYPE_ROUTER || USB_IS_PLUGGED()){
     return;
   }
 #endif /* UIP_CONF_DYN_HOST_ROUTER*/
 
-  /* Prevent RDC to start if battery level is critical. */
-  if( crdc_battery_level == BATLEV_CRITICAL ){
-    return;
-  }
-
-  /* Reduce the RDC period to save a little energy if battery voltage is low. */
-  if( crdc_battery_level == BATLEV_LOW && seconds > RDC_SAFE_PERIOD ){
-    seconds = RDC_SAFE_PERIOD;
-  }
-
-  // need to turn-on the RDC to send a packet
+  /* Turn-on the RDC to send a packet. Enable it for CRDC_WAIT_RESPONSE
+   * if a response is expected. */
   if( !seconds && !rdc_is_on){
-    enableRDC();
-    ctimer_set(&ct_rdc, 8, stop_rdc, NULL);
-    PRINTF("CRDC: The RDC is ENABLED to send a packet.\n");
+    crdc_enable_rdc();
+    if(expect_response()){
+      ctimer_set(&ct_rdc, CLOCK_SECOND * CRDC_WAIT_RESPONSE, stop_rdc, NULL);
+      PRINTF("CRDC: The RDC is ENABLED (for %d seconds) to receive a response.\n", 
+        CRDC_WAIT_RESPONSE);
+    } else {
+      ctimer_set(&ct_rdc, 8, stop_rdc, NULL);
+      PRINTF("CRDC: The RDC is ENABLED to send a packet.\n");
+    }
     return;
   }
 
