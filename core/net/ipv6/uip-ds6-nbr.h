@@ -68,7 +68,11 @@
 #define  NBR_TENTATIVE_DAD 8
 #endif /* CONF_6LOWPAN_ND */
 
-/** \brief Possible states for isrouter flag */
+/** \brief Possible states for isrouter flag 
+ *
+ *         ISROUTER_YES indicates that the neighbor is the default router.
+ *         
+ */
 #if CONF_6LOWPAN_ND
 #define ISROUTER_NO 0
 #define ISROUTER_YES 1

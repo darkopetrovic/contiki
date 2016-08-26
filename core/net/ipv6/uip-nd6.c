@@ -326,7 +326,7 @@ uip_nd6_na_output(uint8_t flags)
   PRINT6ADDR(&UIP_ND6_NA_BUF->tgtipaddr);
 #if (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER) && CONF_6LOWPAN_ND
   if(NODE_TYPE_ROUTER){
-  PRINTF(" with aro status:%d ", aro_state);
+  PRINTF(" with aro status :%d (flags: %d) ", aro_state, UIP_ND6_NA_BUF->flagsreserved);
   }
 #endif /* UIP_CONF_ROUTER */
   PRINTF("\n");
@@ -400,10 +400,10 @@ ns_input(void)
           goto  discard;
         }
 
-#if UIP_CONF_LL_802154
-        nbr->state = NBR_REGISTERED;
-#else
+#if UIP_ND6_DEF_MAXDADNS
         nbr->state = NBR_TENTATIVE_DAD;
+#else
+        nbr->state = NBR_REGISTERED;
 #endif
         nbr->nscount = 0;
 
@@ -496,6 +496,17 @@ ns_input(void)
       }
       PRINTF("DAD - 1\n");
       goto discard;
+    } else {
+      if(aro_state == UIP_ND6_ARO_STATUS_SUCCESS) {
+        stimer_set(&nbr->reachable, uip_ntohs(nd6_opt_aro->lifetime) * 60);
+        uip_ds6_route_add(&UIP_IP_BUF->srcipaddr, 128, &nbr->ipaddr);
+        nd6_opt_aro->status = UIP_ND6_ARO_STATUS_SUCCESS;
+        uip_ipaddr_copy(&UIP_IP_BUF->destipaddr, &UIP_IP_BUF->srcipaddr);
+        addr = uip_ds6_get_link_local(ADDR_PREFERRED);
+        uip_ipaddr_copy(&UIP_IP_BUF->srcipaddr, &addr->ipaddr);
+        flags = UIP_ND6_NA_FLAG_SOLICITED | UIP_ND6_NA_FLAG_OVERRIDE;
+        goto create_na;
+      }
     }
   }
 #endif /* CONF_6LOWPAN_ND && (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER) */
@@ -1406,7 +1417,7 @@ ra_input(void)
                                    &nd6_opt_auth_br->address);
     PRINTF("New border router (");
     PRINT6ADDR(&nd6_opt_auth_br->address);
-    PRINTF(") with ABRO version %lu\n", abro_version);
+    PRINTF(") with ABRO version %lu (lifetime: %u)\n", abro_version, nd6_opt_auth_br->lifetime*60);
   }
 
   abro_version -= border_router->version;
@@ -1692,6 +1703,12 @@ ra_input(void)
       defrt = uip_ds6_defrt_add(&UIP_IP_BUF->srcipaddr,
                         (unsigned
                          long)(uip_ntohs(UIP_ND6_RA_BUF->router_lifetime)));
+#if DEBUG
+      PRINTF("RA input: adding default router ");
+      PRINT6ADDR(&defrt->ipaddr);
+      uint32_t routerlifetime = (unsigned long)(uip_ntohs(UIP_ND6_RA_BUF->router_lifetime));
+      PRINTF(" with lifetime %lu\n", routerlifetime);
+#endif
     } else {
       stimer_set(&(defrt->lifetime),
                  (unsigned long)(uip_ntohs(UIP_ND6_RA_BUF->router_lifetime)));
@@ -1704,7 +1721,8 @@ ra_input(void)
 
 #if CONF_6LOWPAN_ND
   if(defrt == NULL) {
-    PRINTF("RA input: default router lifetime set to 0. Neighbor set as garbage collectible.\n");
+    PRINTF("RA input: default router lifetime set to 0 or the default router list is full.\n");
+    PRINTF("Neighbor set as garbage collectible.\n");
     nbr->state = NBR_GARBAGE_COLLECTIBLE;
     goto discard;
   } else {
@@ -1856,7 +1874,7 @@ dac_input(void)
   return;
 
 discard:
-  uip_len = 0;
+  uip_clear_buf();
   return;
 }
 #endif /* CONF_6LOWPAN_ND && UIP_CONF_ROUTER */
