@@ -326,7 +326,7 @@ uip_nd6_na_output(uint8_t flags)
   PRINT6ADDR(&UIP_ND6_NA_BUF->tgtipaddr);
 #if (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER) && CONF_6LOWPAN_ND
   if(NODE_TYPE_ROUTER){
-  PRINTF(" with aro status :%d (flags: %d) ", aro_state, UIP_ND6_NA_BUF->flagsreserved);
+  PRINTF(" with aro status: %d", aro_state);
   }
 #endif /* UIP_CONF_ROUTER */
   PRINTF("\n");
@@ -352,9 +352,9 @@ ns_input(void)
   PRINTF("\n");
   UIP_STAT(++uip_stat.nd6.recv);
 
-#if CONF_6LOWPAN_ND && (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+#if CONF_6LOWPAN_ND
   if(non_router() || NODE_TYPE_HOST) {
-  PRINTF("Not yet router!\n");
+    PRINTF("NS discard because no yet router or always host!\n");
     goto discard;
   }
   nd6_opt_aro = NULL;
@@ -496,7 +496,10 @@ ns_input(void)
       }
       PRINTF("DAD - 1\n");
       goto discard;
-    } else {
+    } 
+  
+    /* Otherwise register immediattely the host */
+    else {
       if(aro_state == UIP_ND6_ARO_STATUS_SUCCESS) {
         stimer_set(&nbr->reachable, uip_ntohs(nd6_opt_aro->lifetime) * 60);
         uip_ds6_route_add(&UIP_IP_BUF->srcipaddr, 128, &nbr->ipaddr);
@@ -526,7 +529,9 @@ ns_input(void)
         uip_create_linklocal_allnodes_mcast(&UIP_IP_BUF->destipaddr);
         uip_ds6_select_src(&UIP_IP_BUF->srcipaddr, &UIP_IP_BUF->destipaddr);
         flags = UIP_ND6_NA_FLAG_OVERRIDE;
-#if (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER) && CONF_6LOWPAN_ND
+#if (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER) && CONF_6LOWPAN_ND && !UIP_CONF_IPV6_RPL
+        /* With RPL activated and as a router, these latter doesn't perform multicast NS
+         * and thus disover each other with RPL. */
         nbr = uip_ds6_nbr_add(&UIP_IP_BUF->srcipaddr,
                               (uip_lladdr_t *)&nd6_opt_llao[UIP_ND6_OPT_DATA_OFFSET],
                               ISROUTER_NODEFINE, NBR_GARBAGE_COLLECTIBLE);
@@ -832,40 +837,40 @@ na_input(void)
 #if CONF_6LOWPAN_ND
     if(nd6_opt_aro != NULL) {
       defrt = uip_ds6_defrt_lookup(&UIP_ND6_NA_BUF->tgtipaddr);
-    if (defrt != NULL) {
-      if ((nd6_opt_aro->lifetime == 0)) {
-        /* if lifetime is 0, that means we must remove cache entry */
-         uip_ds6_nbr_rm(nbr);
-         defrt = uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr);
-         if(defrt != NULL) {
-         uip_ds6_defrt_rm(defrt);
-         }
-      } else {
-      addr = uip_ds6_addr_lookup(&UIP_IP_BUF->destipaddr);
-      switch(nd6_opt_aro->status) {
-      case UIP_ND6_ARO_STATUS_SUCCESS:
-        addr = uip_ds6_addr_lookup(&UIP_IP_BUF->destipaddr);
-        nbr->state = NBR_REGISTERED;
-        nbr->nscount = 0;
-        addr->state = ADDR_PREFERRED;
-        stimer_set(&nbr->reachable, uip_ntohs(nd6_opt_aro->lifetime) * 60);
-        break;
-      case UIP_ND6_ARO_STATUS_DUPLICATE:
-        /* Removing an address is done by clearing the 'isused' attribute. */
-        uip_ds6_get_global_br(ADDR_TENTATIVE, defrt->br)->isused = 0;
-        break;
-      case UIP_ND6_ARO_STATUS_CACHE_FULL:
-        /* Host SHOULD remove this router from its default router list. */
-        defrt = uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr);
-        if(defrt != NULL) {
-          uip_ds6_defrt_rm(defrt);
+      if (defrt != NULL) {
+        if ((nd6_opt_aro->lifetime == 0)) {
+          /* if lifetime is 0, that means we must remove cache entry */
+          uip_ds6_nbr_rm(nbr);
+          defrt = uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr);
+          if(defrt != NULL) {
+            uip_ds6_defrt_rm(defrt);
+          }
+        } else {
+          addr = uip_ds6_addr_lookup(&UIP_IP_BUF->destipaddr);
+          switch(nd6_opt_aro->status) {
+          case UIP_ND6_ARO_STATUS_SUCCESS:
+            addr = uip_ds6_addr_lookup(&UIP_IP_BUF->destipaddr);
+            nbr->state = NBR_REGISTERED;
+            nbr->nscount = 0;
+            addr->state = ADDR_PREFERRED;
+            stimer_set(&nbr->reachable, uip_ntohs(nd6_opt_aro->lifetime) * 60);
+            break;
+          case UIP_ND6_ARO_STATUS_DUPLICATE:
+            /* Removing an address is done by clearing the 'isused' attribute. */
+            uip_ds6_get_global_br(ADDR_TENTATIVE, defrt->br)->isused = 0;
+            break;
+          case UIP_ND6_ARO_STATUS_CACHE_FULL:
+            /* Host SHOULD remove this router from its default router list. */
+            defrt = uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr);
+            if(defrt != NULL) {
+              uip_ds6_defrt_rm(defrt);
+            }
+            break;
+          default:
+            break;
+          }
         }
-        break;
-      default:
-        break;
       }
-      }
-    }
     }
 
 #else /* CONF_6LOWPAN_ND */
@@ -1027,7 +1032,7 @@ rs_input(void)
         /* we need to add the neighbor */
         nbr = uip_ds6_nbr_add(&UIP_IP_BUF->srcipaddr,
                         (uip_lladdr_t *)&nd6_opt_llao[UIP_ND6_OPT_DATA_OFFSET],
-                        ISROUTER_NODEFINE, NBR_GARBAGE_COLLECTIBLE,
+                        ISROUTER_NO, NBR_GARBAGE_COLLECTIBLE,
                         NBR_TABLE_REASON_IPV6_ND, NULL);
         stimer_set(&nbr->reachable, UIP_ND6_TENTATIVE_NCE_LIFETIME);
       } else {
@@ -1038,14 +1043,13 @@ rs_input(void)
           uip_ds6_nbr_rm(nbr);
           nbr = uip_ds6_nbr_add(&UIP_IP_BUF->srcipaddr,
                                 (uip_lladdr_t *)&nd6_opt_llao[UIP_ND6_OPT_DATA_OFFSET],
-                                ISROUTER_NODEFINE, NBR_GARBAGE_COLLECTIBLE,
+                                ISROUTER_NO, NBR_GARBAGE_COLLECTIBLE,
                                 NBR_TABLE_REASON_IPV6_ND, NULL);
           stimer_set(&nbr->reachable, UIP_ND6_TENTATIVE_NCE_LIFETIME);
           nbr->reachable = nbr_data.reachable;
           nbr->sendns = nbr_data.sendns;
           nbr->nscount = nbr_data.nscount;
         }
-        nbr->isrouter = ISROUTER_NODEFINE;
       }
 #else  /* CONF_6LOWPAN_ND */
       uip_lladdr_t lladdr_aligned;
@@ -1219,7 +1223,7 @@ uip_nd6_ra_output(uip_ipaddr_t * dest)
   UIP_ND6_OPT_ABRO_BUF->len = UIP_ND6_OPT_ABRO_LEN / 8;
   UIP_ND6_OPT_ABRO_BUF->verlow = uip_htons(locbr->version & 0xffff);
   UIP_ND6_OPT_ABRO_BUF->verhigh = uip_htons(locbr->version >> 16);
-  UIP_ND6_OPT_ABRO_BUF->lifetime = uip_htons((stimer_remaining(&locbr->timeout) / 60));
+  UIP_ND6_OPT_ABRO_BUF->lifetime = uip_htons(locbr->lifetime);
   uip_ipaddr_copy(&UIP_ND6_OPT_ABRO_BUF->address, &locbr->ipaddr);
 
   nd6_opt_offset += UIP_ND6_OPT_ABRO_LEN;
@@ -1362,7 +1366,6 @@ ra_input(void)
 #endif
 #endif
 
-
   PRINTF("Received RA from ");
   PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
   PRINTF(" to ");
@@ -1413,11 +1416,12 @@ ra_input(void)
 
   if(border_router == NULL) {
     /* New border router found */
-    border_router = uip_ds6_br_add(abro_version, nd6_opt_auth_br->lifetime,
+    border_router = uip_ds6_br_add(abro_version, uip_ntohs(nd6_opt_auth_br->lifetime),
                                    &nd6_opt_auth_br->address);
     PRINTF("New border router (");
     PRINT6ADDR(&nd6_opt_auth_br->address);
-    PRINTF(") with ABRO version %lu (lifetime: %u)\n", abro_version, nd6_opt_auth_br->lifetime*60);
+    PRINTF(") with ABRO version %lu (lifetime: %lus)\n", abro_version, 
+    (uint32_t)uip_ntohs(nd6_opt_auth_br->lifetime)*60);
   }
 
   abro_version -= border_router->version;
@@ -1676,7 +1680,9 @@ ra_input(void)
   if(abro_version >= 0) {
     /* Update timer */
     stimer_set(&border_router->timeout,
-         (nd6_opt_auth_br->lifetime == 0 ? 10000 : nd6_opt_auth_br->lifetime) * 60);
+         (uint32_t)(nd6_opt_auth_br->lifetime == 0 ? 10000 : uip_ntohs(nd6_opt_auth_br->lifetime)) * 60);
+    PRINTF("Setting BR lifetime to %lus.\n", 
+      (uint32_t)(nd6_opt_auth_br->lifetime == 0 ? 10000 : uip_ntohs(nd6_opt_auth_br->lifetime)) * 60);
   }
   if(abro_version > 0) {
     /* Update information */
@@ -1704,10 +1710,12 @@ ra_input(void)
                         (unsigned
                          long)(uip_ntohs(UIP_ND6_RA_BUF->router_lifetime)));
 #if DEBUG
-      PRINTF("RA input: adding default router ");
-      PRINT6ADDR(&defrt->ipaddr);
-      uint32_t routerlifetime = (unsigned long)(uip_ntohs(UIP_ND6_RA_BUF->router_lifetime));
-      PRINTF(" with lifetime %lu\n", routerlifetime);
+      if(defrt != NULL){
+        PRINTF("RA input: adding default router ");
+        PRINT6ADDR(&defrt->ipaddr);
+        uint32_t routerlifetime = (unsigned long)(uip_ntohs(UIP_ND6_RA_BUF->router_lifetime));
+        PRINTF(" with lifetime %lu\n", routerlifetime);
+      }
 #endif
     } else {
       stimer_set(&(defrt->lifetime),

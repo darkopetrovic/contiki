@@ -60,7 +60,6 @@
 #include <string.h>
 
 #define DEBUG DEBUG_PRINT
-
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -189,6 +188,11 @@ rpl_icmp6_update_nbr_table(uip_ipaddr_t *from, nbr_table_reason_t reason, void *
 {
   uip_ds6_nbr_t *nbr;
 
+  /**
+   * \sixlowpanndrpl  The 6lowpan-nd host doesn't go here because it discard
+   *                  DIO from router not in the neighbor cache. 
+   */
+
   if((nbr = uip_ds6_nbr_lookup(from)) == NULL) {
     if((nbr = uip_ds6_nbr_add(from, (uip_lladdr_t *)
                               packetbuf_addr(PACKETBUF_ADDR_SENDER),
@@ -202,10 +206,32 @@ rpl_icmp6_update_nbr_table(uip_ipaddr_t *from, nbr_table_reason_t reason, void *
   }
 
   if(nbr != NULL) {
-#if UIP_ND6_SEND_NA && !CONF_6LOWPAN_ND
+    /**
+     * \sixlowpanndrpl  For the router, do not update the NCE of a registered 
+     *                  router (assuming that they register each other with ARO)
+     *                  or host in a 6lowpan-nd states. 
+     */
+#if CONF_6LOWPAN_ND
+    if (nbr->state == NBR_REGISTERED || nbr->state == NBR_GARBAGE_COLLECTIBLE
+       || nbr->state == NBR_TENTATIVE || nbr->state == NBR_TENTATIVE_DAD)
+    {
+      return nbr;
+    }
+#endif /* CONF_6LOWPAN_ND */
+
+#if UIP_ND6_SEND_NA
+
+#if CONF_6LOWPAN_ND && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+    if(NODE_TYPE_HOST){
+      stimer_set(&nbr->reachable, UIP_ND6_TENTATIVE_NCE_LIFETIME);
+    }
+#else
     /* set reachable timer if we added or found the nbr entry - and update
        neighbor entry to reachable to avoid sending NS/NA, etc.  */
     stimer_set(&nbr->reachable, UIP_ND6_REACHABLE_TIME / 1000);
+#endif
+
+    
     nbr->state = NBR_REACHABLE;
 #endif /* UIP_ND6_SEND_NA */
   }
@@ -218,9 +244,9 @@ dis_input(void)
   rpl_instance_t *instance;
   rpl_instance_t *end;
 
+/** \sixlowpanndrpl As a leaf ignores DIS messages (RFC 6550, 16.2).*/
 #if CONF_6LOWPAN_ND && (RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER)
   if(NODE_TYPE_HOST){
-    /* As a leaf ignores DIS messages (RFC 6550, 16.2).*/
     return;
   }
 #endif /* CONF_6LOWPAN_ND */
@@ -301,6 +327,27 @@ dio_input(void)
   int i;
   int len;
   uip_ipaddr_t from;
+
+  /** \sixlowpanndrpl Once registered to a router, an host can receive a DIO from 
+   * another close router which isn't in the neighbor cache yet. Accept DIO
+   * only from registered router. Otherwise the router is added in the neighbor 
+   * cache in REACHEABLE state and this isn't permitted for a 6lowpan-nd device.
+   *
+   * However the host can register to this router if the default route list isn't
+   * full. 
+   */
+// #if CONF_6LOWPAN_ND && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+//   if(NODE_TYPE_HOST && uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr) == NULL){
+//     PRINTF("RPL: Received a DIO from ");
+//     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
+//     PRINTF(" but not a default router -> discard.\n");
+//     /** 
+//      * \feature From here we may send an NS to register to this router whether the
+//      *          router list is not full. 
+//      */
+//     return;
+//   }
+// #endif
 
   memset(&dio, 0, sizeof(dio));
 
@@ -1032,9 +1079,9 @@ dao_input(void)
   rpl_instance_t *instance;
   uint8_t instance_id;
 
+/** \sixlowpanndrpl As a leaf ignores DAO messages (RFC 6550, 16.2).*/
 #if CONF_6LOWPAN_ND && (RPL_LEAF_ONLY || UIP_CONF_DYN_HOST_ROUTER)
   if(NODE_TYPE_HOST){
-    /* As a leaf ignores DAO messages (RFC 6550, 16.2).*/
     return;
   }
 #endif /* CONF_6LOWPAN_ND */

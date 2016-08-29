@@ -77,6 +77,7 @@
 /** @} */
 
 /** \name RFC 4861 Router constants */
+/** Enable sending RA/NA by default with 6lowpan-nd */
 /** @{ */
 #if CONF_6LOWPAN_ND
 #undef UIP_CONF_ND6_SEND_RA

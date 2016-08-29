@@ -541,7 +541,12 @@ rpl_set_default_route(rpl_instance_t *instance, uip_ipaddr_t *from)
     PRINTF("RPL: Removing default route through ");
     PRINT6ADDR(&instance->def_route->ipaddr);
     PRINTF("\n");
-    uip_ds6_defrt_rm(instance->def_route);
+/** \sixlowpanndrpl As a host do not remove registered default router.*/
+#if CONF_6LOWPAN_ND && (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+    if(NODE_TYPE_ROUTER){
+      uip_ds6_defrt_rm(instance->def_route);
+    }
+#endif
     instance->def_route = NULL;
   }
 
@@ -1155,7 +1160,7 @@ rpl_join_instance(uip_ipaddr_t *from, rpl_dio_t *dio)
     default_instance = instance;
   }
 
-  PRINTF("RPL: Joined DAG with instance ID %u, rank %hu, DAG ID ",
+  PRINTF("RPL: Joined DAG with instance ID %u, rank %u, DAG ID ",
          dio->instance_id, dag->rank);
   PRINT6ADDR(&dag->dag_id);
   PRINTF("\n");
@@ -1360,6 +1365,19 @@ rpl_process_parent_event(rpl_instance_t *instance, rpl_parent_t *p)
 
   return_value = 1;
 
+  /** 
+   * \sixlowpanndrpl When the registration to a router is about to expire, the host need to 
+   * register itself again to the router. After three attempts, if this router
+   * is unreachable, it is removed and its neighbor cache entry is deleted. 
+   * Because this router was added as a RPL parents and the related neighbor
+   * cache is no more valid, we need to remove the parent from the list.
+   */
+#if CONF_6LOWPAN_ND && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+  if(NODE_TYPE_HOST && uip_ds6_defrt_lookup(rpl_get_parent_ipaddr(p)) == NULL){
+    rpl_remove_parent(p);
+  }
+#endif
+
   if(RPL_IS_STORING(instance)
       && uip_ds6_route_is_nexthop(rpl_get_parent_ipaddr(p))
       && !rpl_parent_is_reachable(p) && instance->mop > RPL_MOP_NON_STORING) {
@@ -1393,7 +1411,7 @@ rpl_process_parent_event(rpl_instance_t *instance, rpl_parent_t *p)
 
 #if DEBUG
   if(DAG_RANK(old_rank, instance) != DAG_RANK(instance->current_dag->rank, instance)) {
-    PRINTF("RPL: Moving in the instance from rank %hu to %hu\n",
+    PRINTF("RPL: Moving in the instance from rank %u to %u\n",
 	   DAG_RANK(old_rank, instance), DAG_RANK(instance->current_dag->rank, instance));
     if(instance->current_dag->rank != INFINITE_RANK) {
       PRINTF("RPL: The preferred parent is ");

@@ -45,6 +45,11 @@
 #include "shell-ifconfig.h"
 
 #include "net/ipv6/uip-ds6.h"
+
+#if UIP_CONF_IPV6_RPL
+#include "net/rpl/rpl.h"
+#endif /* CONF_6LOWPAN_ND */
+
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -180,7 +185,7 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
   while (nbr != NULL) {
     printf("   ");
     uip_debug_ipaddr_print(&nbr->ipaddr);
-    printf(" - router: ");
+    printf(" - deft. router: ");
 
 #if CONF_6LOWPAN_ND
     switch (nbr->isrouter) {
@@ -191,9 +196,11 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
       case ISROUTER_NO:
         printf("NO");
         break;
+#if UIP_CONF_ROUTER
       case ISROUTER_NODEFINE:
         printf("UNDEFINED YET");
         break;
+#endif /* UIP_CONF_ROUTER */
     }
 #else /* CONF_6LOWPAN_ND */
     if (nbr->isrouter) {
@@ -218,7 +225,7 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
     case NBR_TENTATIVE_DAD:
       printf("TENTATIVE DAD");
       break;
-#else /* CONF_6LOWPAN_ND */
+#endif /* CONF_6LOWPAN_ND */
     case NBR_INCOMPLETE:
       printf("INCOMPLETE");
       break;
@@ -234,7 +241,6 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
     case NBR_PROBE:
       printf("PROBE");
       break;
-#endif /* CONF_6LOWPAN_ND */
     default:
       printf("%d", nbr->state);
     }
@@ -260,10 +266,17 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
     printf("    ");
     uip_debug_ipaddr_print(&br->ipaddr);
     printf(" - version: %lu", br->version);
-    printf(" - lifetime: %lus", (uint32_t)((br->lifetime == 0 ? 10000 : br->lifetime) * 60));
+    printf(" - lifetime: %lus", (uint32_t)(br->lifetime == 0 ? 10000 : br->lifetime) * 60);
     printf(" (expiring in: %lus)\n", stimer_remaining(&br->timeout));
   }
 #endif /* CONF_6LOWPAN_ND */
+
+
+#if UIP_CONF_IPV6_RPL
+  printf("RPL:\n");
+  rpl_print_neighbor_list();
+#endif /* CONF_6LOWPAN_ND */
+
 
   PROCESS_END();
 }
