@@ -123,7 +123,9 @@ tcpip_output(const uip_lladdr_t *a)
 {
   int ret;
   if(outputfunc != NULL) {
+#if ENABLE_CUSTOM_RDC
     crdc_period_start(0);
+#endif /* ENABLE_CUSTOM_RDC */
     ret = outputfunc(a);
     return ret;
   }
@@ -681,7 +683,7 @@ tcpip_ipv6_output(void)
         return;
       } else{
         tcpip_output(uip_ds6_nbr_get_ll(nbr));
-        uip_len = 0;
+        uip_clear_buf();
         return;
       }
     }
@@ -724,7 +726,7 @@ tcpip_ipv6_output(void)
       }
 #else /* UIP_ND6_SEND_NA */
       PRINTF("tcpip_ipv6_output: neighbor not in cache\n");
-      uip_len = 0;
+      uip_clear_buf();
       return;  
 #endif /* UIP_ND6_SEND_NA */
     } else {

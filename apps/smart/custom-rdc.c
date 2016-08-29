@@ -85,8 +85,8 @@ float2str(float num, uint8_t preci)
   return buf;
 }
 
-static void
-stop_rdc(void *ptr)
+static 
+void stop_rdc(void *ptr)
 {
 #if UIP_ND6_SEND_NA
   uip_ds6_nbr_t *nbr;
@@ -255,7 +255,7 @@ crdc_lpm_enter(void)
 
 #endif
 
-    PRINTF("CRDC: *** Time: %lu *** (%d, %d)\n", clock_time());
+    PRINTF("CRDC: *** Time: %lu *** \n", clock_time());
   } else {
     /* RDC is enabled -> normal behaviour. */
 #if CONTIKI_TARGET_CC2538DK
@@ -314,9 +314,14 @@ static uint8_t
 expect_response(void)
 {
 #if UIP_CONF_IPV6_RPL
-  if(UIP_ICMP_BUF->type == ICMP6_RS || UIP_ICMP_BUF->type == ICMP6_NS ||
-      (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_DIS) ||
-      (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_SEC_DIS))
+  if( (UIP_ICMP_BUF->type == ICMP6_RS || UIP_ICMP_BUF->type == ICMP6_NS)
+      || (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_DIS)
+      || (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_SEC_DIS)
+#if RPL_WITH_DAO_ACK
+      || (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_DAO)
+      || (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_SEC_DAO)
+#endif
+    )
 #else /* UIP_CONF_IPV6_RPL */
   if(UIP_ICMP_BUF->type == ICMP6_RS || UIP_ICMP_BUF->type == ICMP6_NS)
 #endif /* UIP_CONF_IPV6_RPL */

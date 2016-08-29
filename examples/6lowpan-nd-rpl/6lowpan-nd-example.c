@@ -86,6 +86,10 @@
 PROCESS(nd_optimization_example, "6lowpan-nd example");
 AUTOSTART_PROCESSES(&nd_optimization_example);
 
+#if UDPCLIENT
+PROCESS_NAME(udp_client_process);
+#endif
+
 #if SHELL
 PROCESS(shell_fast_reboot_process, "reboot");
 SHELL_COMMAND(fast_reboot_command,
@@ -95,6 +99,10 @@ SHELL_COMMAND(fast_reboot_command,
 #endif /* SHELL */
 
 static struct etimer status_timer;
+
+#if CONTIKI_TARGET_Z1 && !UIP_CONF_ROUTER
+static struct etimer delay_start;
+#endif
 
 /*---------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------*/
@@ -145,8 +153,27 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   SENSORS_ACTIVATE(button_sensor);
 #endif
 
+/* Delay the start of the host. Wait network to setup properly. */
+#if CONTIKI_TARGET_Z1 && !UIP_CONF_ROUTER
+
+  etimer_stop(&uip_ds6_timer_rs);
+
+  etimer_set(&delay_start, CLOCK_SECOND*30);
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&delay_start));
+
+  PROCESS_CONTEXT_BEGIN(&tcpip_process);
+  etimer_set(&uip_ds6_timer_rs,
+                 random_rand() % (UIP_ND6_RTR_SOLICITATION_INTERVAL *
+                                  CLOCK_SECOND));
+  PROCESS_CONTEXT_END(&tcpip_process);
+#endif
+
 #if CONTIKI_TARGET_Z1
-  etimer_set(&status_timer, CLOCK_SECOND);
+  etimer_set(&status_timer, CLOCK_SECOND*10);
+#endif
+
+#if UDPCLIENT
+  process_start(&udp_client_process, NULL);
 #endif
 
   
@@ -213,7 +240,9 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
     if( ev == sensors_event ) {
       if(data == &button_sensor) {
         PRINTF("Button select pushed.\n");
+#if ENABLE_CUSTOM_RDC
         crdc_period_start(10);
+#endif /* ENABLE_CUSTOM_RDC */
 #if UIP_CONF_DYN_HOST_ROUTER
         if(node_type==ROUTER){
           set_node_type(HOST);

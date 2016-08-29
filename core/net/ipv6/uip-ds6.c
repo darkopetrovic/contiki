@@ -232,6 +232,9 @@ uip_ds6_periodic(void)
 #if CONF_6LOWPAN_ND
    d = uip_ds6_defrt_list_head();
 
+   /** 
+    * \needreview How the host should send RS when no more router? 
+    */
    /* whenever the default router list is empty we send RS */
    /*if(d == NULL && etimer_expired(&uip_ds6_timer_rs)){
      PRINTF("uip_ds6_defrt_periodic: default router list is empty we send RS\n");

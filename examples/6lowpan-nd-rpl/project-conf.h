@@ -28,46 +28,58 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /**
- * \addtogroup cc2538-examples
- * @{
- *
  * \file
- * Project specific configuration
+ *          Example project to test 6lowpan-nd with rpl. 
+ *          (for cc2538 and z1 (cooja) platforms)
  */
+
+
 #ifndef PROJECT_CONF_H_
 #define PROJECT_CONF_H_
 
-#define CONF_6LOWPAN_ND               1
-//#define USB_SERIAL_CONF_ENABLE        0
-//#undef UIP_CONF_ROUTER
-//#define UIP_CONF_ROUTER               0
-//#define UIP_CONF_DYN_HOST_ROUTER      0
+/**
+ * \sixlowpanndrpl 	We disable the probing for the host when
+ *                  6lowpan-nd is enabled. 
+ *
+ * \todo implement dynamic host/router for the probing
+ */
+#if CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL && !UIP_CONF_ROUTER
+#define RPL_CONF_WITH_PROBING               0
+#endif         
 
-/** Enable the external 32k oscillator */
-#define SYS_CTRL_CONF_OSC32K_USE_XTAL         1
+/* RPL configuration */
 
-//#define NETSTACK_CONF_RDC     nullrdc_driver
+/** 
+ * \needreview The DAO message couldn't be received sometimes by the node. 
+ * Need to do more tests.
+ */
+#define RPL_CONF_WITH_DAO_ACK               1
 
-#define UIP_CONF_ND6_SEND_NA              1
-//#define UIP_CONF_IPV6_RPL                         0
+/* 6LoWPAN-ND configuration */
 
+#define UIP_CONF_ND6_REGISTRATION_LIFETIME  5
 
-#define CC2538_RF_CONF_CHANNEL              26
-#define LPM_CONF_MAX_PM                   2
+/* System configuration */
 
-#if !UIP_CONF_ROUTER
-#define UIP_DS6_CONF_PERIOD               CLOCK_SECOND*10
+#define UIP_CONF_TCP                        0
+
+#define	WATCHDOG_CONF_ENABLE                0
+
+#if !UIP_CONF_ROUTER && CRDC_CONF_ENABLE_CUSTOM_RDC
+#define UIP_DS6_CONF_PERIOD                 CLOCK_SECOND*10
 #endif
 
-#define UIP_CONF_ND6_REGISTRATION_LIFETIME		5
+/* Platform specific configurations. */
 
-#define UIP_CONF_TCP				0
-      
-#define ENTER_SLEEP_MODE()           _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF)
+#if CONTIKI_TARGET_CC2538DK
+#define CC2538_RF_CONF_CHANNEL              25
+#define LPM_CONF_MAX_PM                     2
+#endif
 
-#define	WATCHDOG_CONF_ENABLE		0
+#if CONTIKI_TARGET_Z1
+#define ENTER_SLEEP_MODE()  _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF)
+#endif
 
 #endif /* PROJECT_CONF_H_ */
-
-/** @} */

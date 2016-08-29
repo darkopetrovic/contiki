@@ -253,6 +253,7 @@ uip_ds6_link_neighbor_callback(int status, int numtx)
 void
 uip_ds6_neighbor_periodic(void)
 {
+  uip_ds6_defrt_t *locdefrt;
   uip_ds6_nbr_t *nbr = nbr_table_head(ds6_neighbors);
   while(nbr != NULL) {
     switch(nbr->state) {
@@ -286,6 +287,10 @@ uip_ds6_neighbor_periodic(void)
           uip_ds6_get_global(ADDR_PREFERRED) != NULL && 
           stimer_expired(&nbr->sendns)) 
         {
+          /* Need to remove the default router too. */
+          if((locdefrt = uip_ds6_defrt_lookup(&nbr->ipaddr)) != NULL) {
+            uip_ds6_defrt_rm(locdefrt);
+          }
           uip_ds6_nbr_rm(nbr);
           PRINTF("Registration failed: remove neighbor (");
           PRINT6ADDR(&nbr->ipaddr);
@@ -303,7 +308,9 @@ uip_ds6_neighbor_periodic(void)
           }
 #if DEBUG
           else{
-            PRINTF("No global address configured with the border router.\n");
+            PRINTF("No global address configured with the border router from the default router ");
+            PRINT6ADDR(&nbr->ipaddr);
+            PRINTF(".\n");
           }
 #endif
 #if CONF_6LOWPAN_ND_OPTI_NS
@@ -346,9 +353,28 @@ uip_ds6_neighbor_periodic(void)
       }
       break;
 #endif /* UIP_CONF_ROUTER */
-#else /* CONF_6LOWPAN_ND */
+#endif /* CONF_6LOWPAN_ND */
+
     case NBR_REACHABLE:
       if(stimer_expired(&nbr->reachable)) {
+#if CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+        /**
+         * \sixlowpanndrpl  When RPL is activated and the node is receiving a DIO,
+         *                  an NCE will be created in RECHEABLE state. As this state
+         *                  must not exit for a 6lowpan-nd host but we wouldn't prevent 
+         *                  the host to find new router via RPL, the host register to this
+         *                  new router with an ARO. 
+         */
+        if(NODE_TYPE_HOST){
+          uip_nd6_rs_unicast_output(&nbr->ipaddr);
+          uip_ds6_nbr_rm(nbr);
+          tcpip_ipv6_output();
+          /*nbr->state = NBR_TENTATIVE;
+          nbr->nscount = 0;
+          nbr->isrouter = ISROUTER_YES;
+          stimer_set(&nbr->sendns, 0);*/
+        }
+#else /* CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL */
 #if UIP_CONF_IPV6_RPL
         /* when a neighbor leave its REACHABLE state and is a default router,
            instead of going to STALE state it enters DELAY state in order to
@@ -375,6 +401,7 @@ uip_ds6_neighbor_periodic(void)
         PRINTF(")\n");
         nbr->state = NBR_STALE;
 #endif /* UIP_CONF_IPV6_RPL */
+#endif /* CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL */
       }
       break;
     case NBR_INCOMPLETE:
@@ -397,7 +424,6 @@ uip_ds6_neighbor_periodic(void)
       break;
     case NBR_PROBE:
       if(nbr->nscount >= UIP_ND6_MAX_UNICAST_SOLICIT) {
-        uip_ds6_defrt_t *locdefrt;
         PRINTF("PROBE END\n");
         if((locdefrt = uip_ds6_defrt_lookup(&nbr->ipaddr)) != NULL) {
           if (!locdefrt->isinfinite) {
@@ -412,7 +438,6 @@ uip_ds6_neighbor_periodic(void)
         stimer_set(&nbr->sendns, uip_ds6_if.retrans_timer / 1000);
       }
       break;
-#endif /* CONF_6LOWPAN_ND */
     default:
       break;
     }

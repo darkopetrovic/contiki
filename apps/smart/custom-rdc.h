@@ -47,7 +47,7 @@
 /* The duration in seconds the system keeps the RDC on to receive
  * a packet in response. */
 #ifndef CRDC_CONF_WAIT_RESPONSE
-#define CRDC_WAIT_RESPONSE          3 // second(s)
+#define CRDC_WAIT_RESPONSE          5 // second(s)
 #else
 #define CRDC_WAIT_RESPONSE          CRDC_CONF_WAIT_RESPONSE
 #endif
