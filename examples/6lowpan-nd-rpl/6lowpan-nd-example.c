@@ -124,10 +124,12 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   PRINTF("standard ");
 #endif
 
-#if UIP_CONF_ROUTER
-  PRINTF("ROUTER.\n");
-#else
-  PRINTF("HOST.\n");
+#if DEBUG
+  if(NODE_TYPE_ROUTER){
+    PRINTF("ROUTER.\n");
+  } else {
+    PRINTF("HOST.\n");
+  }
 #endif
 
 #if SHELL
@@ -240,18 +242,27 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
     if( ev == sensors_event ) {
       if(data == &button_sensor) {
         PRINTF("Button select pushed.\n");
+
 #if ENABLE_CUSTOM_RDC
         crdc_period_start(10);
 #endif /* ENABLE_CUSTOM_RDC */
+
 #if UIP_CONF_DYN_HOST_ROUTER
         if(node_type==ROUTER){
           set_node_type(HOST);
+#if ENABLE_CUSTOM_RDC
+          crdc_disable_rdc(0);
+#endif /* ENABLE_CUSTOM_RDC */
           PRINTF("Device set as HOST.\n");
         } else if(node_type==HOST){
+#if ENABLE_CUSTOM_RDC
+          crdc_enable_rdc();
+#endif /* ENABLE_CUSTOM_RDC */
           set_node_type(ROUTER);
           PRINTF("Device set as ROUTER.\n");
         }
 #endif /* UIP_CONF_DYN_HOST_ROUTER */
+
       }
     }
   } /* while(1) */

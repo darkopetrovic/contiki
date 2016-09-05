@@ -93,6 +93,18 @@ void stop_rdc(void *ptr)
   uint8_t ns_msg_is_sent;
 #endif /* UIP_ND6_SEND_NA */
 
+/**
+ * Small security: with the dynamic host/router feature, if the CRDC period was
+ * enabled while the node is a host, this stop_rdc function is scheduled. 
+ * If the node becomes a router meanwhile, we prevent to stop the RDC. 
+ * Same for the USB cable.
+ */
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+  if(NODE_TYPE_ROUTER || USB_IS_PLUGGED()){
+    return;
+  }
+#endif /* UIP_CONF_DYN_HOST_ROUTER*/
+
 #if DEBUG && CRDC_COAP_IS_ENALBED
   if( coap_confirmable_transaction_exist() ){
     PRINTF("CRDC: > Confirmable notification found!\n");
@@ -147,8 +159,13 @@ void stop_rdc(void *ptr)
 void
 crdc_init(void)
 {
-#if UIP_CONF_ROUTER
-  rdc_is_on = 1;
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+  if(NODE_TYPE_ROUTER){
+    rdc_is_on = 1;
+  } else {
+    rdc_is_on = 0;
+    disableRDC(0);
+  }
 #else 
   rdc_is_on = 0;
   disableRDC(0);
@@ -163,7 +180,7 @@ crdc_lpm_enter(void)
   rtimer_clock_t next_wakeup_time;
   //uip_ds6_nbr_t *nbr;
 
-  if( !rdc_is_on ){
+  if(!rdc_is_on){
     next_expiration = etimer_next_expiration_time();
 
     /* When 'next_expiration' is 0 that means there is no more etimer pending. And thus,

@@ -57,6 +57,14 @@
 #include "cfs/cfs-coffee.h"
 #include "sys/autostart.h"
 
+#include "dev/battery-sensor.h"
+#include "dev/button-sensor.h"
+#include "dev/sht11/sht11-sensor.h"
+
+#include "net/ipv6/uip-ds6.h"
+
+SENSORS(&button_sensor);
+
 extern unsigned char node_mac[8];
 
 #if DCOSYNCH_CONF_ENABLED
@@ -421,6 +429,11 @@ main(int argc, char **argv)
 #if DCOSYNCH_CONF_ENABLED
   timer_set(&mgt_timer, DCOSYNCH_PERIOD * CLOCK_SECOND);
 #endif
+
+#if ENABLE_CUSTOM_RDC
+  crdc_init();
+#endif /* ENABLE_CUSTOM_RDC */
+
   watchdog_start();
   /*  watchdog_stop();*/
   while(1) {
@@ -456,13 +469,18 @@ main(int argc, char **argv)
          were awake. */
       energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
       watchdog_stop();
+#if ENABLE_CUSTOM_RDC && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+    if(!USB_IS_PLUGGED()){
+      crdc_lpm_enter();
+    }
+#else /* ENABLE_CUSTOM_RDC */
       _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF); /* LPM3 sleep. This
                                               statement will block
                                               until the CPU is
                                               woken up by an
                                               interrupt that sets
                                               the wake up flag. */
-
+#endif /* ENABLE_CUSTOM_RDC */
       /* We get the current processing time for interrupts that was
          done during the LPM and store it for next time around.  */
       dint();

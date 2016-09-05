@@ -230,8 +230,6 @@ rpl_icmp6_update_nbr_table(uip_ipaddr_t *from, nbr_table_reason_t reason, void *
        neighbor entry to reachable to avoid sending NS/NA, etc.  */
     stimer_set(&nbr->reachable, UIP_ND6_REACHABLE_TIME / 1000);
 #endif
-
-    
     nbr->state = NBR_REACHABLE;
 #endif /* UIP_ND6_SEND_NA */
   }

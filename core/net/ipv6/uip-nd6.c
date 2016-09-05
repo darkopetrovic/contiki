@@ -1465,12 +1465,12 @@ ra_input(void)
         goto discard;
       }
 #if CONF_6LOWPAN_ND
-    if(nbr == NULL) {
-      nbr = uip_ds6_nbr_add(&UIP_IP_BUF->srcipaddr,
-                  (uip_lladdr_t *)&nd6_opt_llao[UIP_ND6_OPT_DATA_OFFSET],
-                  ISROUTER_YES, NBR_TENTATIVE, NBR_TABLE_REASON_IPV6_ND, NULL);
-      stimer_set(&nbr->reachable, UIP_ND6_TENTATIVE_NCE_LIFETIME);
-    }
+      if(nbr == NULL) {
+        nbr = uip_ds6_nbr_add(&UIP_IP_BUF->srcipaddr,
+                    (uip_lladdr_t *)&nd6_opt_llao[UIP_ND6_OPT_DATA_OFFSET],
+                    ISROUTER_YES, NBR_TENTATIVE, NBR_TABLE_REASON_IPV6_ND, NULL);
+        stimer_set(&nbr->reachable, UIP_ND6_TENTATIVE_NCE_LIFETIME);
+      }
 #else /* CONF_6LOWPAN_ND */
       if(nbr == NULL) {
         nbr = uip_ds6_nbr_add(&UIP_IP_BUF->srcipaddr, &lladdr_aligned,
@@ -1952,9 +1952,6 @@ uip_nd6_init()
   uip_icmp6_register_input_handler(&dac_input_handler);
 #endif /* CONF_6LOWPAN_ND && UIP_CONF_ROUTER  */
 
-#if UIP_CONF_DYN_HOST_ROUTER
-  node_type = HOST;
-#endif /* UIP_CONF_DYN_HOST_ROUTER */
 }
 /*---------------------------------------------------------------------------*/
  /** @} */
