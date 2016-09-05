@@ -77,7 +77,7 @@
 #define ISROUTER_NO 0
 #define ISROUTER_YES 1
 // mytodo: need to review this
-#if !UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+#if !UIP_CONF_ROUTER
 #define ISROUTER_NODEFINE ISROUTER_YES
 #else /* UIP_CONF_6LN */
 #define ISROUTER_NODEFINE 2

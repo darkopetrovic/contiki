@@ -35,7 +35,6 @@
  *          (for cc2538 and z1 (cooja) platforms)
  */
 
-
 #ifndef PROJECT_CONF_H_
 #define PROJECT_CONF_H_
 

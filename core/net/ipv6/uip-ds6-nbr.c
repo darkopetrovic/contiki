@@ -361,18 +361,16 @@ uip_ds6_neighbor_periodic(void)
         /**
          * \sixlowpanndrpl  When RPL is activated and the node is receiving a DIO,
          *                  an NCE will be created in RECHEABLE state. As this state
-         *                  must not exit for a 6lowpan-nd host but we wouldn't prevent 
-         *                  the host to find new router via RPL, the host register to this
-         *                  new router with an ARO. 
+         *                  must not exist for a 6lowpan-nd host and we wouldn't prevent 
+         *                  the host to find new router via RPL, the host send an RS to 
+         *                  add and register itself to this new router. 
          */
         if(NODE_TYPE_HOST){
-          uip_nd6_rs_unicast_output(&nbr->ipaddr);
-          uip_ds6_nbr_rm(nbr);
-          tcpip_ipv6_output();
-          /*nbr->state = NBR_TENTATIVE;
+          nbr->state = NBR_TENTATIVE;
           nbr->nscount = 0;
           nbr->isrouter = ISROUTER_YES;
-          stimer_set(&nbr->sendns, 0);*/
+          uip_nd6_rs_unicast_output(&nbr->ipaddr);
+          tcpip_ipv6_output();
         }
 #else /* CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL */
 #if UIP_CONF_IPV6_RPL

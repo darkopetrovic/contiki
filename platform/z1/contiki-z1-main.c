@@ -466,10 +466,8 @@ main(int argc, char **argv)
       energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
 
       watchdog_stop();
-#if ENABLE_CUSTOM_RDC && !UIP_CONF_ROUTER
-    /* Doesn't use the custom RDC if a ROUTER. 
-     * If a HOST, the RDC is constantly enabled if USB is plugged in. */
-    if(NODE_TYPE_HOST && !USB_IS_PLUGGED()){
+#if ENABLE_CUSTOM_RDC && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+    if(!USB_IS_PLUGGED()){
       crdc_lpm_enter();
     }
 #else /* ENABLE_CUSTOM_RDC */

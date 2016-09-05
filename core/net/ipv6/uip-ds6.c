@@ -155,6 +155,16 @@ uip_ds6_init(void)
   uip_create_linklocal_allnodes_mcast(&loc_fipaddr);
   uip_ds6_maddr_add(&loc_fipaddr);
 
+#if UIP_CONF_DYN_HOST_ROUTER
+#if UIP_CONF_ROUTER
+  node_type = ROUTER;
+  PRINTF("Router: YES\n");
+#else /* UIP_CONF_ROUTER */
+  node_type = HOST;
+  PRINTF("Router: NO\n");
+#endif /* UIP_CONF_ROUTER */
+#endif /* UIP_CONF_DYN_HOST_ROUTER */
+
 #if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
 
   if( NODE_TYPE_ROUTER ){
