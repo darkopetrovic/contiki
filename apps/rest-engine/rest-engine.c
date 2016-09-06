@@ -107,12 +107,23 @@ rest_activate_resource(resource_t *resource, char *path)
 
   PRINTF("Activating: %s\n", resource->url);
 
-  /* Only add periodic resources with a periodic_handler and a period > 0. */
-  if(resource->flags & IS_PERIODIC && resource->periodic->periodic_handler
-     && resource->periodic->period) {
+  /* Add ALL periodic resources to be present in the list. They are activated later. */
+#if REST_DELAY_START
+  if(resource->flags & IS_PERIODIC && resource->periodic->periodic_handler)
+#else
+   /* Only add periodic resources with a periodic_handler and a period > 0. */
+   if(resource->flags & IS_PERIODIC && resource->periodic->periodic_handler
+      && resource->periodic->period)
+#endif
+  {
     PRINTF("Periodic resource: %p (%s)\n", resource->periodic,
            resource->periodic->resource->url);
     list_add(restful_periodic_services, resource->periodic);
+  }
+
+  // execute the new init() function of the resource
+  if(resource->init){
+     resource->init();
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -194,6 +205,7 @@ PROCESS_THREAD(rest_engine_process, ev, data)
   /* initialize the PERIODIC_RESOURCE timers, which will be handled by this process. */
   periodic_resource_t *periodic_resource = NULL;
 
+#if REST_DELAY_START
   for(periodic_resource =
         (periodic_resource_t *)list_head(restful_periodic_services);
       periodic_resource; periodic_resource = periodic_resource->next) {
@@ -204,6 +216,7 @@ PROCESS_THREAD(rest_engine_process, ev, data)
                  periodic_resource->period);
     }
   }
+#endif /* REST_DELAY_START */
   while(1) {
     PROCESS_WAIT_EVENT();
 

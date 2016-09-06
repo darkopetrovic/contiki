@@ -76,5 +76,6 @@ void coap_clear_transaction(coap_transaction_t *t);
 coap_transaction_t *coap_get_transaction_by_mid(uint16_t mid);
 
 void coap_check_transactions(void);
+uint8_t coap_confirmable_transaction_exist();
 
 #endif /* COAP_TRANSACTIONS_H_ */
