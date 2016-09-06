@@ -64,7 +64,7 @@
 #include "dev/watchdog.h"
 #endif /* SHELL */
 
-#include "apps/smart-led/smart-led.h"
+#include "smart-led.h"
 
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
@@ -115,6 +115,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
 #if CONTIKI_TARGET_Z1
   uip_ds6_nbr_t *nbr;
   uip_ipaddr_t *defrt_addr;
+  static uint8_t na_received;
 #endif
 
   PROCESS_BEGIN();
@@ -181,7 +182,6 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   process_start(&udp_client_process, NULL);
 #endif
 
-  
   while(1) {
     PROCESS_YIELD();
 
@@ -202,14 +202,17 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
         defrt_addr = uip_ds6_defrt_choose();
 
         /* Node found a router. */
-        if(defrt_addr != NULL){
-          blink_leds(LEDS_COOJA_BLUE, CLOCK_SECOND, 0);
-        } else {
-          leds_off(LEDS_COOJA_BLUE);
+        if(!na_received){
+          if(defrt_addr != NULL){
+            blink_leds(LEDS_COOJA_BLUE, CLOCK_SECOND, 0);
+          } else {
+            leds_off(LEDS_COOJA_BLUE);
+          }
         }
 
         /* Node received an NA message and successfully registered 
-         * to the router (6lowpan-nd) or resolved address with this latter (ndp). */
+         * to the router (6lowpan-nd) or resolved address with this latter (ndp). 
+         */
         nbr = uip_ds6_nbr_lookup(defrt_addr);
 #if CONF_6LOWPAN_ND
         if(nbr != NULL && nbr->state == NBR_REGISTERED)
@@ -217,11 +220,14 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
         if(nbr != NULL && (nbr->state == NBR_REACHABLE || nbr->state == NBR_STALE))
 #endif /* CONF_6LOWPAN_ND */
         {
+          na_received=1;
           blink_leds_stop();
           leds_on(LEDS_COOJA_BLUE);
         } else {
+          na_received=0;
           leds_off(LEDS_COOJA_BLUE);
         }
+
 #if UIP_CONF_IPV6_RPL
         /* Find that a DIS message is going to be send. */
         if(rpl_get_any_dag() == NULL && rpl_get_next_dis() >= RPL_DIS_INTERVAL-1){
