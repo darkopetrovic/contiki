@@ -45,6 +45,10 @@
 #include "net/mac/mac.h"
 #include "net/llsec/llsec802154.h"
 
+#if RDC_CONF_SLEEPING_HOST
+#include "custom-rdc.h"
+#endif
+
 #ifdef RDC_CONF_WITH_DUPLICATE_DETECTION
 #define RDC_WITH_DUPLICATE_DETECTION RDC_CONF_WITH_DUPLICATE_DETECTION
 #else /* RDC_CONF_WITH_DUPLICATE_DETECTION */

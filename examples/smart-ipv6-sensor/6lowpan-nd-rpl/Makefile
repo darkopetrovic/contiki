@@ -1,0 +1,11 @@
+PROJECT = 6lowpan-nd-rpl
+
+WITH_SHELL=1
+WITH_UDPCLIENT=1
+WITH_CUSTOMRDC=1
+
+PROJECTDIR=..
+CONTIKI = ../../..
+
+include $(PROJECTDIR)/Makefile
+
