@@ -90,9 +90,13 @@ coap_receive(void)
     if(erbium_status_code == NO_ERROR) {
 
       /*TODO duplicates suppression, if required by application */
+      #if DEBUG
+          uint8_t etag_reversed[COAP_ETAG_LEN];
+          array_reverse(message->etag, etag_reversed, message->etag_len);
+      #endif
+      PRINTF("  Parsed: v %u, t %u, tkl %u, c %u, mid %u, etag %#018x \n", message->version,
+             message->type, message->token_len, message->code, message->mid, (unsigned int)*(uint32_t*)etag_reversed);
 
-      PRINTF("  Parsed: v %u, t %u, tkl %u, c %u, mid %u\n", message->version,
-             message->type, message->token_len, message->code, message->mid);
       PRINTF("  URL: %.*s\n", message->uri_path_len, message->uri_path);
       PRINTF("  Payload: %.*s\n", message->payload_len, message->payload);
 

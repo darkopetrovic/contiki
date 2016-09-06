@@ -177,3 +177,18 @@ coap_check_transactions()
   }
 }
 /*---------------------------------------------------------------------------*/
+uint8_t
+coap_confirmable_transaction_exist()
+{
+  coap_transaction_t *t = NULL;
+
+  for(t = (coap_transaction_t *)list_head(transactions_list); t; t = t->next) {
+    if(COAP_TYPE_CON ==
+       ((COAP_HEADER_TYPE_MASK & t->packet[0]) >> COAP_HEADER_TYPE_POSITION)) {
+      PRINTF("Confirmable notification found!\n");
+      return 1;
+    }
+  }
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
