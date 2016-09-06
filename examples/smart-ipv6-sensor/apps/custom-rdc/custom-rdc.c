@@ -8,10 +8,10 @@
  *  \author
  *  Darko Petrovic
  */
+#include <examples/smart-ipv6-sensor/apps/custom-rdc/custom-rdc.h>
 #include "contiki.h"
-#include "custom-rdc.h"
 
-#if ENABLE_CUSTOM_RDC
+#if RDC_SLEEPING_HOST
 
 #include "net/netstack.h"
 #include "net/ipv6/uip-ds6.h"
@@ -399,6 +399,6 @@ crdc_period_start(uint32_t seconds)
   }
 }
 
-#endif // RDC_SLEEPING_HOST
+#endif // ENABLE_CUSTOM_RDC
 
 /** @} */

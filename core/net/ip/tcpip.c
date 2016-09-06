@@ -77,8 +77,6 @@ extern struct uip_fallback_interface UIP_FALLBACK_INTERFACE;
 #include "rpl/rpl.h"
 #endif
 
-#include "custom-rdc.h"
-
 process_event_t tcpip_event;
 #if UIP_CONF_ICMP6
 process_event_t tcpip_icmp6_event;
@@ -123,9 +121,9 @@ tcpip_output(const uip_lladdr_t *a)
 {
   int ret;
   if(outputfunc != NULL) {
-#if ENABLE_CUSTOM_RDC
+#if RDC_SLEEPING_HOST
     crdc_period_start(0);
-#endif /* ENABLE_CUSTOM_RDC */
+#endif /* RDC_SLEEPING_HOST */
     ret = outputfunc(a);
     return ret;
   }
