@@ -249,13 +249,15 @@ main(void)
     } while(r > 0);
 
     /* We have serviced all pending events. Enter a Low-Power mode. */
-#if ENABLE_CUSTOM_RDC && !UIP_CONF_ROUTER
-    if(NODE_TYPE_HOST && !USB_IS_PLUGGED()){
+#if !SHELL
+#if ENABLE_CUSTOM_RDC
+    if(!USB_IS_PLUGGED()){
       crdc_lpm_enter();
     }
 #else /* ENABLE_CUSTOM_RDC */
     lpm_enter();
 #endif /* ENABLE_CUSTOM_RDC */
+#endif /* !SHELL */
   }
 }
 /*---------------------------------------------------------------------------*/

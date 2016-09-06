@@ -31,8 +31,7 @@
 
 /**
  * \file
- *          Example project to test 6lowpan-nd with rpl. 
- *          (for cc2538 and z1 (cooja) platforms)
+ *          Proect specific configuration.
  */
 
 #ifndef PROJECT_CONF_H_
