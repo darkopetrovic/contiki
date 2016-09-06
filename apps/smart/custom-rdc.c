@@ -146,7 +146,10 @@ void stop_rdc(void *ptr)
    *  - if a RS or NS message has been sent, and thus waiting on RA or NA
    *  - blockwise transfer is not finished, wait the client to get from complete message */
   if ( !coap_confirmable_transaction_exist() && !resource_pending_msg() 
-      && !ns_msg_is_sent)
+#if UIP_ND6_SEND_NA
+      && !ns_msg_is_sent
+#endif
+      )
   {
       crdc_disable_rdc(0);
       PRINTF("CRDC: The RDC is DISABLED.\n");
@@ -197,7 +200,7 @@ crdc_lpm_enter(void)
       rtimer_arch_schedule( next_wakeup_time );
 
 #ifdef CONTIKI_TARGET_CC2538DK
-      REG(SYS_CTRL_PMCTL) = LPM_CONF_MAX_PM
+      REG(SYS_CTRL_PMCTL) = LPM_CONF_MAX_PM;
       if(next_wakeup_time <= RTIMER_NOW() ||
           next_wakeup_time-RTIMER_NOW() < DEEP_SLEEP_PM2_THRESHOLD){
         return;
@@ -220,8 +223,10 @@ crdc_lpm_enter(void)
 #if DEBUG
     clock_delay_usec(5000); // to display correctly PRINTF before sleep
 #endif
+#if ENERGEST_CONF_ON
     ENERGEST_SWITCH(ENERGEST_TYPE_CPU, ENERGEST_TYPE_LPM);
     energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
+#endif /* ENERGEST_CONF_ON */
 #endif /* CONTIKI_TARGET_CC2538DK */
 
     ENTER_SLEEP_MODE();
@@ -229,10 +234,10 @@ crdc_lpm_enter(void)
      * The wake-up can come from the rtimer or the gpio, nothing else.
      * ZzZZzZZzZZZzzzZzzZZzzzzzzzZzZZzZzzzzzzzzzzzZZzZZZzzZZzZZZzzzZZzzzz */
 
-#if CONTIKI_TARGET_CC2538DK
+#if ENERGEST_CONF_ON && CONTIKI_TARGET_CC2538DK
     irq_energest = energest_type_time(ENERGEST_TYPE_IRQ);
     ENERGEST_SWITCH(ENERGEST_TYPE_LPM, ENERGEST_TYPE_CPU);
-#endif /* CONTIKI_TARGET_CC2538DK */
+#endif /* ENERGEST_CONF_ON && CONTIKI_TARGET_CC2538DK */
 
 
 

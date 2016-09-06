@@ -37,6 +37,8 @@
  * @{
  *
  * \file
+ *          Example project to test 6lowpan-nd with rpl.
+ *          (for cc2538 and z1 (cooja) platforms)
  *
  */
 #include "contiki.h"
@@ -98,7 +100,9 @@ SHELL_COMMAND(fast_reboot_command,
         &shell_fast_reboot_process);
 #endif /* SHELL */
 
+#if CONTIKI_TARGET_Z1
 static struct etimer status_timer;
+#endif
 
 #if CONTIKI_TARGET_Z1 && !UIP_CONF_ROUTER
 static struct etimer delay_start;
