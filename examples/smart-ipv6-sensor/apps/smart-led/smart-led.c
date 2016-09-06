@@ -41,7 +41,7 @@
 #include "contiki.h"
 #include "dev/leds.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #if PLATFORM_HAS_LEDS
@@ -77,7 +77,7 @@ blink_leds(unsigned char l, uint32_t period, uint8_t duration)
 
 	//process_exit(&blink_process);
 	process_start(&blink_process, NULL);
-	PRINTF("Blink process STARTED.\n");
+	PRINTF("Blink process STARTED (leds: %2X, period: %lu, duration: %d).\n", l, period, duration);
 }
 
 void

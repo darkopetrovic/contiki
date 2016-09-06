@@ -204,7 +204,8 @@ TAB_SIZE               = 8
 # You can put \n's in the value part of an alias to insert newlines.
 
 ALIASES                = "needreview=\xrefitem needreview \"Review\" \"Need review\"" \
-                         "lowpanndrpl=\xrefitem lowpanndrpl \"6lowpan-nd-rpl\" \"6LoWPAN NDP with RPL\""
+                         "sixlowpanndrpl=\xrefitem sixlowpanndrpl \"6lowpan-nd-rpl\" \"6LoWPAN NDP with RPL\"" \
+                         "feature=\xrefitem feature \"Feature\" \"Features\""
 
 # This tag can be used to specify a number of word-keyword mappings (TCL only). 
 # A mapping has the form "name=value". For example adding 
@@ -258,7 +259,7 @@ EXTENSION_MAPPING      =
 # can mix doxygen, HTML, and XML commands with Markdown formatting. 
 # Disable only in case of backward compatibilities issues.
 
-MARKDOWN_SUPPORT       = NO
+MARKDOWN_SUPPORT       = YES
 
 # If you use STL classes (i.e. std::string, std::vector, etc.) but do not want 
 # to include (a tag file for) the STL sources as input, then you should 
@@ -839,7 +840,7 @@ INLINE_SOURCES         = YES
 # doxygen to hide any special comment blocks from generated source code 
 # fragments. Normal C, C++ and Fortran comments will always remain visible.
 
-STRIP_CODE_COMMENTS    = YES
+STRIP_CODE_COMMENTS    = NO
 
 # If the REFERENCED_BY_RELATION tag is set to YES 
 # then for each documented function all documented 
@@ -1701,7 +1702,7 @@ UML_LOOK               = NO
 # managable. Set this to 0 for no limit. Note that the threshold may be 
 # exceeded by 50% before the limit is enforced.
 
-UML_LIMIT_NUM_FIELDS   = 0
+UML_LIMIT_NUM_FIELDS   = 5
 
 # If set to YES, the inheritance and collaboration graphs will show the 
 # relations between templates and their instances.
@@ -1736,7 +1737,7 @@ CALL_GRAPH             = YES
 # the time of a run. So in most cases it will be better to enable caller 
 # graphs for selected functions only using the \callergraph command.
 
-CALLER_GRAPH           = NO
+CALLER_GRAPH           = YES
 
 # If the GRAPHICAL_HIERARCHY and HAVE_DOT tags are set to YES then doxygen 
 # will generate a graphical hierarchy of all classes instead of a textual one.
@@ -1756,7 +1757,7 @@ DIRECTORY_GRAPH        = YES
 # HTML_FILE_EXTENSION to xhtml in order to make the SVG files 
 # visible in IE 9+ (other browsers do not have this requirement).
 
-DOT_IMAGE_FORMAT       = jpg
+DOT_IMAGE_FORMAT       = png
 
 # If DOT_IMAGE_FORMAT is set to svg, then this option can be set to YES to 
 # enable generation of interactive SVG images that allow zooming and panning. 

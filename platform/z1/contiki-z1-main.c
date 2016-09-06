@@ -430,9 +430,9 @@ main(int argc, char **argv)
   timer_set(&mgt_timer, DCOSYNCH_PERIOD * CLOCK_SECOND);
 #endif
 
-#if ENABLE_CUSTOM_RDC
+#if RDC_SLEEPING_HOST
   crdc_init();
-#endif /* ENABLE_CUSTOM_RDC */
+#endif /* RDC_SLEEPING_HOST */
 
   watchdog_start();
   /*  watchdog_stop();*/
@@ -469,18 +469,18 @@ main(int argc, char **argv)
          were awake. */
       energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
       watchdog_stop();
-#if ENABLE_CUSTOM_RDC && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+#if RDC_SLEEPING_HOST && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
     if(!USB_IS_PLUGGED()){
       crdc_lpm_enter();
     }
-#else /* ENABLE_CUSTOM_RDC */
+#else /* RDC_SLEEPING_HOST */
       _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF); /* LPM3 sleep. This
                                               statement will block
                                               until the CPU is
                                               woken up by an
                                               interrupt that sets
                                               the wake up flag. */
-#endif /* ENABLE_CUSTOM_RDC */
+#endif /* RDC_SLEEPING_HOST */
       /* We get the current processing time for interrupts that was
          done during the LPM and store it for next time around.  */
       dint();

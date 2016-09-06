@@ -15,7 +15,7 @@ WITH_COAPSERVER ?= 0
 TARGET_NAME_HOST = $(PROJECT)-host
 TARGET_NAME_ROUTER = $(PROJECT)-router
 
-ifeq ($(findstring $(TARGET_NAME_HOST),$(MAKECMDGOALS)),$(TARGET_NAME_HOST))
+ifeq ($(findstring host,$(MAKECMDGOALS)),host)
 	# If the node is a HOST
   DEFINES+=UIP_CONF_ROUTER=0
 else
@@ -74,13 +74,13 @@ PROJECTDIRS += $(PROJECTDIR)
 
 include $(CONTIKI)/Makefile.include
 
-$(TARGET_NAME_HOST).$(TARGET): $(CONTIKI_PROJECT) $(TARGET_NAME_HOST)-rename
-$(TARGET_NAME_ROUTER).$(TARGET): $(CONTIKI_PROJECT) $(TARGET_NAME_ROUTER)-rename
+host.$(TARGET): $(PROJECT) $(TARGET_NAME_HOST)-rename
+router.$(TARGET): $(PROJECT) $(TARGET_NAME_ROUTER)-rename
 
 $(TARGET_NAME_HOST)-rename:
-	mv $(CONTIKI_PROJECT).$(TARGET) $(TARGET_NAME_HOST).$(TARGET)
+	mv $(PROJECT).$(TARGET) $(TARGET_NAME_HOST).$(TARGET)
 	rm -rf *.map contiki*.a obj_$(TARGET)
 
 $(TARGET_NAME_ROUTER)-rename:
-	mv $(CONTIKI_PROJECT).$(TARGET) $(TARGET_NAME_ROUTER).$(TARGET)
+	mv $(PROJECT).$(TARGET) $(TARGET_NAME_ROUTER).$(TARGET)
 	rm -rf *.map contiki*.a obj_$(TARGET)
