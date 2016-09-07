@@ -38,10 +38,10 @@
 /* The custom rdc looks if there is pending transations to not stop
  * the RDC if this is the case.
  * */
-#ifndef CRDC_CONF_COAP_IS_ENALBED
-#define CRDC_COAP_IS_ENALBED          0
+#ifdef REST
+#define CRDC_COAP_IS_ENALBED          1
 #else
-#define CRDC_COAP_IS_ENALBED          CRDC_CONF_COAP_IS_ENALBED
+#define CRDC_COAP_IS_ENALBED          0
 #endif
 
 /* The duration in seconds the system keeps the RDC on to receive

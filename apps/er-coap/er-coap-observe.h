@@ -85,4 +85,6 @@ void coap_notify_observers_sub(resource_t *resource, const char *subpath);
 void coap_observe_handler(resource_t *resource, void *request,
                           void *response);
 
+coap_observer_t* coap_get_list_observers(void);
+
 #endif /* COAP_OBSERVE_H_ */

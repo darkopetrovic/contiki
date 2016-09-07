@@ -1,0 +1,11 @@
+PROJECT = coap-example
+
+WITH_SHELL=1
+WITH_CUSTOMRDC=1
+WITH_COAPSERVER=1
+
+PROJECTDIR=..
+CONTIKI = ../../..
+
+include $(PROJECTDIR)/Makefile
+

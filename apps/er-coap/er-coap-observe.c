@@ -304,3 +304,9 @@ coap_observe_handler(resource_t *resource, void *request, void *response)
   }
 }
 /*---------------------------------------------------------------------------*/
+coap_observer_t*
+coap_get_list_observers(void)
+{
+  return (coap_observer_t *)list_head(observers_list);
+}
+/*---------------------------------------------------------------------------*/

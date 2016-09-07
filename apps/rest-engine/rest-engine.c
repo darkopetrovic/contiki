@@ -41,8 +41,9 @@
 #include <stdio.h>
 #include "contiki.h"
 #include "rest-engine.h"
+#include "er-coap-observe.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -52,6 +53,11 @@
 #define PRINTF(...)
 #define PRINT6ADDR(addr)
 #define PRINTLLADDR(addr)
+#endif
+
+#if REST_DELAY_RES_START
+struct etimer observer_periodic_timer;
+static struct process *observer_periodic_timer_p;
 #endif
 
 PROCESS(rest_engine_process, "REST Engine");
@@ -108,7 +114,7 @@ rest_activate_resource(resource_t *resource, char *path)
   PRINTF("Activating: %s\n", resource->url);
 
   /* Add ALL periodic resources to be present in the list. They are activated later. */
-#if REST_DELAY_START
+#if REST_DELAY_RES_START
   if(resource->flags & IS_PERIODIC && resource->periodic->periodic_handler)
 #else
    /* Only add periodic resources with a periodic_handler and a period > 0. */
@@ -133,6 +139,11 @@ list_t
 rest_get_resources(void)
 {
   return restful_services;
+}
+list_t
+rest_get_periodic_resources(void)
+{
+  return restful_periodic_services;
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -195,9 +206,184 @@ rest_invoke_restful_service(void *request, void *response, uint8_t *buffer,
   return found & allowed;
 }
 /*-----------------------------------------------------------------------------------*/
+#if REST_DELAY_RES_START
+static void
+observer_periodic(void)
+{
+  periodic_resource_t *periodic_resource = NULL;
+  coap_observer_t *obs = NULL;
+  uint8_t obsfound;
+  uint8_t nb_observers = 0;
+
+  for(periodic_resource = list_head(rest_get_periodic_resources());
+      periodic_resource; periodic_resource = periodic_resource->next)
+  {
+    PRINTF("REST: (observer periodic) Available periodic resource: '%s' with period %lu.\n",
+        periodic_resource->resource->url, periodic_resource->period);
+    if( periodic_resource->period )
+    {
+      /* search within the observers if the resource is still observed
+       * otherwise disable the periodic timer of the resource. */
+      obsfound = 0;
+      for(obs = coap_get_list_observers(); obs; obs = obs->next)
+      {
+        nb_observers++;
+        if( !strcmp(obs->url, periodic_resource->resource->url )  )
+        {
+          obsfound = 1;
+          break;
+        }
+      }
+
+      if( !obsfound )
+      {
+        // Stop the periodic resource
+        PRINTF("REST: (observer periodic) Observer not found for periodic resource '%s' -> Stop timer.\n",
+            periodic_resource->resource->url);
+        etimer_stop(&periodic_resource->periodic_timer);
+      }
+    }
+
+  } // end for
+
+  /* Don't need to keep the observer periodic if there is zero observer. */
+  if( !nb_observers ){
+    etimer_stop(&observer_periodic_timer);
+  } else {
+    etimer_reset(&observer_periodic_timer);
+  }
+}
+/*-----------------------------------------------------------------------------------*/
+static void
+start_observer_periodic(void)
+{
+  /* We call the function the first time only to store the process
+   * where the timer event is handled. The observer periodic is effectively
+   * started when a first periodic resource interval is set. */
+  if( observer_periodic_timer_p == NULL ){
+    // store the process which called the function the first time
+    observer_periodic_timer_p = PROCESS_CURRENT();
+    return;
+  }
+
+  if( !etimer_expired(&observer_periodic_timer) )
+  {
+    /* We restart the observer periodic timer to prevent the auto-removal by this latter
+     * of the resource timer if an observer is not immediately registered.
+     * An observer has from now OBSERVER_PERIODIC seconds to subscribe to the resource. */
+    PROCESS_CONTEXT_BEGIN(observer_periodic_timer_p);
+    etimer_restart(&observer_periodic_timer);
+    PROCESS_CONTEXT_END(observer_periodic_timer_p);
+  } else {
+    PROCESS_CONTEXT_BEGIN(observer_periodic_timer_p);
+    etimer_set(&observer_periodic_timer, CLOCK_SECOND * REST_OBSERVER_PERIODIC);
+    PROCESS_CONTEXT_END(observer_periodic_timer_p);
+    PRINTF("RES: Observer periodic started.\n");
+  }
+}
+void
+rest_update_resource_interval(resource_t *resource, uint32_t interval)
+{
+#if REST_RESOURCES_DESYNCH
+  periodic_resource_t *periodic_resource = NULL;
+  periodic_resource_t *periodic_resource_temp = NULL;
+  clock_time_t tdiff;
+  uint32_t intervals[MAX_PERIODIC_RESSOURCES];
+  periodic_resource_t *periodic_resources[MAX_PERIODIC_RESSOURCES];
+  uint32_t best_interval = 0;
+  uint8_t active_periodic_resources;
+  uint8_t i, j;
+#endif /* REST_RESOURCES_DESYNCH */
+
+  resource->periodic->period =  interval * CLOCK_SECOND;
+
+  if( interval )
+  {
+    /* The periodic resources are independant from observer. They can fire without a
+     * specific observer registered to the resource. Therefore, we enable here a periodic
+     * check of resource vs observer in order to disable the periodic resource timer if no
+     * observer is found for this periodic resource for a while. */
+    start_observer_periodic();
+
+    PROCESS_CONTEXT_BEGIN(&rest_engine_process);
+    etimer_set(&resource->periodic->periodic_timer, resource->periodic->period);
+    PROCESS_CONTEXT_END(&rest_engine_process);
+  } else {
+    etimer_stop(&resource->periodic->periodic_timer);
+  } /* if( interval ) */
+
+#if REST_RESOURCES_DESYNCH
+
+  active_periodic_resources = 0;
+  for(periodic_resource = get_restful_periodic_services();
+    periodic_resource; periodic_resource = periodic_resource->next)
+  {
+    if( periodic_resource->period )
+    {
+      intervals[active_periodic_resources] = periodic_resource->period;
+      periodic_resources[active_periodic_resources++] = periodic_resource;
+    }
+  }
+
+  if( active_periodic_resources > 1 ){
+
+    /* Calculate the best interval between resources. */
+    best_interval = gcd_a(active_periodic_resources, (int*)intervals)/active_periodic_resources;
+
+    /* Ascending order of the periodic resources by the remaining time. */
+    for (i = 0; i < active_periodic_resources; ++i)
+    {
+      for (j = i + 1; j < active_periodic_resources; ++j)
+      {
+        if (timer_remaining(&(periodic_resources[i]->periodic_timer.timer)) >
+          timer_remaining(&(periodic_resources[j]->periodic_timer.timer)))
+        {
+          periodic_resource_temp =  periodic_resources[i];
+          periodic_resources[i] = periodic_resources[j];
+          periodic_resources[j] = periodic_resource_temp;
+        }
+      }
+    }
+
+    /* Adjust resources periodic wake-up */
+    for (i = 0; i < active_periodic_resources-1; ++i)
+    {
+
+      tdiff = timer_remaining(&(periodic_resources[i+1]->periodic_timer.timer)) - \
+          timer_remaining(&(periodic_resources[i]->periodic_timer.timer));
+
+      if((int32_t)tdiff < 0){
+        tdiff = 0;
+      }
+
+      etimer_adjust(&periodic_resources[i+1]->periodic_timer, best_interval-tdiff);
+
+    } /* for() */
+
+  } /* if() */
+
+#if DEBUG
+  PRINTF("RES: Best interval between resources is %lu (%s seconds).\n", best_interval,
+      float2str((float)best_interval/CLOCK_SECOND, 1));
+  for (i = 0; i < active_periodic_resources; ++i)
+  {
+    PRINTF("RES: Resource '%s' wakes-up in %s seconds.\n", periodic_resources[i]->resource->url,
+        float2str((float)timer_remaining(&(periodic_resources[i]->periodic_timer.timer))/CLOCK_SECOND, 1));
+  }
+#endif
+
+#endif /* REST_RESOURCES_DESYNCH */
+
+}
+#endif /* REST_DELAY_RES_START */
+/*-----------------------------------------------------------------------------------*/
 PROCESS_THREAD(rest_engine_process, ev, data)
 {
   PROCESS_BEGIN();
+
+#if REST_DELAY_RES_START
+  start_observer_periodic();
+#endif /* REST_DELAY_RES_START */
 
   /* pause to let REST server finish adding resources. */
   PROCESS_PAUSE();
@@ -205,7 +391,7 @@ PROCESS_THREAD(rest_engine_process, ev, data)
   /* initialize the PERIODIC_RESOURCE timers, which will be handled by this process. */
   periodic_resource_t *periodic_resource = NULL;
 
-#if REST_DELAY_START
+#if !REST_DELAY_RES_START
   for(periodic_resource =
         (periodic_resource_t *)list_head(restful_periodic_services);
       periodic_resource; periodic_resource = periodic_resource->next) {
@@ -216,11 +402,21 @@ PROCESS_THREAD(rest_engine_process, ev, data)
                  periodic_resource->period);
     }
   }
-#endif /* REST_DELAY_START */
+#endif /* !REST_DELAY_RES_START */
   while(1) {
     PROCESS_WAIT_EVENT();
 
     if(ev == PROCESS_EVENT_TIMER) {
+
+#if REST_DELAY_RES_START
+      if( data == &observer_periodic_timer &&
+          etimer_expired(&observer_periodic_timer) )
+      {
+          observer_periodic();
+          continue;
+      }
+#endif /* REST_DELAY_RES_START */
+
       for(periodic_resource =
             (periodic_resource_t *)list_head(restful_periodic_services);
           periodic_resource; periodic_resource = periodic_resource->next) {

@@ -37,6 +37,11 @@
 #ifndef PROJECT_CONF_H_
 #define PROJECT_CONF_H_
 
+
+/* Application configuration */
+
+#define REST_CONF_DELAY_RES_START     1
+
 /**
  * \sixlowpanndrpl 	We disable the probing for the host when
  *                  6lowpan-nd is enabled. 
@@ -64,6 +69,21 @@
 #define UIP_CONF_TCP                        0
 
 #define	WATCHDOG_CONF_ENABLE                0
+
+#define UIP_CONF_BUFFER_SIZE              400
+
+/** Reduce the maximum amount of concurrent UDP connections (default 10). */
+#define UIP_CONF_UDP_CONNS                2
+
+/** Maximum routes to store */
+#define UIP_CONF_MAX_ROUTES       2
+
+/** Maximum neighbors to store in the Neighbors Table */
+#if CONF_6LOWPAN_ND && !UIP_CONF_ROUTER
+#define NBR_TABLE_CONF_MAX_NEIGHBORS  UIP_CONF_MAX_ROUTES
+#else
+#define NBR_TABLE_CONF_MAX_NEIGHBORS  5
+#endif
 
 #if !UIP_CONF_ROUTER && RDC_SLEEPING_HOST
 #define UIP_DS6_CONF_PERIOD                 CLOCK_SECOND*10
