@@ -304,7 +304,7 @@ rest_update_resource_interval(resource_t *resource, uint32_t interval)
      * check of resource vs observer in order to disable the periodic resource timer if no
      * observer is found for this periodic resource for a while. */
     start_observer_periodic();
-
+    PRINTF("REST: Update resource '%s' with interval %lu seconds.\n", resource->url, interval);
     PROCESS_CONTEXT_BEGIN(&rest_engine_process);
     etimer_set(&resource->periodic->periodic_timer, resource->periodic->period);
     PROCESS_CONTEXT_END(&rest_engine_process);
@@ -388,6 +388,8 @@ PROCESS_THREAD(rest_engine_process, ev, data)
   /* pause to let REST server finish adding resources. */
   PROCESS_PAUSE();
 
+  PRINTF("REST Engine started.\n");
+
   /* initialize the PERIODIC_RESOURCE timers, which will be handled by this process. */
   periodic_resource_t *periodic_resource = NULL;
 
@@ -403,6 +405,7 @@ PROCESS_THREAD(rest_engine_process, ev, data)
     }
   }
 #endif /* !REST_DELAY_RES_START */
+
   while(1) {
     PROCESS_WAIT_EVENT();
 

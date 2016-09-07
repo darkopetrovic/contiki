@@ -54,7 +54,7 @@ ifneq ($(TARGET),native)
 endif
   APPS += er-coap
   APPS += rest-engine
-  PROJECTDIRS += $(PROJECTDIR)/apps/custom-coap 
+  PROJECTDIRS += $(PROJECTDIR)/apps/custom-coap
   PROJECT_SOURCEFILES += custom-coap.c
 endif
 
