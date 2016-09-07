@@ -62,7 +62,6 @@
 #include "dev/button-sensor.h"
 #include "dev/sht11/sht11-sensor.h"
 
-#include "custom-rdc.h"
 #include "net/ipv6/uip-ds6.h"
 
 SENSORS(&button_sensor);

@@ -70,10 +70,10 @@
 
 #define	WATCHDOG_CONF_ENABLE                0
 
-#define UIP_CONF_BUFFER_SIZE              400
+#define UIP_CONF_BUFFER_SIZE              200
 
 /** Reduce the maximum amount of concurrent UDP connections (default 10). */
-#define UIP_CONF_UDP_CONNS                2
+#define UIP_CONF_UDP_CONNS                4
 
 /** Maximum routes to store */
 #define UIP_CONF_MAX_ROUTES       2
@@ -82,7 +82,7 @@
 #if CONF_6LOWPAN_ND && !UIP_CONF_ROUTER
 #define NBR_TABLE_CONF_MAX_NEIGHBORS  UIP_CONF_MAX_ROUTES
 #else
-#define NBR_TABLE_CONF_MAX_NEIGHBORS  5
+#define NBR_TABLE_CONF_MAX_NEIGHBORS  3
 #endif
 
 #if !UIP_CONF_ROUTER && RDC_SLEEPING_HOST

@@ -44,20 +44,23 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "contiki-net.h"
+#ifdef REST
 #include "rest-engine.h"
-
+#endif
 #include "dev/button-sensor.h"
 
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
+#ifdef REST
 extern resource_t
   res_temperature
   ;
+#endif
 
 /*---------------------------------------------------------------------------*/
 
-PROCESS(erbium_server, "Erbium Server (CoAP)");
+PROCESS(erbium_server, "CoAP Example");
 AUTOSTART_PROCESSES(&erbium_server);
 
 PROCESS_THREAD(erbium_server, ev, data)
@@ -66,18 +69,20 @@ PROCESS_THREAD(erbium_server, ev, data)
 
   //PROCESS_PAUSE();
 
-  PRINTF("Starting CoAP Server\n");
-
 #ifndef CONTIKI_TARGET_CC2538DK
   SENSORS_ACTIVATE(button_sensor);
 #endif
 
+#ifdef REST
+  PRINTF("Starting CoAP Server\n");
+  
   /* Initialize the REST engine. */
   rest_init_engine();
 
   //rest_activate_resource(&res_sensors,      "sensors");
   rest_activate_resource(&res_temperature,  "sensors/temperature");
   //rest_activate_resource(&res_humidity,     "sensors/humidity");
+#endif
 
   /* Define application-specific events here. */
   while(1) {

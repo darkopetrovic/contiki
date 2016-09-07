@@ -32,7 +32,7 @@
 #define RESOURCE_REPRESENTATION_MAX_SIZE  400
 
 /** The maximum stored resource representation.  */
-#define MAX_RESOURCE_REPRESENTATION     3
+#define MAX_RESOURCE_REPRESENTATION     2
 
 #define MAX_PERIODIC_RESSOURCES       10
 

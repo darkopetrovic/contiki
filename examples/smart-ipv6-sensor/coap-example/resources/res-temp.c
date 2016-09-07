@@ -37,7 +37,7 @@ PERIODIC_RESOURCE(res_temperature,
                   res_post_put_handler,
                   res_post_put_handler,
                   NULL,
-                  5,
+                  5*CLOCK_SECOND,
                   res_periodic_handler);
 
 static void
