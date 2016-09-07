@@ -8,8 +8,9 @@
  *  \author
  *  Darko Petrovic
  */
-#include <examples/smart-ipv6-sensor/apps/custom-rdc/custom-rdc.h>
+
 #include "contiki.h"
+#include "custom-rdc.h"
 
 #if RDC_SLEEPING_HOST
 
@@ -27,7 +28,7 @@
 #include "net/rpl/rpl-private.h"
 #endif
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #if DEBUG
@@ -35,8 +36,8 @@
 #endif
 
 #if CRDC_COAP_IS_ENALBED
-#define coap_confirmable_transaction_exist()  coap_confirmable_transaction_exist()
-#define resource_pending_msg()                resource_pending_msg()
+#include "custom-coap.h"
+#include "er-coap-transactions.h"
 #else
 #define coap_confirmable_transaction_exist()  0
 #define resource_pending_msg()                0

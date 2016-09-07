@@ -62,10 +62,32 @@
 #define REST_MAX_CHUNK_SIZE     64
 #endif
 
-#ifndef REST_CONF_DELAY_START
-#define REST_DELAY_START     0
+/**
+ * With this parameter enabled, periodic resources are added to the list
+ * even with a period of 0. They have to be enabled later by the user with
+ * rest_update_resource_interval().
+ * The period specified at the creation of the periodic resource with
+ * PERIODIC_RESOURCE isn't taken in account when this parameter is enabled.
+ */
+#ifndef REST_CONF_DELAY_RES_START
+#define REST_DELAY_RES_START     0
 #else
-#define REST_DELAY_START     REST_CONF_DELAY_START
+#define REST_DELAY_RES_START     REST_CONF_DELAY_RES_START
+#endif
+
+/** Observer periodic interval.
+ * The interval at which the program verify that a periodic resources is still observerd
+ * otherwise it disable this periodic resource.  */
+#ifdef REST_CONF_OBSERVER_PERIODIC
+#define REST_OBSERVER_PERIODIC       REST_CONF_OBSERVER_PERIODIC
+#else
+#define REST_OBSERVER_PERIODIC       30  // in seconds
+#endif
+
+#ifdef REST_CONF_RESOURCES_DESYNCH
+#define REST_RESOURCES_DESYNCH       REST_CONF_RESOURCES_DESYNCH
+#else
+#define REST_RESOURCES_DESYNCH       0  // on or off
 #endif
 
 struct resource_s;
@@ -119,16 +141,16 @@ typedef struct periodic_resource_s periodic_resource_t;
  * Resources are statically defined for the sake of efficiency and better memory management.
  */
 #define RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler) \
-  resource_t name = { NULL, NULL, NO_FLAGS, attributes, get_handler, post_handler, put_handler, delete_handler, { NULL } }
+  resource_t name = { NULL, NULL, NO_FLAGS, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, { NULL } }
 
 #define PARENT_RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler) \
-  resource_t name = { NULL, NULL, HAS_SUB_RESOURCES, attributes, get_handler, post_handler, put_handler, delete_handler, { NULL } }
+  resource_t name = { NULL, NULL, HAS_SUB_RESOURCES, init_handler, attributes, get_handler, post_handler, put_handler, delete_handler, { NULL } }
 
 #define SEPARATE_RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, resume_handler) \
-  resource_t name = { NULL, NULL, IS_SEPARATE, attributes, get_handler, post_handler, put_handler, delete_handler, { .resume = resume_handler } }
+  resource_t name = { NULL, NULL, IS_SEPARATE, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, { .resume = resume_handler } }
 
 #define EVENT_RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, event_handler) \
-  resource_t name = { NULL, NULL, IS_OBSERVABLE, attributes, get_handler, post_handler, put_handler, delete_handler, { .trigger = event_handler } }
+  resource_t name = { NULL, NULL, IS_OBSERVABLE, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, { .trigger = event_handler } }
 
 /*
  * Macro to define a periodic resource.
@@ -261,5 +283,18 @@ void rest_activate_resource(resource_t *resource, char *path);
  */
 list_t rest_get_resources(void);
 /*---------------------------------------------------------------------------*/
-
+/**
+ * \brief      Returns the list of registered periodic RESTful resources.
+ * \return     The periodic resource list.
+ */
+list_t rest_get_periodic_resources(void);
+/*---------------------------------------------------------------------------*/
+#if REST_DELAY_RES_START
+/**
+ * \brief      Update the interval of a periodic resource.
+ *
+ */
+void rest_update_resource_interval(resource_t *resource, uint32_t interval);
+#endif
+/*---------------------------------------------------------------------------*/
 #endif /*REST_ENGINE_H_ */
