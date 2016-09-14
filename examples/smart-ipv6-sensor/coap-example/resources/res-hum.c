@@ -40,15 +40,31 @@ PERIODIC_RESOURCE(res_humidity,
                   res_post_put_handler,
                   res_post_put_handler,
                   NULL,
+                  5*CLOCK_SECOND,
                   res_periodic_handler);
 
 /*
  * Use local resource state that is accessed by res_get_handler() and altered by res_periodic_handler() or PUT or POST.
  */
 
+#if REST_DELAY_RES_START && APP_CONFIG
+static uint8_t
+callback(struct parameter *p)
+{
+  if( !strncmp(p->name, SETTINGS_PERIODIC_PARAM_NAME, strlen(p->name)) ){
+    rest_update_resource_interval(&res_humidity, p->value);
+    return 0;
+  }
+  return 1;
+}
+#endif /* REST_DELAY_RES_START */
+
 static void
 res_init()
 {
+#if REST_DELAY_RES_START && APP_CONFIG
+  app_config_create_parameter(res_humidity.url, SETTINGS_PERIODIC_PARAM_NAME, "5", callback);
+#endif
 }
 
 static void
@@ -58,7 +74,7 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 	uint8_t fractional;
 	uint16_t sensors_value;
 
-	//COAP_BLOCKWISE_SETTINGS_LIST(res_humidity);
+	COAP_BLOCKWISE_SETTINGS_LIST(res_humidity);
 
 	if( OBS_NOTIF_OR_FRST_BLCK_TRSF() ){
 
@@ -92,7 +108,7 @@ res_periodic_handler()
 static void
 res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	//COAP_UPDATE_SETTINGS(res_humidity);
+	COAP_UPDATE_SETTINGS(res_humidity);
 }
 
 /** @} */

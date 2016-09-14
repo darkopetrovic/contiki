@@ -39,6 +39,7 @@ PERIODIC_RESOURCE(res_sensors,
                   res_post_put_handler,
                   res_post_put_handler,
                   NULL,
+                  5*CLOCK_SECOND,
                   res_periodic_handler);
 
 /*
@@ -46,9 +47,24 @@ PERIODIC_RESOURCE(res_sensors,
  */
 static uint16_t sensors_value[3];
 
+#if REST_DELAY_RES_START && APP_CONFIG
+static uint8_t
+callback(struct parameter *p)
+{
+  if( !strncmp(p->name, SETTINGS_PERIODIC_PARAM_NAME, strlen(p->name)) ){
+    rest_update_resource_interval(&res_sensors, p->value);
+    return 0;
+  }
+  return 1;
+}
+#endif /* REST_DELAY_RES_START */
+
 static void
 res_init()
 {
+#if REST_DELAY_RES_START && APP_CONFIG
+  app_config_create_parameter(res_sensors.url, SETTINGS_PERIODIC_PARAM_NAME, "5", callback);
+#endif
 }
 
 static void
@@ -62,7 +78,7 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 	int8_t sense3_integral;
 	uint8_t sense3_fractional;
 
-	//COAP_BLOCKWISE_SETTINGS_LIST(res_sensors);
+	COAP_BLOCKWISE_SETTINGS_LIST(res_sensors);
 
 	// get sensor value only once for the blockwise transfer
 	if( OBS_NOTIF_OR_FRST_BLCK_TRSF() ){
@@ -111,7 +127,7 @@ res_periodic_handler()
 static void
 res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	//COAP_UPDATE_SETTINGS(res_sensors);
+	COAP_UPDATE_SETTINGS(res_sensors);
 }
 
 /** @} */

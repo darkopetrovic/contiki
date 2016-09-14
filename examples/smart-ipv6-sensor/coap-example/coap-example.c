@@ -44,6 +44,10 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "contiki-net.h"
+#include "custom-coap.h"
+
+#include <string.h>
+
 #ifdef REST
 #include "rest-engine.h"
 #endif
@@ -52,9 +56,25 @@
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
+#if SHELL
+#include "dev/serial-line.h"
+#include "apps/shell/shell.h"
+#include "apps/serial-shell/serial-shell.h"
+#include "dev/watchdog.h"
+#endif /* SHELL */
+
+#if APP_CONFIG
+#include "app-config.h"
+#endif
+
 #ifdef REST
 extern resource_t
-  res_temperature
+#if APP_CONFIG
+  res_config,
+#endif
+  res_sensors,
+  res_temperature,
+  res_humidity
   ;
 #endif
 
@@ -65,6 +85,7 @@ AUTOSTART_PROCESSES(&erbium_server);
 
 PROCESS_THREAD(erbium_server, ev, data)
 {
+
   PROCESS_BEGIN();
 
   //PROCESS_PAUSE();
@@ -73,15 +94,39 @@ PROCESS_THREAD(erbium_server, ev, data)
   SENSORS_ACTIVATE(button_sensor);
 #endif
 
+#if APP_CONFIG
+  app_config_init();
+#endif
+
+#if SHELL
+// we use the Z1 platform in cooja
+#ifdef CONTIKI_TARGET_Z1
+  uart0_set_input(serial_line_input_byte);
+  serial_line_init();
+#endif
+  serial_shell_init();
+
+  shell_ping_init();
+  //shell_power_init();
+  shell_ps_init();
+  //shell_config_init();
+  shell_ifconfig_init();
+  //shell_stackusage_init();
+  shell_file_init();
+  shell_coffee_init();
+#endif /* SHELL */
+
 #ifdef REST
   PRINTF("Starting CoAP Server\n");
   
   /* Initialize the REST engine. */
   rest_init_engine();
-
-  //rest_activate_resource(&res_sensors,      "sensors");
+#if APP_CONFIG
+  rest_activate_resource(&res_config,       SETTINGS_RESOURCE_NAME);
+#endif
+  rest_activate_resource(&res_sensors,      "sensors");
   rest_activate_resource(&res_temperature,  "sensors/temperature");
-  //rest_activate_resource(&res_humidity,     "sensors/humidity");
+  rest_activate_resource(&res_humidity,     "sensors/humidity");
 #endif
 
   /* Define application-specific events here. */

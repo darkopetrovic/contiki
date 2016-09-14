@@ -94,6 +94,14 @@
 #if CONTIKI_TARGET_CC2538DK
 #define CC2538_RF_CONF_CHANNEL              25
 #define LPM_CONF_MAX_PM                     2
+/* CFS Configuration */
+#define APP_CONFIG_CONF_STORAGE_COFFEE      1
+#define FLASH_CONF_FW_ADDR                  CC2538_DEV_FLASH_ADDR
+#define COFFEE_CONF_START                   0x230000  // 96th page
+#define COFFEE_CONF_SIZE                    262144
+#define COFFEE_CONF_APPEND_ONLY             0
+#define COFFEE_CONF_MICRO_LOGS              1
+#define COFFEE_CONF_NAME_LENGTH             60
 #endif
 
 #if CONTIKI_TARGET_Z1

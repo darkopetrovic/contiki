@@ -11,8 +11,13 @@
 #include "contiki.h"
 #include "custom-coap.h"
 
+#if APP_CONFIG
+#include "app-config.h"
+#endif
+
 /* Used for vsprintf() */
 #include <stdarg.h>
+#include <stdlib.h> /* strtol */
 
 /** \cond */
 #define DEBUG DEBUG_PRINT
@@ -325,7 +330,52 @@ coap_blockwise_transfer(resource_t *resource, void *request, void *response, uin
   /* The REST.subscription_handler() will be called for observable resources by the REST framework. */
 }
 
-#if 0
+#if APP_CONFIG
+void
+coap_update_setting(resource_t *resource, void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+
+  struct parameter* parameter;
+  size_t len = 0;
+  const char *strvalue = NULL;
+  int error = 0;
+  uint32_t intval;
+  char cntxt[20];
+
+  if(!strcmp(resource->url, SETTINGS_RESOURCE_NAME)){
+    strncpy(cntxt, APP_CONFIG_GENERAL, strlen(APP_CONFIG_GENERAL));
+  } else {
+    sprintf(cntxt, "%s", resource->url);
+  }
+
+  for(parameter = app_config_parameters_list_head(); parameter != NULL; parameter = list_item_next(parameter))
+  {
+    if( !strcmp(cntxt, parameter->context) )
+    {
+      if( (len = REST.get_post_variable(request, parameter->name, &strvalue)) )
+      {
+        if((intval=strtol(strvalue, NULL, 10)) != 0){
+          error = app_config_edit_parameter(parameter->context, parameter->name, NULL, intval);
+        } else {
+          error = app_config_edit_parameter(parameter->context, parameter->name, strvalue, 0);
+        }
+      } else {
+        error = 2;
+      }
+    }
+  }
+
+  if( !error ) {
+    REST.set_response_status(response, REST.status.CHANGED);
+  } else if( error == 1 ) {
+    REST.set_response_status(response, REST.status.FORBIDDEN);
+  } else if( error == 2 ){
+    REST.set_response_status(response, REST.status.BAD_REQUEST);
+  }
+
+}
+
+#if 1
 uint8_t
 coap_blockwise_settings_list(resource_t *resource, void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -333,7 +383,7 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
   size_t bufpos = 0;            /* position within buffer (bytes written) */
   size_t tmplen = 0;
   size_t urllen = 0;
-  struct settings *setting;
+  struct parameter* parameter;
   char txtsetting[100];
   uint8_t count_settings = 0;
   const char *param = NULL;
@@ -368,10 +418,11 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
     /* myFEATURE: we may improve the lookup of parameters by creating
      * special contexts like 'system, global, user, ...' and use search for
      * these parameters with for example ?p=system */
-    setting = settings_lookup( resource->url, txtsetting );
+
+    parameter = app_config_parameter_lookup( resource->url, txtsetting );
     PRINTF("RES: Looking for setting context '%s' with key '%s' (length=%d)\n", resource->url, txtsetting, tmplen);
-    if( setting != NULL ){
-      tmplen = snprintf((char*)buffer, tmplen, "%lu", setting->value);
+    if( parameter != NULL ){
+      tmplen = snprintf((char*)buffer, tmplen, "%lu", parameter->value);
       PRINTF("RES: Setting %s, length=%d\n", buffer, tmplen);
       coap_set_header_content_format(response, TEXT_PLAIN);
       coap_set_payload(response, buffer, tmplen);
@@ -384,39 +435,61 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
     return 1;
   }
 
+
   if( *offset == 0 ){
     bufpos += snprintf((char *)buffer, preferred_size + 1, "{\"e\":[");
   }
   strpos += strlen("{\"e\":[");
 
-  for(setting = list_head(*settings_get_list()); setting != NULL; setting = list_item_next(setting))
+  for(parameter = app_config_parameters_list_head(); parameter != NULL; parameter = list_item_next(parameter))
   {
     /* We don't know the total length of the message, so
      * we create the message dynamically as for the .well-know resource.
      *
      * By using strncmp instead of strcmp we get parameters for sub-resources equally.*/
-    if( !strncmp(resource->url, setting->context, urllen) || is_setting_resource )
+    if( !strncmp(resource->url, parameter->context, urllen) || is_setting_resource )
     {
       count_settings++;
 
-      if( setting->context != NULL ){
+      if( parameter->context != NULL ){
         if( is_setting_resource ){
           // display full parameter path
-          snprintf(txtsetting, 100,
-            "{\"n\":\"%s?p=%s\",\"v\":%lu}", setting->context, setting->key, setting->value);
+          if(parameter->is_string){
+            snprintf(txtsetting, 100,
+               "{\"n\":\"%s?p=%s\",\"v\":\"%s\"}", parameter->context, parameter->name,
+               (char*)app_config_get_parameter_value(parameter->context, parameter->name));
+          } else {
+            snprintf(txtsetting, 100,
+              "{\"n\":\"%s?p=%s\",\"v\":%lu}", parameter->context, parameter->name, parameter->value);
+          }
         } else {
           // remove resource url base name
-          snprintf(txtsetting, 100,
-            "{\"n\":\"%s?p=%s\",\"v\":%lu}", setting->context+urllen,
-            setting->key, setting->value);
+          if(parameter->is_string){
+            snprintf(txtsetting, 100,
+                    "{\"n\":\"%s?p=%s\",\"v\":\"%s\"}", parameter->context+urllen,
+                    parameter->name,
+                    (char*)app_config_get_parameter_value(parameter->context, parameter->name));
+          } else {
+            snprintf(txtsetting, 100,
+                    "{\"n\":\"%s?p=%s\",\"v\":%lu}", parameter->context+urllen,
+                    parameter->name, parameter->value);
+          }
+
           base_name = 1;
           PRINTF("RES: (settings list) Remove base name from '%s' -> '%s'\n",
-              setting->context, setting->context+urllen);
+              parameter->context, parameter->context+urllen);
         }
 
       } else {
-        snprintf(txtsetting, 100,
-          "{\"n\":\"?p=%s\",\"v\":%lu}", setting->key, setting->value);
+
+        if(parameter->is_string){
+          snprintf(txtsetting, 100,
+             "{\"n\":\"?p=%s\",\"v\":\"%s\"}", parameter->name,
+             (char*)app_config_get_parameter_value(parameter->context, parameter->name));
+        } else {
+          snprintf(txtsetting, 100,
+             "{\"n\":\"?p=%s\",\"v\":%lu}", parameter->name, parameter->value);
+        }
       }
 
       ADD_STRING_IF_POSSIBLE(txtsetting, >);
@@ -424,8 +497,9 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
     }
   }
 
+
   /* We can get here a second time if the block size is small. */
-  if(setting == NULL){
+  if(parameter == NULL){
     // we remove the last ','
     if(strpos >= *offset && bufpos < preferred_size){
       bufpos--;
@@ -466,46 +540,16 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
    * occurs within the response ...
    * myTODO: problem may occurs if the text block ends with '}'
    * */
-  if(setting == NULL && buffer[bufpos-1] == '}') {
+  if(parameter == NULL && buffer[bufpos-1] == '}') {
     PRINTF("RES: (settings list) DONE\n");
     *offset = -1;
   } else {
-    PRINTF("RES: (settings list) MORE at %s (%p)\n", setting->key, setting);
+    PRINTF("RES: (settings list) MORE at %s (%p)\n", parameter->name, parameter);
     *offset += preferred_size;
   }
   return 1;
 }
-
-void
-coap_update_setting(resource_t *resource, void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  struct settings *setting;
-  size_t len = 0;
-  const char *strvalue = NULL;
-  int error = 0;
-  uint32_t intval;
-
-  for(setting = list_head(*settings_get_list()); setting != NULL; setting = list_item_next(setting))
-  {
-    if( !strcmp(resource->url, setting->context) )
-    {
-      if( (len = REST.get_post_variable(request, setting->key, &strvalue)) )
-      {
-        intval = atoi(strvalue);
-        error = settings_update_value(setting->context, setting->key, intval);
-      } else {
-        error = 2;
-      }
-    }
-  }
-
-  if( !error ) {
-    REST.set_response_status(response, REST.status.CHANGED);
-  } else if( error == 1 ) {
-    REST.set_response_status(response, REST.status.FORBIDDEN);
-  } else if( error == 2 ){
-    REST.set_response_status(response, REST.status.BAD_REQUEST);
-  }
-}
 #endif
+#endif /* APP_CONFIG */
+
 /** @} */

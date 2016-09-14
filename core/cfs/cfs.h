@@ -74,7 +74,8 @@ struct cfs_dir {
 };
 
 struct cfs_dirent {
-  char name[32];
+  /* \todo this should be COFFEE_NAME_LENGTH but inclusion order problem then */
+  char name[64];
   cfs_offset_t size;
 };
 

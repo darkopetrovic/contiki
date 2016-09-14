@@ -40,11 +40,23 @@ PERIODIC_RESOURCE(res_temperature,
                   5*CLOCK_SECOND,
                   res_periodic_handler);
 
+#if REST_DELAY_RES_START && APP_CONFIG
+static uint8_t
+callback(struct parameter *p)
+{
+  if( !strncmp(p->name, SETTINGS_PERIODIC_PARAM_NAME, strlen(p->name)) ){
+    rest_update_resource_interval(&res_temperature, p->value);
+    return 0;
+  }
+  return 1;
+}
+#endif /* REST_DELAY_RES_START */
+
 static void
 res_init()
 {
-#if REST_DELAY_RES_START
-  rest_update_resource_interval(&res_temperature, 5);
+#if REST_DELAY_RES_START && APP_CONFIG
+  app_config_create_parameter(res_temperature.url, SETTINGS_PERIODIC_PARAM_NAME, "5", callback);
 #endif
 }
 
@@ -59,7 +71,7 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 
 	uint16_t sensors_value[2];
 
-	//COAP_BLOCKWISE_SETTINGS_LIST(res_temperature);
+	COAP_BLOCKWISE_SETTINGS_LIST(res_temperature);
 
 	if( OBS_NOTIF_OR_FRST_BLCK_TRSF() ){
 
@@ -102,7 +114,7 @@ res_periodic_handler()
 static void
 res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	//COAP_UPDATE_SETTINGS(res_temperature);
+	COAP_UPDATE_SETTINGS(res_temperature);
 }
 
 /** @} */

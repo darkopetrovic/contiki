@@ -18,6 +18,9 @@
 #include "contiki-conf.h"
 #include "rest-engine.h"
 #include "er-coap.h"
+#if APP_CONFIG
+#include "app-config.h"
+#endif
 
 /** The name of the resource the client can use to retrieve all configuration
  * from the devices. */
@@ -50,12 +53,17 @@
 /** Handle the blockwise transfer of the resource data. */
 #define COAP_BLOCKWISE_TRANSFER(resource)   coap_blockwise_transfer(&resource, request, response, buffer, preferred_size, offset)
 
+#if APP_CONFIG
 /** Call this function in the POST/PUT handler function of the resource. */
 #define COAP_UPDATE_SETTINGS(resource)      coap_update_setting(&resource, request, response, buffer, preferred_size, offset)
 
 /** Call this function in the GET handler function of the resource.
  * We exit the get handler if the client is requesting the settings (?p). */
 #define COAP_BLOCKWISE_SETTINGS_LIST(resource); if(coap_blockwise_settings_list(&resource, request, response, buffer, preferred_size, offset)){return;}
+#else
+#define COAP_UPDATE_SETTINGS(resource)
+#define COAP_BLOCKWISE_SETTINGS_LIST(resource);
+#endif
 
 /** As specified in draft-ietf-core-block-17 §2.4
  * We actually use only the URI :

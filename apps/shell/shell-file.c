@@ -40,6 +40,7 @@
 #include "contiki.h"
 #include "shell-file.h"
 #include "cfs/cfs.h"
+#include "cfs-coffee-arch.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -79,7 +80,7 @@ PROCESS_THREAD(shell_ls_process, ev, data)
   static struct cfs_dir dir;
   static cfs_offset_t totsize;
   struct cfs_dirent dirent;
-  char buf[32];
+  char buf[COFFEE_NAME_LENGTH];
   PROCESS_BEGIN();
   
   if(data != NULL) {
