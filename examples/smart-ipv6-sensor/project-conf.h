@@ -40,7 +40,14 @@
 
 /* Application configuration */
 
-#define REST_CONF_DELAY_RES_START     1
+/** Delay the start of resources.  */
+#define REST_CONF_DELAY_RES_START           1
+
+/** Activate energy consumption module */
+#define ENERGEST_CONF_ON                    1
+
+/** Activate the Communication power statistics */
+#define CONTIKIMAC_CONF_COMPOWER            1
 
 /**
  * \sixlowpanndrpl 	We disable the probing for the host when
@@ -77,6 +84,9 @@
 
 /** Maximum routes to store */
 #define UIP_CONF_MAX_ROUTES       2
+
+/* Expected reassembly requirements   */
+#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS      4
 
 /** Maximum neighbors to store in the Neighbors Table */
 #if CONF_6LOWPAN_ND && !UIP_CONF_ROUTER

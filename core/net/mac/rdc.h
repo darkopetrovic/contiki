@@ -45,7 +45,7 @@
 #include "net/mac/mac.h"
 #include "net/llsec/llsec802154.h"
 
-#if RDC_CONF_SLEEPING_HOST
+#if APPS_CUSTOMRDC
 #include "custom-rdc.h"
 #endif
 

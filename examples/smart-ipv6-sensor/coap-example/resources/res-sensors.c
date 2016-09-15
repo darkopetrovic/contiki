@@ -47,7 +47,7 @@ PERIODIC_RESOURCE(res_sensors,
  */
 static uint16_t sensors_value[3];
 
-#if REST_DELAY_RES_START && APP_CONFIG
+#if REST_DELAY_RES_START && APPS_APPCONFIG
 static uint8_t
 callback(struct parameter *p)
 {
@@ -62,8 +62,8 @@ callback(struct parameter *p)
 static void
 res_init()
 {
-#if REST_DELAY_RES_START && APP_CONFIG
-  app_config_create_parameter(res_sensors.url, SETTINGS_PERIODIC_PARAM_NAME, "5", callback);
+#if REST_DELAY_RES_START && APPS_APPCONFIG
+  app_config_create_parameter(res_sensors.url, SETTINGS_PERIODIC_PARAM_NAME, "0", callback);
 #endif
 }
 

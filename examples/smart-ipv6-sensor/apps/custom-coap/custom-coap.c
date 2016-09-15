@@ -1,3 +1,35 @@
+/*
+ * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the Institute nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This file is part of the Contiki operating system.
+ *
+ */
+
 /**
  * \addtogroup coap-resources
  * @{
@@ -11,12 +43,11 @@
 #include "contiki.h"
 #include "custom-coap.h"
 
-#if APP_CONFIG
+#if APPS_APPCONFIG
 #include "app-config.h"
 #endif
 
-/* Used for vsprintf() */
-#include <stdarg.h>
+#include <stdarg.h> /* vsprintf */
 #include <stdlib.h> /* strtol */
 
 /** \cond */
@@ -81,7 +112,7 @@ clear_resource_message(void *ptr)
 {
   resource_message_t *m = ptr;
   PRINTF("RES: Timeout\n");
-  resource_clear_message( m );
+  resource_clear_message(m);
 }
 
 /* Add a cached version of a representation for an ongoing sequence of requests */
@@ -330,7 +361,7 @@ coap_blockwise_transfer(resource_t *resource, void *request, void *response, uin
   /* The REST.subscription_handler() will be called for observable resources by the REST framework. */
 }
 
-#if APP_CONFIG
+#if APPS_APPCONFIG
 void
 coap_update_setting(resource_t *resource, void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -342,11 +373,14 @@ coap_update_setting(resource_t *resource, void *request, void *response, uint8_t
   uint32_t intval;
   char cntxt[20];
 
+  memset(cntxt, 0, sizeof(cntxt));
   if(!strcmp(resource->url, SETTINGS_RESOURCE_NAME)){
     strncpy(cntxt, APP_CONFIG_GENERAL, strlen(APP_CONFIG_GENERAL));
   } else {
     sprintf(cntxt, "%s", resource->url);
   }
+
+  PRINTF("Trying to update settings %s.\n", cntxt);
 
   for(parameter = app_config_parameters_list_head(); parameter != NULL; parameter = list_item_next(parameter))
   {
@@ -354,7 +388,7 @@ coap_update_setting(resource_t *resource, void *request, void *response, uint8_t
     {
       if( (len = REST.get_post_variable(request, parameter->name, &strvalue)) )
       {
-        if((intval=strtol(strvalue, NULL, 10)) != 0){
+        if((intval=strtol(strvalue, NULL, 10)) != 0 || !strncmp(strvalue, "0", 1)){
           error = app_config_edit_parameter(parameter->context, parameter->name, NULL, intval);
         } else {
           error = app_config_edit_parameter(parameter->context, parameter->name, strvalue, 0);
@@ -456,7 +490,7 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
           // display full parameter path
           if(parameter->is_string){
             snprintf(txtsetting, 100,
-               "{\"n\":\"%s?p=%s\",\"v\":\"%s\"}", parameter->context, parameter->name,
+               "{\"n\":\"%s?p=%s\",\"sv\":\"%s\"}", parameter->context, parameter->name,
                (char*)app_config_get_parameter_value(parameter->context, parameter->name));
           } else {
             snprintf(txtsetting, 100,
@@ -466,7 +500,7 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
           // remove resource url base name
           if(parameter->is_string){
             snprintf(txtsetting, 100,
-                    "{\"n\":\"%s?p=%s\",\"v\":\"%s\"}", parameter->context+urllen,
+                    "{\"n\":\"%s?p=%s\",\"sv\":\"%s\"}", parameter->context+urllen,
                     parameter->name,
                     (char*)app_config_get_parameter_value(parameter->context, parameter->name));
           } else {
@@ -484,7 +518,7 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
 
         if(parameter->is_string){
           snprintf(txtsetting, 100,
-             "{\"n\":\"?p=%s\",\"v\":\"%s\"}", parameter->name,
+             "{\"n\":\"?p=%s\",\"sv\":\"%s\"}", parameter->name,
              (char*)app_config_get_parameter_value(parameter->context, parameter->name));
         } else {
           snprintf(txtsetting, 100,
@@ -550,6 +584,6 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
   return 1;
 }
 #endif
-#endif /* APP_CONFIG */
+#endif /* APPS_APPCONFIG */
 
 /** @} */

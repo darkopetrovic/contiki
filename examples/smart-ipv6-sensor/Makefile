@@ -12,6 +12,7 @@ WITH_UDPCLIENT ?= 0
 WITH_CUSTOMRDC ?= 0
 WITH_APPCONFIG ?= 0
 WITH_COAPSERVER ?= 0
+WITH_POWERTRACK ?= 0
 
 TARGET_NAME_HOST = $(PROJECT)-host
 TARGET_NAME_ROUTER = $(PROJECT)-router
@@ -31,6 +32,7 @@ ifeq ($(WITH_SHELL),1)
 endif
 
 ifeq ($(WITH_CUSTOMRDC),1)
+	CFLAGS += -DAPPS_CUSTOMRDC=1
 	CFLAGS += -DRDC_CONF_SLEEPING_HOST=1
 	PROJECTDIRS += $(PROJECTDIR)/apps/custom-rdc 
   PROJECT_SOURCEFILES += custom-rdc.c
@@ -38,23 +40,24 @@ endif
 
 # Test routing by sending packet with an udp-client.
 ifeq ($(WITH_UDPCLIENT),1)
-  CFLAGS += -DUDPCLIENT=1
+  CFLAGS += -DAPPS_UDPCLIENT=1
   PROJECTDIRS += $(PROJECTDIR)/apps/udp-client 
   PROJECT_SOURCEFILES += udp-client.c
   ifneq ($(WITH_UDP_CLIENT_AUTOSTART),0)
     CFLAGS += -DUDP_CLIENT_AUTOSTART=1
   endif
 else
-  CFLAGS += -DUDPCLIENT=0
+  CFLAGS += -DAPPS_UDPCLIENT=0
 endif
 
 ifeq ($(WITH_APPCONFIG),1)
-	CFLAGS += -DAPP_CONFIG=1
+	CFLAGS += -DAPPS_APPCONFIG=1
 	PROJECTDIRS += $(PROJECTDIR)/apps/app-config 
   PROJECT_SOURCEFILES += app-config.c
 endif
 
 ifeq ($(WITH_COAPSERVER),1)
+	CFLAGS += -DAPPS_COAPSERVER=1
 	CFLAGS += -DREST=coap_rest_implementation
 ifneq ($(TARGET),native)
 	CFLAGS += -DUIP_CONF_TCP=0
@@ -66,8 +69,15 @@ endif
 endif
 
 ifeq ($(WITH_SMARTLED),1)
+	CFLAGS += -DAPPS_SMARTLED=1
   PROJECTDIRS += $(PROJECTDIR)/apps/smart-led 
   PROJECT_SOURCEFILES += smart-led.c
+endif
+
+ifeq ($(WITH_POWERTRACK),1)
+	CFLAGS += -DAPPS_POWERTRACK=1
+	PROJECTDIRS += $(PROJECTDIR)/apps/power-track 
+  PROJECT_SOURCEFILES += power-track.c
 endif
 
 SMALL=1

@@ -1,3 +1,35 @@
+/*
+ * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the Institute nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This file is part of the Contiki operating system.
+ *
+ */
+
 /**
  * \addtogroup app-config
  * @{
@@ -37,8 +69,6 @@ app_config_init(void)
   app_config_create_parameter(APP_CONFIG_GENERAL, "rdc_enable_period", "30", NULL);
   app_config_create_parameter(APP_CONFIG_GENERAL, "alive_message_period", "30", NULL);
   app_config_create_parameter(APP_CONFIG_GENERAL, "bripaddr", "aaaa::212:4b00:40e:fadb", NULL);
-  app_config_create_parameter(APP_CONFIG_GENERAL, "energest_enable", "120", NULL);
-  app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
   app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
 
   /* The problem is when we update a parameter with a value longer that the old one,
@@ -89,10 +119,6 @@ app_config_create_parameter(const char* context, const char* name, const char* d
   char buf[MAX_PARAM_VALUE_LEN+1];
 #endif /* APP_CONFIG_STORAGE_COFFEE */
 
-#if DEBUG
-  uint8_t is_default = 1;
-#endif
-
   struct parameter *p;
   uint32_t value;
 
@@ -115,7 +141,7 @@ app_config_create_parameter(const char* context, const char* name, const char* d
   p->default_value = default_value;
   /* If default_value is numeric we set the value directly, otherwise the string
    * value is stored in memory and retrieved from there.  */
-  if((value=strtol(default_value, NULL, 10)) != 0){
+  if((value=strtol(default_value, NULL, 10)) != 0 || !strncmp(buf, "0", 1)){
     p->value = value;
     p->is_string = 0;
   } else {
@@ -126,7 +152,7 @@ app_config_create_parameter(const char* context, const char* name, const char* d
 
 #if APP_CONFIG_STORAGE_COFFEE
   sprintf(filepath, "%s/%s/%s", APP_CONFIG_HOME, context, name);
-
+  memset(buf, 0, sizeof(buf));
   /* If file exists we read the value and update the parameter. */
   if(file_exist(filepath)){
     fd = cfs_open(filepath, CFS_READ);
@@ -136,16 +162,15 @@ app_config_create_parameter(const char* context, const char* name, const char* d
 
     if(len > 0) {
       // update the parameter value with stored value
-      if((value=strtol(buf, NULL, 10)) != 0){
+      if((value=strtol(buf, NULL, 10)) != 0 || !strncmp(buf, "0", 1)){
         p->value = value;
         p->is_string = 0;
+        PRINTF("APPCFG: Parameter updated with value from memory: %lu.\n", p->value);
       } else {
         p->value = 0;
         p->is_string = 1;
+        PRINTF("APPCFG: Parameter updated with value from memory: '%s'.\n", buf);
       }
-#if DEBUG
-      is_default = 0;
-#endif
     } else {
       PRINTF("APPCFG: (error) Couldn't read parameter value.\n");
       return 1;
@@ -170,16 +195,20 @@ app_config_create_parameter(const char* context, const char* name, const char* d
   PRINTF("APPCFG: Create parameter (%d) '%s'=", settings_count, p->name);
 
 #if DEBUG
+#if APP_CONFIG_STORAGE_COFFEE
   if(p->is_string){
-    PRINTF("'%s' ", p->default_value);
+    if(buf[0]){
+      PRINTF("'%s' ", buf); // the value from memory
+    } else {
+      PRINTF("'%s'* ", p->default_value);
+    }
   } else {
     PRINTF("%lu ", p->value);
   }
-
-  if(is_default){
-    PRINTF("(default) ");
-  }
+#else /* APP_CONFIG_STORAGE_COFFEE */
+  PRINTF("%lu ", p->value);
 #endif
+#endif /* DEBUG */
 
 #if APP_CONFIG_STORAGE_COFFEE
   PRINTF("stored in cfs at '%s'", filepath);

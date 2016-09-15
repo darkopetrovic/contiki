@@ -87,7 +87,7 @@
 PROCESS(nd_optimization_example, "6lowpan-nd example");
 AUTOSTART_PROCESSES(&nd_optimization_example);
 
-#if UDPCLIENT
+#if APPS_UDPCLIENT
 PROCESS_NAME(udp_client_process);
 #endif
 
@@ -178,7 +178,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   etimer_set(&status_timer, CLOCK_SECOND*10);
 #endif
 
-#if UDPCLIENT
+#if APPS_UDPCLIENT
   process_start(&udp_client_process, NULL);
 #endif
 

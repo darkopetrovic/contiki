@@ -47,7 +47,7 @@ PERIODIC_RESOURCE(res_humidity,
  * Use local resource state that is accessed by res_get_handler() and altered by res_periodic_handler() or PUT or POST.
  */
 
-#if REST_DELAY_RES_START && APP_CONFIG
+#if REST_DELAY_RES_START && APPS_APPCONFIG
 static uint8_t
 callback(struct parameter *p)
 {
@@ -62,8 +62,8 @@ callback(struct parameter *p)
 static void
 res_init()
 {
-#if REST_DELAY_RES_START && APP_CONFIG
-  app_config_create_parameter(res_humidity.url, SETTINGS_PERIODIC_PARAM_NAME, "5", callback);
+#if REST_DELAY_RES_START && APPS_APPCONFIG
+  app_config_create_parameter(res_humidity.url, SETTINGS_PERIODIC_PARAM_NAME, "0", callback);
 #endif
 }
 

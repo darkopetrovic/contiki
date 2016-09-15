@@ -48,9 +48,10 @@
 
 #include <string.h>
 
-#ifdef REST
+#if APPS_COAPSERVER
 #include "rest-engine.h"
 #endif
+
 #include "dev/button-sensor.h"
 
 #define DEBUG DEBUG_PRINT
@@ -63,20 +64,46 @@
 #include "dev/watchdog.h"
 #endif /* SHELL */
 
-#if APP_CONFIG
+#if APPS_APPCONFIG
 #include "app-config.h"
 #endif
 
-#ifdef REST
+#if ENERGEST_CONF_ON
+#include "power-track.h"
+#endif
+
+#if APPS_COAPSERVER
 extern resource_t
-#if APP_CONFIG
+#if APPS_APPCONFIG
   res_config,
+#endif
+#if ENERGEST_CONF_ON
+  res_energest,
 #endif
   res_sensors,
   res_temperature,
   res_humidity
   ;
 #endif
+
+#if APPS_APPCONFIG
+static uint8_t
+callback(struct parameter *p)
+{
+#if ENERGEST_CONF_ON
+  if( !strncmp(p->name, "energest_enable", strlen(p->name)) ){
+    if(p->value){
+      powertrack_start(10*CLOCK_SECOND);
+    } else {
+      powertrack_stop();
+      powertrack_reset();
+    }
+    return 0;
+  }
+#endif
+  return 1;
+}
+#endif /* REST_DELAY_RES_START */
 
 /*---------------------------------------------------------------------------*/
 
@@ -94,9 +121,12 @@ PROCESS_THREAD(erbium_server, ev, data)
   SENSORS_ACTIVATE(button_sensor);
 #endif
 
-#if APP_CONFIG
+#if APPS_APPCONFIG
   app_config_init();
-#endif
+#if ENERGEST_CONF_ON
+  app_config_create_parameter(APP_CONFIG_GENERAL, "energest_enable", "1", callback);
+#endif /* ENERGEST_CONF_ON */
+#endif /* APPS_APPCONFIG */
 
 #if SHELL
 // we use the Z1 platform in cooja
@@ -116,18 +146,21 @@ PROCESS_THREAD(erbium_server, ev, data)
   shell_coffee_init();
 #endif /* SHELL */
 
-#ifdef REST
+#if APPS_COAPSERVER
   PRINTF("Starting CoAP Server\n");
   
   /* Initialize the REST engine. */
   rest_init_engine();
-#if APP_CONFIG
+#if APPS_APPCONFIG
   rest_activate_resource(&res_config,       SETTINGS_RESOURCE_NAME);
-#endif
+#endif /* APPS_APPCONFIG */
   rest_activate_resource(&res_sensors,      "sensors");
   rest_activate_resource(&res_temperature,  "sensors/temperature");
   rest_activate_resource(&res_humidity,     "sensors/humidity");
-#endif
+#if ENERGEST_CONF_ON
+  rest_activate_resource(&res_energest,     "energest");
+#endif /* ENERGEST_CONF_ON */
+#endif /* REST */
 
   /* Define application-specific events here. */
   while(1) {
