@@ -45,6 +45,7 @@
 #include "contiki-lib.h"
 #include "contiki-net.h"
 #include "custom-coap.h"
+#include "pir-sensor.h"
 
 #include <string.h>
 
@@ -82,7 +83,11 @@ extern resource_t
 #endif
   res_sensors,
   res_temperature,
-  res_humidity
+  res_humidity,
+  res_motion,
+  res_power,
+  res_battery,
+  res_solar
   ;
 #endif
 
@@ -157,6 +162,10 @@ PROCESS_THREAD(erbium_server, ev, data)
   rest_activate_resource(&res_sensors,      "sensors");
   rest_activate_resource(&res_temperature,  "sensors/temperature");
   rest_activate_resource(&res_humidity,     "sensors/humidity");
+  rest_activate_resource(&res_motion,       "sensors/motion");
+  rest_activate_resource(&res_power,        "power");
+  rest_activate_resource(&res_battery,      "power/battery");
+  rest_activate_resource(&res_solar,        "power/solar");
 #if ENERGEST_CONF_ON
   rest_activate_resource(&res_energest,     "energest");
 #endif /* ENERGEST_CONF_ON */
@@ -174,6 +183,14 @@ PROCESS_THREAD(erbium_server, ev, data)
         crdc_period_start(10);
 #endif /* RDC_SLEEPING_HOST */
       }
+    }
+
+    if(ev == sensors_event && data == &pir_sensor) {
+      PRINTF("******* MOTION DETECTED *******\n");
+
+      /* Call the event_handler for this application-specific event. */
+      res_motion.trigger();
+
     }
 
   }  /* while (1) */

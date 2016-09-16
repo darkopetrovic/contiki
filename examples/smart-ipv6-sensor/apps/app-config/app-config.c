@@ -141,7 +141,7 @@ app_config_create_parameter(const char* context, const char* name, const char* d
   p->default_value = default_value;
   /* If default_value is numeric we set the value directly, otherwise the string
    * value is stored in memory and retrieved from there.  */
-  if((value=strtol(default_value, NULL, 10)) != 0 || !strncmp(buf, "0", 1)){
+  if((value=strtol(default_value, NULL, 10)) != 0 || !strncmp(default_value, "0", 1)){
     p->value = value;
     p->is_string = 0;
   } else {
@@ -211,7 +211,7 @@ app_config_create_parameter(const char* context, const char* name, const char* d
 #endif /* DEBUG */
 
 #if APP_CONFIG_STORAGE_COFFEE
-  PRINTF("stored in cfs at '%s'", filepath);
+  PRINTF("stored in '%s'", filepath);
 #endif
 
   PRINTF(".\n");
@@ -366,9 +366,9 @@ app_config_edit_parameter(const char* context, const char* name, const char* str
   }
 
   if(!error){
-    PRINTF("APPCFG: Update parameter '%s, %s'=%s.\n", p->context, p->name, buf);
+    PRINTF("APPCFG: Update parameter %s=%s in '%s'.\n", p->name, buf, p->context);
   } else {
-    PRINTF("APPCFG: (error) Fail to update parameter '%s, %s'= (%s|%lu).\n", p->context, p->name, strvalue, intvalue);
+    PRINTF("APPCFG: (error) Fail to update parameter %s = (%s|%lu) in '%s'.\n", p->name, strvalue, intvalue, p->context);
   }
 
   return error;

@@ -56,20 +56,20 @@
 
 /** The name of the resource the client can use to retrieve all configuration
  * from the devices. */
-#define SETTINGS_RESOURCE_NAME        "configuration"
+#define CONFIG_RESOURCE_NAME              "configuration"
 
 /** The parameter used by the client to set the wake-up interval for each
  * periodic resource. */
-#define SETTINGS_PERIODIC_PARAM_NAME    "interval"
+#define CONFIG_PERIODIC_PARAM_NAME        "interval"
 
 /** The maximum size of a resource message stored in memory.
  * Previously: 280 is not enough with /energest full statistics enabled. */
 #define RESOURCE_REPRESENTATION_MAX_SIZE  400
 
 /** The maximum stored resource representation.  */
-#define MAX_RESOURCE_REPRESENTATION     2
+#define MAX_RESOURCE_REPRESENTATION       2
 
-#define MAX_PERIODIC_RESSOURCES       10
+#define MAX_PERIODIC_RESSOURCES           10
 
 /** The time the resource message is available for the client during a blockwise transfer.
  * The system keep the RDC enabled if a message is not fully retrieved. Thus to prevent the
@@ -79,7 +79,7 @@
  * in draft-ietf-core-block-17 p.11 §2.4*/
 #define RESOURCE_REPRESENTATION_LIFETIME  20    // in seconds
 
-#define OBS_NOTIFICATION()            (offset == NULL)
+#define OBS_NOTIFICATION()                (offset == NULL)
 #define OBS_NOTIF_OR_FRST_BLCK_TRSF()     (offset == NULL || (offset != NULL && *offset == 0))
 
 /** Handle the blockwise transfer of the resource data. */
@@ -92,10 +92,10 @@
 /** Call this function in the GET handler function of the resource.
  * We exit the get handler if the client is requesting the settings (?p). */
 #define COAP_BLOCKWISE_SETTINGS_LIST(resource); if(coap_blockwise_settings_list(&resource, request, response, buffer, preferred_size, offset)){return;}
-#else
+#else /* APPS_APPCONFIG */
 #define COAP_UPDATE_SETTINGS(resource)
 #define COAP_BLOCKWISE_SETTINGS_LIST(resource);
-#endif
+#endif /* APPS_APPCONFIG */
 
 /** As specified in draft-ietf-core-block-17 §2.4
  * We actually use only the URI :
@@ -104,10 +104,6 @@
 typedef struct resource_message_t {
   struct resource_message_t *next;        /* for LIST */
   const char *resource_url;
-#if ENABLE_CUSTOM_RDC
-  // used to assign dynamically an identity to a wake-up
-  const char *uid;
-#endif
   char message[RESOURCE_REPRESENTATION_MAX_SIZE + 1];
   uint8_t etag[COAP_ETAG_LEN];
   uint8_t etag_len;

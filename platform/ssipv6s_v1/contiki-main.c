@@ -232,7 +232,7 @@ main(void)
   autostart_start(autostart_processes);
 
   watchdog_start();
-  fade(LEDS_ORANGE);
+  fade(LEDS_YELLOW);
 
 #if RDC_SLEEPING_HOST
   crdc_init();

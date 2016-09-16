@@ -90,7 +90,7 @@
 /** \endcond */
 
 /* The system can store MAX_RESOURCE_REPRESENTATION messages independently of the resource.
- * This is not used by the .well-know/core and SETTINGS_RESOURCE_NAME resources which
+ * This is not used by the .well-know/core and CONFIG_RESOURCE_NAME resources which
  * create the representation dynamically.
  */
 MEMB(resource_message_memb, resource_message_t, MAX_RESOURCE_REPRESENTATION);
@@ -374,13 +374,13 @@ coap_update_setting(resource_t *resource, void *request, void *response, uint8_t
   char cntxt[20];
 
   memset(cntxt, 0, sizeof(cntxt));
-  if(!strcmp(resource->url, SETTINGS_RESOURCE_NAME)){
+  if(!strcmp(resource->url, CONFIG_RESOURCE_NAME)){
     strncpy(cntxt, APP_CONFIG_GENERAL, strlen(APP_CONFIG_GENERAL));
   } else {
     sprintf(cntxt, "%s", resource->url);
   }
 
-  PRINTF("Trying to update settings %s.\n", cntxt);
+  PRINTF("Trying to update parameter in '%s'.\n", cntxt);
 
   for(parameter = app_config_parameters_list_head(); parameter != NULL; parameter = list_item_next(parameter))
   {
@@ -393,6 +393,8 @@ coap_update_setting(resource_t *resource, void *request, void *response, uint8_t
         } else {
           error = app_config_edit_parameter(parameter->context, parameter->name, strvalue, 0);
         }
+        // parameter was found don't need to look further
+        break;
       } else {
         error = 2;
       }
@@ -429,9 +431,9 @@ coap_blockwise_settings_list(resource_t *resource, void *request, void *response
     return 0;
   }
 
-  /* Doing a GET on the 'SETTINGS_RESOURCE_NAME' resource fetches every
+  /* Doing a GET on the 'CONFIG_RESOURCE_NAME' resource fetches every
    * existing parameters on the system. */
-  is_setting_resource = !strcmp(resource->url, SETTINGS_RESOURCE_NAME);
+  is_setting_resource = !strcmp(resource->url, CONFIG_RESOURCE_NAME);
   tmplen = REST.get_query_variable(request, "p", &param);
 
   /* For GET request without '?p' on other resource than the global settings resource,

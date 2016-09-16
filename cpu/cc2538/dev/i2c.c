@@ -68,9 +68,12 @@ i2c_init(uint8_t port_sda, uint8_t pin_sda, uint8_t port_scl, uint8_t pin_scl,
   GPIO_PERIPHERAL_CONTROL(GPIO_PORT_TO_BASE(port_sda), GPIO_PIN_MASK(pin_sda));
   GPIO_PERIPHERAL_CONTROL(GPIO_PORT_TO_BASE(port_scl), GPIO_PIN_MASK(pin_scl));
 
-  /* Set the pad to no drive type */
-  ioc_set_over(port_sda, pin_sda, IOC_OVERRIDE_DIS);
-  ioc_set_over(port_scl, pin_scl, IOC_OVERRIDE_DIS);
+  /* Set the pad to pull-up drive type.
+   * Modified from the original setup. The SCL line can be otherwise in
+   * high impedance state and error can occurs on the communication bus.
+   */
+  ioc_set_over(port_sda, pin_sda, IOC_OVERRIDE_PUE);
+  ioc_set_over(port_scl, pin_scl, IOC_OVERRIDE_PUE);
 
   /* Set pins as peripheral inputs */
   REG(IOC_I2CMSSDA) = ioc_input_sel(port_sda, pin_sda);

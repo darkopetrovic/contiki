@@ -12,6 +12,8 @@
 #include "contiki.h"
 #include "power-track.h"
 
+#include "platform-sensors.h"
+
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
@@ -34,20 +36,18 @@ static uint32_t last_idle_transmit, last_idle_listen;
 static void
 energest_compute(void)
 {
-  //static uint32_t last_sensors_ina3221, last_sensors_sht21, last_sensors_tmp100;
-  //static uint32_t last_sensors_pir, last_led_red, last_led_yellow;
 #ifdef PLATFORM_HAS_BATTERY
   uint16_t battery_volt_mv;
   float battery_volt;
-
   battery_volt_mv = get_battery_voltage();
   battery_volt = (float)battery_volt_mv/1000;
 #endif
 
+  uint32_t sup_lpm = 0;
+
   energest_flush();
 
   /* ALL values calculation */
-  PRINTF("Energest data computation, %lu.\n", energest_type_time(ENERGEST_TYPE_CPU));
 
   energest_data.all_cpu = energest_type_time(ENERGEST_TYPE_CPU);
   energest_data.all_lpm = energest_type_time(ENERGEST_TYPE_LPM);
@@ -58,15 +58,21 @@ energest_compute(void)
   energest_data.all_idle_listen = compower_idle_activity.listen;
 #endif
 
+  energest_data.all_led_red = energest_type_time(ENERGEST_TYPE_LED_RED);
+  energest_data.all_led_yellow = energest_type_time(ENERGEST_TYPE_LED_YELLOW);
   energest_data.all_flash_read = energest_type_time(ENERGEST_TYPE_FLASH_READ);
   energest_data.all_flash_write = energest_type_time(ENERGEST_TYPE_FLASH_WRITE);
   energest_data.all_flash_erase = energest_type_time(ENERGEST_TYPE_FLASH_ERASE);
+
+  /* Add here the new types */
+
+#if CONTIKI_TARGET_SSIPV6S_v1
   energest_data.all_sensors_ina3221 = energest_type_time(ENERGEST_TYPE_SENSORS_INA3221);
   energest_data.all_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
   energest_data.all_sensors_tmp100 = energest_type_time(ENERGEST_TYPE_SENSORS_TMP100);
   energest_data.all_sensors_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
-  energest_data.all_led_red = energest_type_time(ENERGEST_TYPE_LED_RED);
-  energest_data.all_led_yellow = energest_type_time(ENERGEST_TYPE_LED_YELLOW);
+#endif
+
 
   /* CURRENT values calculation */
 
@@ -79,14 +85,6 @@ energest_compute(void)
   energest_data.idle_listen = compower_idle_activity.listen - last_idle_listen;
 #endif
 
-  /*sensors_ina3221 = all_sensors_ina3221 - last_sensors_ina3221;
-  sensors_sht21 = all_sensors_sht21 - last_sensors_sht21;
-  sensors_tmp100 = all_sensors_tmp100 - last_sensors_tmp100;
-  sensors_pir = all_sensors_pir - last_sensors_pir;
-  led_red = all_led_red - last_led_red;
-  led_yellow = all_led_yellow - last_led_yellow;
-  leds = led_red + led_yellow;*/
-
   /* LAST values calculation */
 
   last_cpu = energest_type_time(ENERGEST_TYPE_CPU);
@@ -97,13 +95,6 @@ energest_compute(void)
   last_idle_listen = compower_idle_activity.listen;
   last_idle_transmit = compower_idle_activity.transmit;
 #endif
-
-  /*last_sensors_ina3221 = energest_type_time(ENERGEST_TYPE_SENSORS_INA3221);
-  last_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
-  last_sensors_tmp100 = energest_type_time(ENERGEST_TYPE_SENSORS_TMP100);
-  last_sensors_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
-  last_led_red = energest_type_time(ENERGEST_TYPE_LED_RED);
-  last_led_yellow = energest_type_time(ENERGEST_TYPE_LED_YELLOW);*/
 
   //time = energest_data.cpu + energest_data.lpm;
   energest_data.all_time = energest_data.all_cpu + energest_data.all_lpm;
@@ -117,17 +108,25 @@ energest_compute(void)
 
   /* myBUG: sometimes, especially during the first minute of the device,
    * RX+TX duration is greater than CPU which shouldn't be possible. */
+
+#if CONTIKI_TARGET_SSIPV6S_v1
+  sup_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21 +
+      energest_data.all_sensors_tmp100;
+#endif
+
   energest_data.charge_consumed =
       (float)(energest_data.all_cpu-energest_data.all_transmit-energest_data.all_listen)/RTIMER_SECOND * I_CPU \
-      + (float)(energest_data.all_lpm-energest_data.all_sensors_ina3221-energest_data.all_sensors_sht21-
-          energest_data.all_sensors_tmp100-energest_data.all_leds)/RTIMER_SECOND * I_LPM \
+      + (float)(energest_data.all_lpm-energest_data.all_leds-sup_lpm)/RTIMER_SECOND * I_LPM \
       + (float)energest_data.all_transmit/RTIMER_SECOND * I_TX \
-      + (float)energest_data.all_listen/RTIMER_SECOND * I_RX \
+      + (float)energest_data.all_listen/RTIMER_SECOND * I_RX
+#if CONTIKI_TARGET_SSIPV6S_v1
       + (float)energest_data.all_sensors_ina3221/RTIMER_SECOND * I_INA3221 \
       + (float)energest_data.all_sensors_sht21/RTIMER_SECOND * I_SHT21 \
       + (float)energest_data.all_sensors_tmp100/RTIMER_SECOND * I_TMP100 \
-      + (float)energest_data.all_sensors_pir/RTIMER_SECOND * I_PIR \
+      + (float)energest_data.all_sensors_pir/RTIMER_SECOND * I_PIR
+#endif
       + (float)energest_data.all_leds/RTIMER_SECOND * I_LED;
+
 
 #ifdef PLATFORM_HAS_BATTERY
   /* Estimate the remaining battery capacity using simple relationship with the battery level:

@@ -37,8 +37,9 @@
 #ifndef PROJECT_CONF_H_
 #define PROJECT_CONF_H_
 
-
-/* Application configuration */
+/* ********************************************************************** */
+/* Application configuration                                              */
+/* ********************************************************************** */
 
 /** Delay the start of resources.  */
 #define REST_CONF_DELAY_RES_START           1
@@ -49,6 +50,10 @@
 /** Activate the Communication power statistics */
 #define CONTIKIMAC_CONF_COMPOWER            1
 
+/* ********************************************************************** */
+/* RPL configuration                                                      */
+/* ********************************************************************** */
+
 /**
  * \sixlowpanndrpl 	We disable the probing for the host when
  *                  6lowpan-nd is enabled. 
@@ -58,20 +63,35 @@
 #if CONF_6LOWPAN_ND && UIP_CONF_IPV6_RPL && !UIP_CONF_ROUTER
 #define RPL_CONF_WITH_PROBING               0
 #endif         
-
-/* RPL configuration */
-
 /** 
  * \needreview The DAO message couldn't be received sometimes by the node. 
  * Need to do more tests.
  */
 #define RPL_CONF_WITH_DAO_ACK               1
 
-/* 6LoWPAN-ND configuration */
+/* ********************************************************************** */
+/* 6LoWPAN-ND configuration                                               */
+/* ********************************************************************** */
 
 #define UIP_CONF_ND6_REGISTRATION_LIFETIME  5
 
-/* System configuration */
+/* ********************************************************************** */
+/* System configuration                                                   */
+/* ********************************************************************** */
+
+/**
+ * The USB is initiliazed only when the USB cable is plugged in. Therefore,
+ * there is no extra current consumption on the battery due to the USB process.
+ */
+#define CC2538_CONF_QUIET                   0
+
+/**
+ * Useful to print debug message on the terminal while debuging USB features
+ * (initilization, plug, unplug, command input, ...). */
+#define DEBUG_USB_WITH_UART                 0
+
+/** Enable USB (commands and print) */
+#define DBG_CONF_USB                        0
 
 #define UIP_CONF_TCP                        0
 
@@ -99,7 +119,9 @@
 #define UIP_DS6_CONF_PERIOD                 CLOCK_SECOND*10
 #endif
 
-/* Platform specific configurations. */
+/* ********************************************************************** */
+/* Platform specific configurations.                                      */
+/* ********************************************************************** */
 
 #if CONTIKI_TARGET_CC2538DK
 #define CC2538_RF_CONF_CHANNEL              25
@@ -117,5 +139,29 @@
 #if CONTIKI_TARGET_Z1
 #define ENTER_SLEEP_MODE()  _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF)
 #endif
+
+/* ********************************************************************** */
+/* Automatic (re)definition when required.                                */
+/* ********************************************************************** */
+
+#if DEBUG_USB_WITH_UART
+#define USB_SERIAL_CONF_ENABLE              1
+#undef CC2538_CONF_QUIET
+#define CC2538_CONF_QUIET                   0
+#undef DBG_CONF_USB
+#define DBG_CONF_USB                        0
+#endif
+
+#if DBG_CONF_USB
+/* If we set the QUIET mode, the global configuration will unset USB_SERIAL_CONF_ENABLE
+ * and the USB will be unusable (USB_SERIAL_CONF_ENABLE depends on DBG_CONF_USB) */
+#undef CC2538_CONF_QUIET
+#define CC2538_CONF_QUIET                     0
+/* Prevent the initilisation of the standard UART when we use USB. */
+#define UART_CONF_ENABLE                      0
+/* Avoid spurious current consumption at device startup if UART is not in use. */
+#define STARTUP_CONF_VERBOSE                  0
+#endif
+
 
 #endif /* PROJECT_CONF_H_ */
