@@ -46,6 +46,7 @@ EVENT_RESOURCE(res_motion,
 
 static int32_t event_counter = 0;
 
+#if APPS_APPCONFIG
 static uint8_t
 callback(struct parameter *p)
 {
@@ -58,6 +59,7 @@ callback(struct parameter *p)
 	}
 	return 1;
 }
+#endif
 
 static void
 res_init()

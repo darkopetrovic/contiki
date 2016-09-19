@@ -79,11 +79,14 @@
 /* System configuration                                                   */
 /* ********************************************************************** */
 
+#define UIP_CONF_ROUTER   0
+#define RDC_CONF_SLEEPING_HOST 1
+
 /**
  * The USB is initiliazed only when the USB cable is plugged in. Therefore,
  * there is no extra current consumption on the battery due to the USB process.
  */
-#define CC2538_CONF_QUIET                   0
+#define CC2538_CONF_QUIET                   1
 
 /**
  * Useful to print debug message on the terminal while debuging USB features
@@ -91,31 +94,31 @@
 #define DEBUG_USB_WITH_UART                 0
 
 /** Enable USB (commands and print) */
-#define DBG_CONF_USB                        0
+#define DBG_CONF_USB                        1
 
 #define UIP_CONF_TCP                        0
 
 #define	WATCHDOG_CONF_ENABLE                0
 
-#define UIP_CONF_BUFFER_SIZE              200
+#define UIP_CONF_BUFFER_SIZE                200
 
 /** Reduce the maximum amount of concurrent UDP connections (default 10). */
-#define UIP_CONF_UDP_CONNS                4
+#define UIP_CONF_UDP_CONNS                  4
 
 /** Maximum routes to store */
-#define UIP_CONF_MAX_ROUTES       2
+#define UIP_CONF_MAX_ROUTES                 2
 
 /* Expected reassembly requirements   */
-#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS      4
+#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    4
 
 /** Maximum neighbors to store in the Neighbors Table */
 #if CONF_6LOWPAN_ND && !UIP_CONF_ROUTER
-#define NBR_TABLE_CONF_MAX_NEIGHBORS  UIP_CONF_MAX_ROUTES
+#define NBR_TABLE_CONF_MAX_NEIGHBORS        UIP_CONF_MAX_ROUTES
 #else
-#define NBR_TABLE_CONF_MAX_NEIGHBORS  3
+#define NBR_TABLE_CONF_MAX_NEIGHBORS        3
 #endif
 
-#if !UIP_CONF_ROUTER && RDC_SLEEPING_HOST
+#if !UIP_CONF_ROUTER && RDC_CONF_SLEEPING_HOST
 #define UIP_DS6_CONF_PERIOD                 CLOCK_SECOND*10
 #endif
 
@@ -123,9 +126,12 @@
 /* Platform specific configurations.                                      */
 /* ********************************************************************** */
 
-#if CONTIKI_TARGET_CC2538DK
+/* Even if CONTIKI_TARGET_CC2538DK is set with the ssipv6s platform in the
+ * board.h file, this configuration file is included before. */
+#if CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_SSIPV6S_V1
 #define CC2538_RF_CONF_CHANNEL              25
 #define LPM_CONF_MAX_PM                     2
+#define LPM_CONF_ENABLE                     1
 /* CFS Configuration */
 #define APP_CONFIG_CONF_STORAGE_COFFEE      1
 #define FLASH_CONF_FW_ADDR                  CC2538_DEV_FLASH_ADDR
@@ -156,11 +162,11 @@
 /* If we set the QUIET mode, the global configuration will unset USB_SERIAL_CONF_ENABLE
  * and the USB will be unusable (USB_SERIAL_CONF_ENABLE depends on DBG_CONF_USB) */
 #undef CC2538_CONF_QUIET
-#define CC2538_CONF_QUIET                     0
+#define CC2538_CONF_QUIET                   0
 /* Prevent the initilisation of the standard UART when we use USB. */
-#define UART_CONF_ENABLE                      0
+#define UART_CONF_ENABLE                    0
 /* Avoid spurious current consumption at device startup if UART is not in use. */
-#define STARTUP_CONF_VERBOSE                  0
+#define STARTUP_CONF_VERBOSE                0
 #endif
 
 

@@ -41,7 +41,7 @@
 
 #include "custom-rdc.h"
 
-#define DEBUG 1
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #ifndef CETIC_6LBR_UDP_PERIOD

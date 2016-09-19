@@ -16,7 +16,38 @@
 #include "tmp100-sensor.h"
 #include "button-sensor.h"
 
+#if SHELL && USB_SERIAL_CONF_ENABLE && USB_SHELL_IN_NRMEM
+#include "dev/serial-line.h"
+#include "apps/shell/shell.h"
+#include "apps/serial-shell/serial-shell.h"
+#include "dev/watchdog.h"
+#include "dev/leds.h"
+//#include "cdc-acm.h"
+#include "usb/usb-serial.h"
+#include "dev/usb-regs.h" /* USB_CTRL */
+#endif
+
 #include <string.h>
+
+#define DEBUG DEBUG_NONE
+#include "net/ip/uip-debug.h"
+
+#if SHELL && USB_SERIAL_CONF_ENABLE && USB_SHELL_IN_NRMEM
+extern unsigned long _nrbss;
+extern unsigned long _enrbss;
+extern unsigned long _data;
+extern unsigned long _data_lma;
+extern unsigned long _nrdata;
+extern unsigned long _nrdata_lma;
+extern unsigned long _enrdata;
+extern unsigned long _nrdata_size;
+
+extern struct process usb_serial_process;
+extern struct process usb_process;
+extern struct process shell_process;
+extern struct process shell_server_process;
+extern struct process serial_shell_process;
+#endif
 
 void
 deep_sleep_ms(uint32_t duration)
@@ -47,8 +78,89 @@ get_battery_voltage(void)
   level = ina3221_sensor.value(INA3221_CH2_BUS_VOLTAGE);
   SENSORS_DEACTIVATE(ina3221_sensor);
   return level;
+}
+
+#if SHELL && USB_SERIAL_CONF_ENABLE && USB_SHELL_IN_NRMEM
+void
+zero_fill_nrbss(void)
+{
+  //PRINTF("_nrbss=%p _enrbss=%p\n", &_nrbss, &_enrbss);
+
+   /* Zero-fill the nrbss segment. */
+  __asm("    ldr     r0, =_nrbss\n"
+      "    ldr     r1, =_enrbss\n"
+      "    mov     r2, #0\n"
+      "    .thumb_func\n"
+      "zero_loop2:\n"
+      "        cmp     r0, r1\n"
+      "        it      lt\n"
+      "        strlt   r2, [r0], #4\n" "        blt     zero_loop2");
+}
+
+void
+copy_nrdata(void)
+{
+  unsigned long *pul_src, *pul_dst;
+  //PRINTF("_data=%p _data_lma=%p\n", &_data, &_data_lma);
+  //PRINTF("_nrdata=%p _nrdata_lma=%p\n", &_nrdata, &_nrdata_lma);
+  pul_src = &_nrdata_lma;
+  for(pul_dst = &_nrdata; pul_dst < &_enrdata;) {
+    *pul_dst++ = *pul_src++;
+  }
+}
+
+uint8_t
+usb_shell_init(void)
+{
+  if(USB_IS_PLUGGED()){
+    PRINTF("CTRL: USB Plugged.\n");
+    leds_on(LEDS_YELLOW);
+
+    copy_nrdata();
+    zero_fill_nrbss();
+
+    usb_serial_init();
+    usb_serial_set_input(serial_line_input_byte);
+
+    /* Since the commands are stored in the non-retention memory, we need
+     * to re-initialize the memory every time. */
+    serial_shell_init();
+
+    shell_ping_init();
+    //shell_power_init();
+    shell_ps_init();
+    //shell_config_init();
+    shell_ifconfig_init();
+    //shell_stackusage_init();
+    shell_file_init();
+    shell_coffee_init();
+
+    return 1;
+
+  } else {
+    PRINTF("CTRL: USB Unplugged.\n");
+    /* Note that the PRINTF function in exit_process() is moved after the
+     * process is tested to exist. Otherwise the code crashes here if the
+     * process doesn't exist. */
+    leds_off(LEDS_YELLOW);
+
+    process_exit(&shell_process);
+    process_exit(&shell_server_process);
+    process_exit(&serial_shell_process);
+    process_exit(&usb_serial_process);
+    process_exit(&usb_process);
+
+    // turn-off usb-module and pll
+    REG(USB_CTRL) = 0;
+
+    // clear PC0 pin
+    GPIO_CLR_PIN(GPIO_PORT_TO_BASE(USB_PULLUP_PORT), GPIO_PIN_MASK(USB_PULLUP_PIN));
+
+    return 0;
+  }
 
 }
+#endif /* SHELL */
 
 /** \brief Exports a global symbol to be used by the sensor API */
 SENSORS(&button_select_sensor, &button_user_sensor, &usb_plug_detect, &pir_sensor,

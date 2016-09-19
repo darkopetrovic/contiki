@@ -1,18 +1,48 @@
+# Makefile to build the cc2538.ld file only.
+# (used by Code Composer Studio editor)
+#
+
 CFLAGS = -mcpu=cortex-m3 -mthumb -mlittle-endian
-CFLAGS += -ffunction-sections -fdata-sections
+CFLAGS += -ffunction-sections
 CFLAGS += -fshort-enums -fomit-frame-pointer -fno-strict-aliasing
-CFLAGS += -Wall -DLPM_CONF_MAX_PM=2 -DLPM_CONF_ENABLE
+CFLAGS += -Wall -Os -DUSB_SHELL_IN_NRMEM=1
+
+CFLAGS += -DPROJECT_CONF_H=\"../examples/smart-ipv6-sensor/project-conf.h\"
+
+SOURCEDIRS = "../cpu/cc2538" "../core" 
+
+PLATFORM = $(findstring cc2538dk,$(SUBDIRS))
+LDSCRIPT_PATH = ../cpu/cc2538/cc2538.lds
+
+ifeq (,$(PLATFORM))
+PLATFORM = $(findstring ssipv6s_v1,$(SUBDIRS))
+LDSCRIPT_PATH = ../platform/ssipv6s_v1/dev/cc2538.lds
+CFLAGS += -DCONTIKI_TARGET_SSIPV6S_V1=1
+endif
+
+ifeq (,$(PLATFORM))
+PLATFORM = $(findstring ssipv6s_v2,$(SUBDIRS))
+LDSCRIPT_PATH = ../platform/ssipv6s_v2/dev/cc2538.lds
+endif
+
+# This flag cannot be use when we want to store usb and shell 
+# symbols in the NRSRAM. 
+ifeq (cc2538dk,$(PLATFORM))
+CFLAGS += -fdata-sections
+endif
+
+SOURCEDIRS += "../platform/$(PLATFORM)" "../platform/$(PLATFORM)/dev"
 
 LDGENFLAGS = $(CFLAGS)
 LDGENFLAGS += -imacros "contiki-conf.h" -imacros "dev/cc2538-dev.h"
-LDGENFLAGS += -imacros "dev/flash.h" -imacros "cfs-coffee-arch.h"
+LDGENFLAGS += -imacros "dev/flash.h" -imacros "cfs-coffee-arch.h" #-imacros "project-conf.h"
 LDGENFLAGS += -x c -P -E
 
-SOURCEDIRS = "../cpu/cc2538" "../platform/cc2538dk" "../platform/cc2538dk/dev" "../core"
 
-# This target is added as pre-build step as follow:
+# This target is added as pre-build step in CCS as follow:
 # ${CCS_UTILS_DIR}/bin/gmake -j 8 cc2538.ld
-cc2538.ld: ../cpu/cc2538/cc2538.lds
+
+cc2538.ld: $(LDSCRIPT_PATH)
 	@echo 'Building file: $<'
 	"$(CG_TOOL_ROOT)/bin/arm-none-eabi-gcc.exe" ${addprefix -I,$(SOURCEDIRS)} $(LDGENFLAGS) $< -o $@
 	@echo 'Finished building: $<'
@@ -20,3 +50,5 @@ cc2538.ld: ../cpu/cc2538/cc2538.lds
 
 clean-cc2538.ld:
 	-$(RM) "cc2538.ld"
+	
+	

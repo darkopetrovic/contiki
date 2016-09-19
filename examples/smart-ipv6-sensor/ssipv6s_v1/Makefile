@@ -1,7 +1,8 @@
 PROJECT = smart-sensor
 
 WITH_SHELL=1
-WITH_CUSTOMRDC=0
+WITH_USBSHELL=1
+WITH_CUSTOMRDC=1
 WITH_APPCONFIG=1
 WITH_COAPSERVER=1
 WITH_POWERTRACK=1
@@ -9,6 +10,7 @@ WITH_POWERTRACK=1
 PROJECTDIR=..
 CONTIKI = ../../..
 
+# Add the project specific resources
 ifeq ($(WITH_COAPSERVER),1)
   PROJECTDIRS += resources
   PROJECT_SOURCEFILES += res-sensors.c res-temp.c res-hum.c res-motion.c

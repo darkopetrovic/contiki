@@ -51,7 +51,7 @@ PERIODIC_RESOURCE(res_humidity,
 static uint8_t
 callback(struct parameter *p)
 {
-  if( !strncmp(p->name, SETTINGS_PERIODIC_PARAM_NAME, strlen(p->name)) ){
+  if( !strncmp(p->name, CONFIG_PERIODIC_PARAM_NAME, strlen(p->name)) ){
     rest_update_resource_interval(&res_humidity, p->value);
     return 0;
   }
@@ -63,7 +63,7 @@ static void
 res_init()
 {
 #if REST_DELAY_RES_START && APPS_APPCONFIG
-  app_config_create_parameter(res_humidity.url, SETTINGS_PERIODIC_PARAM_NAME, "0", callback);
+  app_config_create_parameter(res_humidity.url, CONFIG_PERIODIC_PARAM_NAME, "0", callback);
 #endif
 }
 

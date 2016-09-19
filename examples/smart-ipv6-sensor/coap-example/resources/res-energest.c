@@ -69,7 +69,7 @@ PERIODIC_RESOURCE(res_energest,
 static uint8_t
 callback(struct parameter *p)
 {
-  if( !strncmp(p->name, SETTINGS_PERIODIC_PARAM_NAME, strlen(p->name)) ){
+  if( !strncmp(p->name, CONFIG_PERIODIC_PARAM_NAME, strlen(p->name)) ){
     rest_update_resource_interval(&res_energest, p->value);
     return 0;
   }
@@ -81,7 +81,7 @@ static void
 res_init()
 {
 #if REST_DELAY_RES_START && APPS_APPCONFIG
-  app_config_create_parameter(res_energest.url, SETTINGS_PERIODIC_PARAM_NAME, "0", callback);
+  app_config_create_parameter(res_energest.url, CONFIG_PERIODIC_PARAM_NAME, "0", callback);
 #endif
 }
 static void
@@ -109,7 +109,7 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 #if STATISTICAL_DATA
 				",{\"n\":\"raw_duration\",\"sv\":\"%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,"
 								"%lu,%lu,%lu,%lu"
-#if CONTIKI_TARGET_SSIPV6S_v1
+#if CONTIKI_TARGET_SSIPV6S_V1
 		    ",%lu,%lu,%lu,%lu"
 #endif
 #if CONTIKIMAC_CONF_COMPOWER
@@ -136,7 +136,7 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 			 (uint32_t)((float)energest_data.all_flash_read/RTIMER_SECOND*REPR_TIME*REPR_TIME),
 			 (uint32_t)((float)energest_data.all_flash_write/RTIMER_SECOND*REPR_TIME*REPR_TIME),
 			 (uint32_t)((float)energest_data.all_flash_erase/RTIMER_SECOND*REPR_TIME*REPR_TIME),
-#if CONTIKI_TARGET_SSIPV6S_v1
+#if CONTIKI_TARGET_SSIPV6S_V1
 			 (uint32_t)((float)energest_data.all_sensors_ina3221/RTIMER_SECOND*REPR_TIME*REPR_TIME),
 			 (uint32_t)((float)energest_data.all_sensors_sht21/RTIMER_SECOND*REPR_TIME*REPR_TIME),
 			 (uint32_t)((float)energest_data.all_sensors_tmp100/RTIMER_SECOND*REPR_TIME*REPR_TIME),

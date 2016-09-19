@@ -23,9 +23,12 @@
 #include "dev/gpio.h"
 #include "dev/nvic.h"
 
+#undef CONTIKI_TARGET_CC2538DK
+#define CONTIKI_TARGET_CC2538DK                        1
+
 /** Pin PA_7 (RF2.12) activates the boot loader */
 #undef FLASH_CCA_CONF_BOOTLDR_BACKDOOR_PORT_A_PIN
-#define FLASH_CCA_CONF_BOOTLDR_BACKDOOR_PORT_A_PIN    7
+#define FLASH_CCA_CONF_BOOTLDR_BACKDOOR_PORT_A_PIN     7
 
 /*---------------------------------------------------------------------------*/
 /** \name SmartSensor LED configuration

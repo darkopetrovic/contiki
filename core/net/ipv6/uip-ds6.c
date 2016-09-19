@@ -213,6 +213,8 @@ uip_ds6_periodic(void)
   uip_ds6_defrt_t *d;
 #endif
 
+  PRINTF("DS Periodic.\n");
+
 #if CONF_6LOWPAN_ND_OPTI_START && UIP_CONF_IPV6_RPL
   /* Start RPL only when the device has global IPv6 */
   if(!rpl_started && uip_ds6_get_global(ADDR_PREFERRED)) {

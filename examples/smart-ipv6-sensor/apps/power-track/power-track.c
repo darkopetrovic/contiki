@@ -12,9 +12,11 @@
 #include "contiki.h"
 #include "power-track.h"
 
+#if CONTIKI_TARGET_SSIPV6S_V1
 #include "platform-sensors.h"
+#endif
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #if ENERGEST_CONF_ON
@@ -66,7 +68,7 @@ energest_compute(void)
 
   /* Add here the new types */
 
-#if CONTIKI_TARGET_SSIPV6S_v1
+#if CONTIKI_TARGET_SSIPV6S_V1
   energest_data.all_sensors_ina3221 = energest_type_time(ENERGEST_TYPE_SENSORS_INA3221);
   energest_data.all_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
   energest_data.all_sensors_tmp100 = energest_type_time(ENERGEST_TYPE_SENSORS_TMP100);
@@ -109,7 +111,7 @@ energest_compute(void)
   /* myBUG: sometimes, especially during the first minute of the device,
    * RX+TX duration is greater than CPU which shouldn't be possible. */
 
-#if CONTIKI_TARGET_SSIPV6S_v1
+#if CONTIKI_TARGET_SSIPV6S_V1
   sup_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21 +
       energest_data.all_sensors_tmp100;
 #endif
@@ -119,7 +121,7 @@ energest_compute(void)
       + (float)(energest_data.all_lpm-energest_data.all_leds-sup_lpm)/RTIMER_SECOND * I_LPM \
       + (float)energest_data.all_transmit/RTIMER_SECOND * I_TX \
       + (float)energest_data.all_listen/RTIMER_SECOND * I_RX
-#if CONTIKI_TARGET_SSIPV6S_v1
+#if CONTIKI_TARGET_SSIPV6S_V1
       + (float)energest_data.all_sensors_ina3221/RTIMER_SECOND * I_INA3221 \
       + (float)energest_data.all_sensors_sht21/RTIMER_SECOND * I_SHT21 \
       + (float)energest_data.all_sensors_tmp100/RTIMER_SECOND * I_TMP100 \

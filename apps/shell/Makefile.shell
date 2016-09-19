@@ -38,6 +38,9 @@ ifndef PLATFORM_BUILD
 ifeq ($(findstring cc2538dk,$(TARGET)),cc2538dk)
   override webserver_src = http-strings.c psock.c memb.c httpd-cfs.c urlconv.c
 endif
+ifeq ($(findstring ssipv6s_v1,$(TARGET)),ssipv6s_v1)
+  override webserver_src = http-strings.c psock.c memb.c httpd-cfs.c urlconv.c
+endif
 endif
 
 APPS += webbrowser

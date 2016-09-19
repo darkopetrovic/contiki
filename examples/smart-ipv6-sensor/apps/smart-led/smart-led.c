@@ -41,7 +41,7 @@
 #include "contiki.h"
 #include "dev/leds.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #if PLATFORM_HAS_LEDS

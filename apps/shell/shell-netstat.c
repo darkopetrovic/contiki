@@ -120,7 +120,6 @@ PROCESS_THREAD(shell_netstat_process, ev, data)
 
 #if UIP_TCP
   for(i = 0; i < UIP_CONNS; ++i) {
-    /* fixme: if TCP is disabled the compilation fails. */
     conn = &uip_conns[i];
     snprintf(buf, BUFLEN,
 	     "%d, %u.%u.%u.%u:%u, %s, %u, %u, %c %c",

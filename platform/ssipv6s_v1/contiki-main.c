@@ -153,12 +153,19 @@ main(void)
   gpio_init();
 
   leds_init();
-  fade(LEDS_YELLOW);
 
   process_init();
 
   watchdog_init();
   button_sensor_init();
+
+#if CONTIKI_TARGET_SSIPV6S_V1
+  /* Disable GPIO pull-ups */
+  ioc_set_over(GPIO_A_NUM, 2, IOC_OVERRIDE_DIS);  // IV_SENSE_CRITICAL
+  ioc_set_over(GPIO_A_NUM, 3, IOC_OVERRIDE_DIS);  // IV_SENSE_WARNING
+  ioc_set_over(GPIO_C_NUM, 4, IOC_OVERRIDE_DIS);  // VBAT_OK
+  ioc_set_over(GPIO_C_NUM, 6, IOC_OVERRIDE_PDE);  //
+#endif
 
   /*
    * Character I/O Initialisation.
@@ -176,7 +183,7 @@ main(void)
   uart_set_input(SERIAL_LINE_CONF_UART, serial_line_input_byte);
 #endif
 
-#if USB_SERIAL_CONF_ENABLE
+#if USB_SERIAL_CONF_ENABLE && !USB_SHELL_IN_NRMEM
   usb_serial_init();
   usb_serial_set_input(serial_line_input_byte);
 #endif
@@ -184,7 +191,6 @@ main(void)
   serial_line_init();
 
   INTERRUPTS_ENABLE();
-  fade(LEDS_GREEN);
 
   PUTS(CONTIKI_VERSION_STRING);
   PUTS(BOARD_STRING);
@@ -232,7 +238,6 @@ main(void)
   autostart_start(autostart_processes);
 
   watchdog_start();
-  fade(LEDS_YELLOW);
 
 #if RDC_SLEEPING_HOST
   crdc_init();

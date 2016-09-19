@@ -59,7 +59,7 @@
 #include "net/rpl/rpl-private.h"
 #endif
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #if DEBUG
@@ -199,11 +199,11 @@ crdc_init(void)
     rdc_is_on = 1;
   } else {
     rdc_is_on = 0;
-    disableRDC(0);
+    crdc_disable_rdc(0);
   }
 #else 
   rdc_is_on = 0;
-  disableRDC(0);
+  crdc_disable_rdc(0);
 #endif
 }
 
@@ -216,6 +216,8 @@ crdc_lpm_enter(void)
   //uip_ds6_nbr_t *nbr;
 
   if(!rdc_is_on){
+
+    nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
     next_expiration = etimer_next_expiration_time();
 
     /* When 'next_expiration' is 0 that means there is no more etimer pending. And thus,
@@ -224,20 +226,23 @@ crdc_lpm_enter(void)
      * */
     if( next_expiration ){
       if(next_expiration == next_expiration_old){
-        return;
+        //return;
       }
       next_expiration_old = next_expiration;
       next_wakeup_time = (float)(next_expiration / CLOCK_SECOND) * RTIMER_SECOND;
-      // schedule the next wake-up time -> we can go to sleep
-      rtimer_arch_schedule( next_wakeup_time );
 
 #ifdef CONTIKI_TARGET_CC2538DK
       REG(SYS_CTRL_PMCTL) = LPM_CONF_MAX_PM;
+      /* Check whether the next wake-up time is effectively planned in
+       * the future and if it's not too small. */
       if(next_wakeup_time <= RTIMER_NOW() ||
           next_wakeup_time-RTIMER_NOW() < DEEP_SLEEP_PM2_THRESHOLD){
-        return;
+        next_wakeup_time = RTIMER_NOW() + RTIMER_SECOND/NETSTACK_RDC_CHANNEL_CHECK_RATE;
       }
 #endif /* CONTIKI_TARGET_CC2538DK */
+
+      // schedule the next wake-up time -> we can go to sleep
+      rtimer_arch_schedule( next_wakeup_time );
 
 #if 0
       PRINTF("CRDC: Next wake-up in %s second(s) (next: %X) (now: %u) (clock: %lu).\n",
@@ -326,11 +331,14 @@ crdc_enable_rdc(void)
   // Accelerate DS periodic
 #if DEBUG
   PROCESS_CONTEXT_BEGIN(&tcpip_process);
-  etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/10);
+  etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND);
   PROCESS_CONTEXT_END(&tcpip_process);
 #else
+  //PROCESS_CONTEXT_BEGIN(&tcpip_process);
+  //etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/10);
+  //PROCESS_CONTEXT_END(&tcpip_process);
   PROCESS_CONTEXT_BEGIN(&tcpip_process);
-  etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/10);
+  etimer_reset(&uip_ds6_timer_periodic);
   PROCESS_CONTEXT_END(&tcpip_process);
 #endif
   enableRDC();
@@ -345,15 +353,15 @@ crdc_disable_rdc(uint8_t keep_radio)
     etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND);
     PROCESS_CONTEXT_END(&tcpip_process);
 #else
-    PROCESS_CONTEXT_BEGIN(&tcpip_process);
-    etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/10);
-    PROCESS_CONTEXT_END(&tcpip_process);
+    //PROCESS_CONTEXT_BEGIN(&tcpip_process);
+    //etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/10);
+    //PROCESS_CONTEXT_END(&tcpip_process);
 #endif
   } else {
     // Deccelerate DS periodic
-    PROCESS_CONTEXT_BEGIN(&tcpip_process);
-    etimer_set(&uip_ds6_timer_periodic, UIP_DS6_PERIOD);
-    PROCESS_CONTEXT_END(&tcpip_process);
+    //PROCESS_CONTEXT_BEGIN(&tcpip_process);
+    //etimer_reset_with_new_interval(&uip_ds6_timer_periodic, UIP_DS6_PERIOD);
+    //PROCESS_CONTEXT_END(&tcpip_process);
   }
   disableRDC(keep_radio);
 }
@@ -406,7 +414,7 @@ crdc_period_start(uint32_t seconds)
   /* Turn-on the RDC to send a packet. Enable it for CRDC_WAIT_RESPONSE
    * if a response is expected. */
   if( !seconds && !rdc_is_on){
-    crdc_enable_rdc();
+    enableRDC();
     if(expect_response()){
       ctimer_set(&ct_rdc, CLOCK_SECOND * CRDC_WAIT_RESPONSE, stop_rdc, NULL);
       PRINTF("CRDC: The RDC is ENABLED (for %d seconds) to receive a response.\n", 

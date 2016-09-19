@@ -8,6 +8,7 @@ WITH_6LOWPAN_ND ?= 1
 
 WITH_SMARTLED ?= 1
 WITH_SHELL ?= 0
+WITH_USBSHELL ?= 0
 WITH_UDPCLIENT ?= 0
 WITH_CUSTOMRDC ?= 0
 WITH_APPCONFIG ?= 0
@@ -29,6 +30,9 @@ endif
 ifeq ($(WITH_SHELL),1)
 	APPS += serial-shell
 	CFLAGS += -DSHELL=1
+	ifeq ($(WITH_USBSHELL),1)
+  	CFLAGS += -DUSB_SHELL_IN_NRMEM=1
+  endif
 endif
 
 ifeq ($(WITH_CUSTOMRDC),1)

@@ -126,14 +126,14 @@ exit_process(struct process *p, struct process *fromprocess)
   register struct process *q;
   struct process *old_current = process_current;
 
-  PRINTF("process: exit_process '%s'\n", PROCESS_NAME_STRING(p));
-
   /* Make sure the process is in the process list before we try to
      exit it. */
   for(q = process_list; q != p && q != NULL; q = q->next);
   if(q == NULL) {
     return;
   }
+
+  PRINTF("process: exit_process '%s'\n", PROCESS_NAME_STRING(p));
 
   if(process_is_running(p)) {
     /* Process was running */

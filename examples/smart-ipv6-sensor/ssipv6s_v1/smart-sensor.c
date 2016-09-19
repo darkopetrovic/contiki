@@ -46,6 +46,8 @@
 #include "contiki-net.h"
 #include "custom-coap.h"
 #include "pir-sensor.h"
+#include "platform-sensors.h"
+#include "dev/leds.h"
 
 #include <string.h>
 
@@ -55,10 +57,10 @@
 
 #include "dev/button-sensor.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
-#if SHELL
+#if SHELL && !USB_SHELL_IN_NRMEM
 #include "dev/serial-line.h"
 #include "apps/shell/shell.h"
 #include "apps/serial-shell/serial-shell.h"
@@ -98,7 +100,7 @@ callback(struct parameter *p)
 #if ENERGEST_CONF_ON
   if( !strncmp(p->name, "energest_enable", strlen(p->name)) ){
     if(p->value){
-      powertrack_start(10*CLOCK_SECOND);
+      powertrack_start(15*CLOCK_SECOND);
     } else {
       powertrack_stop();
       powertrack_reset();
@@ -112,10 +114,10 @@ callback(struct parameter *p)
 
 /*---------------------------------------------------------------------------*/
 
-PROCESS(erbium_server, "CoAP Example");
-AUTOSTART_PROCESSES(&erbium_server);
+PROCESS(controller_process, "Controller process");
+AUTOSTART_PROCESSES(&controller_process);
 
-PROCESS_THREAD(erbium_server, ev, data)
+PROCESS_THREAD(controller_process, ev, data)
 {
 
   PROCESS_BEGIN();
@@ -126,6 +128,10 @@ PROCESS_THREAD(erbium_server, ev, data)
   SENSORS_ACTIVATE(button_sensor);
 #endif
 
+  /* Execute the USB plug event to detect if usb is plugged in after
+   * a software reset. */
+  process_post(&controller_process, sensors_event,  (void *)&usb_plug_detect);
+
 #if APPS_APPCONFIG
   app_config_init();
 #if ENERGEST_CONF_ON
@@ -133,14 +139,8 @@ PROCESS_THREAD(erbium_server, ev, data)
 #endif /* ENERGEST_CONF_ON */
 #endif /* APPS_APPCONFIG */
 
-#if SHELL
-// we use the Z1 platform in cooja
-#ifdef CONTIKI_TARGET_Z1
-  uart0_set_input(serial_line_input_byte);
-  serial_line_init();
-#endif
+#if SHELL && !USB_SHELL_IN_NRMEM
   serial_shell_init();
-
   shell_ping_init();
   //shell_power_init();
   shell_ps_init();
@@ -176,8 +176,13 @@ PROCESS_THREAD(erbium_server, ev, data)
     PROCESS_WAIT_EVENT();
 
     if( ev == sensors_event ) {
-      if(data == &button_sensor) {
+#if CONTIKI_TARGET_SSIPV6S_V1
+      if(data == &button_user_sensor){
+        PRINTF("Button user pushed.\n");
+#else
+      if(data == &button_sensor){
         PRINTF("Button select pushed.\n");
+#endif
 
 #if RDC_SLEEPING_HOST
         crdc_period_start(10);
@@ -185,12 +190,37 @@ PROCESS_THREAD(erbium_server, ev, data)
       }
     }
 
+#if CONTIKI_TARGET_SSIPV6S_V1
+    if(data == &usb_plug_detect){
+      if(USB_IS_PLUGGED()){
+        leds_on(LEDS_YELLOW);
+#if RDC_SLEEPING_HOST
+        /* If RDC is already enabled when the USB cable is plugged, we clear the timer
+         * which is supposed to stop the RDC, and enable RDC indefinetely (while the usb
+         * is plugged in). */
+        crdc_clear_stop_rdc_timer();
+        crdc_enable_rdc();
+#endif
+      } else {
+        leds_off(LEDS_YELLOW);
+#if RDC_SLEEPING_HOST
+        crdc_disable_rdc(0);
+#endif
+      }
+
+#if SHELL && USB_SERIAL_CONF_ENABLE && USB_SHELL_IN_NRMEM
+      usb_shell_init();
+#endif
+    }
+#endif /* CONTIKI_TARGET_SSIPV6S_V1 */
+
     if(ev == sensors_event && data == &pir_sensor) {
       PRINTF("******* MOTION DETECTED *******\n");
 
+#if APPS_COAPSERVER
       /* Call the event_handler for this application-specific event. */
       res_motion.trigger();
-
+#endif
     }
 
   }  /* while (1) */

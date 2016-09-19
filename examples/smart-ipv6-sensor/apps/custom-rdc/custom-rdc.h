@@ -91,7 +91,7 @@
 extern void rtimer_isr(void);
 
 #define enableRDC()       rdc_is_on = 1;\
-                          NETSTACK_RDC.on();\
+                          NETSTACK_RDC.on()
 
 /* When turned off, ContikiMAC doesn't kill automatically the next wake-up.
  * Therefore we disable the incoming wake-up from ContikiMAC with rtimer_arch_schedule(0).

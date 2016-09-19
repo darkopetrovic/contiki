@@ -24,7 +24,7 @@ typedef struct energest_data {
   uint32_t all_flash_read;
   uint32_t all_flash_write;
   uint32_t all_flash_erase;
-#if CONTIKI_TARGET_SSIPV6S_v1
+#if CONTIKI_TARGET_SSIPV6S_V1
   uint32_t all_sensors_ina3221;
   uint32_t all_sensors_sht21;
   uint32_t all_sensors_tmp100;
