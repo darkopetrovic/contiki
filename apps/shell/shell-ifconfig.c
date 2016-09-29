@@ -45,10 +45,11 @@
 #include "shell-ifconfig.h"
 
 #include "net/ipv6/uip-ds6.h"
+#include "net/ip/ip64-addr.h"
 
 #if UIP_CONF_IPV6_RPL
 #include "net/rpl/rpl.h"
-#endif /* CONF_6LOWPAN_ND */
+#endif /* UIP_CONF_IPV6_RPL */
 
 #include "net/ip/uip-debug.h"
 
@@ -58,63 +59,86 @@ SHELL_COMMAND(ifconfig_command, "ifconfig",
     "ifconfig : show interface configuration", &shell_ifconfig_process);
 /*---------------------------------------------------------------------------*/
 
+static char * ipaddr_print(const uip_ipaddr_t *addr);
+
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(shell_ifconfig_process, ev, data) {
+PROCESS_THREAD(shell_ifconfig_process, ev, data)
+{
   uint8_t i;
   uip_ds6_defrt_t *d;
   uip_ds6_element_t *element;
   uip_ds6_nbr_t *nbr;
   uip_ds6_prefix_t *prefix;
+  char buf[200], *bufptr;;
+
 #if CONF_6LOWPAN_ND
   uip_ds6_border_router_t *br;
 #endif
 
   PROCESS_BEGIN();
 
-  printf("Interface configuration:\n");
-  printf("    Link MTU: %lu\n", uip_ds6_if.link_mtu);
-  printf("    Hop limit: %d\n", uip_ds6_if.cur_hop_limit);
-  printf("    Base reachable time: %lums\n", uip_ds6_if.base_reachable_time);
-  printf("    Reachable time: %lums\n", uip_ds6_if.reachable_time);
-  printf("    Retransmission timer: %lums\n", uip_ds6_if.retrans_timer);
-  printf("    Max DADNS: %d\n", uip_ds6_if.maxdadns);
+  /***** Interface configuration *****/
 
-  printf("MAC Address:\n    ");
+  sprintf(buf,
+      "Interface configuration:\n"
+      "    Link MTU: %lu\n"
+      "    Hop limit: %d\n"
+      "    Base reachable time: %lums\n"
+      "    Reachable time: %lums\n"
+      "    Retransmission timer: %lums\n"
+      "    Max DADNS: %d",
+      uip_ds6_if.link_mtu,
+      uip_ds6_if.cur_hop_limit,
+      uip_ds6_if.base_reachable_time,
+      uip_ds6_if.reachable_time,
+      uip_ds6_if.retrans_timer,
+      uip_ds6_if.maxdadns);
+  shell_output_str(&ifconfig_command, buf, "");
+
+  /***** MAC Address *****/
+
+  bufptr = buf;
+  bufptr += sprintf(bufptr, "MAC Address:\n    ");
   for (i = 0; i < LINKADDR_SIZE - 1; i++) {
-    printf("%02x:", linkaddr_node_addr.u8[i]);
+    bufptr += sprintf(bufptr, "%02x:", linkaddr_node_addr.u8[i]);
   }
-  printf("%02x\n", linkaddr_node_addr.u8[i]);
+  bufptr += sprintf(bufptr, "%02x", linkaddr_node_addr.u8[i]);
+  shell_output_str(&ifconfig_command, buf, "");
 
-  printf("Prefixes list (max %d):\n", UIP_DS6_PREFIX_NB);
+  /***** Prefixes list *****/
+
+  bufptr = buf;
+  bufptr += sprintf(buf, "Prefixes list (max %d):\n", UIP_DS6_PREFIX_NB);
   for (prefix = uip_ds6_prefix_list;
       prefix < uip_ds6_prefix_list + UIP_DS6_PREFIX_NB; prefix++) {
     if (prefix->isused) {
-      printf("    ");
-      uip_debug_ipaddr_print(&prefix->ipaddr);
-      printf("/%d", prefix->length);
-
-      printf(" - lifetime: ");
+      bufptr += sprintf(bufptr, "    %s/%d", ipaddr_print(&prefix->ipaddr), prefix->length);
+      bufptr += sprintf(bufptr, " - lifetime: ");
 
       if( prefix->isinfinite ) {
-        printf("infinite");
+        bufptr += sprintf(bufptr, "infinite\n");
       } else {
 #if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER || CONF_6LOWPAN_ND
 #if CONF_6LOWPAN_ND
-        printf("%lus", prefix->vlifetime.interval);
-        printf(" (expiring in: %lus)", stimer_remaining(&prefix->vlifetime));
+        bufptr += sprintf(bufptr, "%lus (expiring in: %lus)\n",
+            prefix->vlifetime.interval, stimer_remaining(&prefix->vlifetime));
 #else /* CONF_6LOWPAN_ND */
-        printf("%lus", prefix->vlifetime);
+        bufptr += sprintf(bufptr, "%lus", prefix->vlifetime);
 #endif /* CONF_6LOWPAN_ND */
 #else /* UIP_CONF_ROUTER */
-        printf("%lus", prefix->vlifetime.interval);
-        printf(" (expiring in: %lus)", stimer_remaining(&prefix->vlifetime));
+        bufptr += sprintf(bufptr, "%lus (expiring in: %lus)",
+            prefix->vlifetime.interval, stimer_remaining(&prefix->vlifetime));
 #endif /* UIP_CONF_ROUTER */
       }
-      printf("\n");
     }
   }
 
-  printf("Addresses list (max: %d):\n", UIP_DS6_ADDR_NB);
+  shell_output_str(&ifconfig_command, buf, "");
+
+  /***** Addresses list *****/
+
+  bufptr = buf;
+  bufptr += sprintf(buf, "Addresses list (max: %d):\n", UIP_DS6_ADDR_NB);
   for (element = (uip_ds6_element_t *) uip_ds6_if.addr_list;
       element
           < (uip_ds6_element_t *) ((uint8_t *) (uip_ds6_element_t *) uip_ds6_if.addr_list
@@ -124,157 +148,162 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data) {
     if (element->isused) {
 
       uip_ds6_addr_t *locaddr = (uip_ds6_addr_t *) element;
-      printf("    ");
-      uip_debug_ipaddr_print(&element->ipaddr);
+      bufptr += sprintf(bufptr, "    %s", ipaddr_print(&element->ipaddr));
 
-      printf(" - state: ");
+      bufptr += sprintf(bufptr, " - state: ");
       switch (locaddr->state) {
       case ADDR_TENTATIVE:
-        printf("TENTATIVE");
+        bufptr += sprintf(bufptr, "TENTATIVE");
         break;
       case ADDR_PREFERRED:
-        printf("PREFERRED");
+        bufptr += sprintf(bufptr, "PREFERRED");
         break;
       case ADDR_DEPRECATED:
-        printf("DEPRECATED");
+        bufptr += sprintf(bufptr, "DEPRECATED");
         break;
       }
 
-      printf(" - type: ");
+      bufptr += sprintf(bufptr, " - type: ");
       switch (locaddr->type) {
       case ADDR_AUTOCONF:
-        printf("Auto");
+        bufptr += sprintf(bufptr, "Auto");
         break;
       case ADDR_DHCP:
-        printf("DHCP");
+        bufptr += sprintf(bufptr, "DHCP");
         break;
       case ADDR_MANUAL:
-        printf("Manual");
+        bufptr += sprintf(bufptr, "Manual");
         break;
       }
 
-      printf(" - lifetime: ");
+      bufptr += sprintf(bufptr, " - lifetime: ");
       if (locaddr->isinfinite) {
-        printf("infinite");
+        bufptr += sprintf(bufptr, "infinite\n");
       } else {
-        printf("%lus", locaddr->vlifetime.interval);
-        printf(" (expiring in: %lus)", stimer_remaining(&locaddr->vlifetime));
+        bufptr += sprintf(bufptr, "%lus (expiring in: %lus)\n",
+            locaddr->vlifetime.interval, stimer_remaining(&locaddr->vlifetime));
       }
-
-      printf("\n");
-
     }
   }
 
-  printf("Default routers (max: %d):\n", UIP_DS6_DEFRT_NB);
+  shell_output_str(&ifconfig_command, buf, "");
+
+  /***** Default routers *****/
+
+  bufptr = buf;
+  bufptr += sprintf(buf, "Default routers (max: %d):\n", UIP_DS6_DEFRT_NB);
   for (d = uip_ds6_defrt_list_head(); d != NULL; d = list_item_next(d)) {
-    printf("   ");
-    uip_debug_ipaddr_print(&d->ipaddr);
-    printf(" - lifetime: ");
+    bufptr += sprintf(bufptr, "    %s - lifetime: ", ipaddr_print(&d->ipaddr));
     if (d->isinfinite) {
-      printf("infinite");
+      bufptr += sprintf(bufptr, "infinite\n");
     } else {
-      printf("%lus", d->lifetime.interval);
-      printf(" (expiring in: %lus)", stimer_remaining(&d->lifetime));
+      bufptr += sprintf(bufptr, "%lus (expiring in: %lus)\n",
+          d->lifetime.interval, stimer_remaining(&d->lifetime));
     }
-    printf("\n");
   }
 
-  printf("Neighbors list (max: %d):\n", NBR_TABLE_MAX_NEIGHBORS);
+  shell_output_str(&ifconfig_command, buf, "");
+
+  /***** Neighbors list *****/
+
+  bufptr = buf;
+  bufptr += sprintf(buf, "Neighbors list (max: %d):\n", NBR_TABLE_MAX_NEIGHBORS);
   nbr = nbr_table_head(ds6_neighbors);
   while (nbr != NULL) {
-    printf("   ");
-    uip_debug_ipaddr_print(&nbr->ipaddr);
-    printf(" - deft. router: ");
+    bufptr += sprintf(bufptr, "    %s - deft. router: ", ipaddr_print(&nbr->ipaddr));
 
 #if CONF_6LOWPAN_ND
     switch (nbr->isrouter) {
       case ISROUTER_RPL:
       case ISROUTER_YES:
-        printf("YES");
+        bufptr += sprintf(bufptr, "YES");
         break;
       case ISROUTER_NO:
-        printf("NO");
+        bufptr += sprintf(bufptr, "NO");
         break;
 #if UIP_CONF_ROUTER
       case ISROUTER_NODEFINE:
-        printf("UNDEFINED YET");
+        bufptr += sprintf(bufptr, "UNDEFINED YET");
         break;
 #endif /* UIP_CONF_ROUTER */
     }
 #else /* CONF_6LOWPAN_ND */
     if (nbr->isrouter) {
-      printf("YES");
+      bufptr += sprintf(bufptr, "YES");
     } else {
-      printf("NO");
+      bufptr += sprintf(bufptr, "NO");
     }
 #endif /* CONF_6LOWPAN_ND */
 
-    printf(" - state: ");
+    bufptr += sprintf(bufptr, " - state: ");
     switch (nbr->state) {
 #if CONF_6LOWPAN_ND
     case NBR_GARBAGE_COLLECTIBLE:
-      printf("GARBAGE COLLECTIBLE");
+      bufptr += sprintf(bufptr, "GARBAGE COLLECTIBLE");
       break;
     case NBR_REGISTERED:
-      printf("REGISTERED");
+      bufptr += sprintf(bufptr, "REGISTERED");
       break;
     case NBR_TENTATIVE:
-      printf("TENTATIVE");
+      bufptr += sprintf(bufptr, "TENTATIVE");
       break;
     case NBR_TENTATIVE_DAD:
-      printf("TENTATIVE DAD");
+      bufptr += sprintf(bufptr, "TENTATIVE DAD");
       break;
 #endif /* CONF_6LOWPAN_ND */
     case NBR_INCOMPLETE:
-      printf("INCOMPLETE");
+      bufptr += sprintf(bufptr, "INCOMPLETE");
       break;
     case NBR_REACHABLE:
-      printf("REACHABLE");
+      bufptr += sprintf(bufptr, "REACHABLE");
       break;
     case NBR_STALE:
-      printf("STALE");
+      bufptr += sprintf(bufptr, "STALE");
       break;
     case NBR_DELAY:
-      printf("DELAY");
+      bufptr += sprintf(bufptr, "DELAY");
       break;
     case NBR_PROBE:
-      printf("PROBE");
+      bufptr += sprintf(bufptr, "PROBE");
       break;
     default:
-      printf("%d", nbr->state);
+      bufptr += sprintf(bufptr, "%d", nbr->state);
     }
 
 #if UIP_ND6_SEND_NA || UIP_ND6_SEND_RA
 #if CONF_6LOWPAN_ND
-    printf(" - lifetime: %lus", nbr->reachable.interval);
+    bufptr += sprintf(bufptr, " - lifetime: %lus", nbr->reachable.interval);
 #else
-    printf(" - reachable: %lus", nbr->reachable.interval);
+    bufptr += sprintf(bufptr, " - reachable: %lus", nbr->reachable.interval);
 #endif /* CONF_6LOWPAN_ND */
-    printf(" (expiring in: %lus)", stimer_remaining(&nbr->reachable));
-    printf("\n");
+    bufptr += sprintf(bufptr, " (expiring in: %lus)\n", stimer_remaining(&nbr->reachable));
     nbr = nbr_table_next(ds6_neighbors, nbr);
 #endif
   }
 
+  shell_output_str(&ifconfig_command, buf, "");
+
+  /***** Border router list *****/
+
 #if CONF_6LOWPAN_ND
-  printf("Border router list (max: %d):\n", UIP_DS6_BR_NB);
+  bufptr = buf;
+  bufptr += sprintf(buf, "Border router list (max: %d):\n", UIP_DS6_BR_NB);
   for(br = uip_ds6_br_list;
       br < uip_ds6_br_list + UIP_DS6_BR_NB;
       br++)
   {
-    printf("    ");
-    uip_debug_ipaddr_print(&br->ipaddr);
-    printf(" - version: %lu", br->version);
-    printf(" - lifetime: %lus", (uint32_t)(br->lifetime == 0 ? 10000 : br->lifetime) * 60);
-    printf(" (expiring in: %lus)\n", stimer_remaining(&br->timeout));
+    bufptr += sprintf(bufptr, "    %s", ipaddr_print(&br->ipaddr));
+    bufptr += sprintf(bufptr, " - version: %lu", br->version);
+    bufptr += sprintf(bufptr, " - lifetime: %lus", (uint32_t)(br->lifetime == 0 ? 10000 : br->lifetime) * 60);
+    bufptr += sprintf(bufptr, " (expiring in: %lus)\n", stimer_remaining(&br->timeout));
   }
+  shell_output_str(&ifconfig_command, buf, "");
 #endif /* CONF_6LOWPAN_ND */
 
 
 #if UIP_CONF_IPV6_RPL
-  printf("RPL:\n");
-  rpl_print_neighbor_list();
+  //printf("RPL:\n");
+  //rpl_print_neighbor_list();
 #endif /* CONF_6LOWPAN_ND */
 
 
@@ -285,3 +314,58 @@ void shell_ifconfig_init(void) {
   shell_register_command(&ifconfig_command);
 }
 /*---------------------------------------------------------------------------*/
+static char *
+ipaddr_print(const uip_ipaddr_t *addr)
+{
+  static char ipaddr_buf[150], *ipaddr_bufptr;
+
+#if NETSTACK_CONF_WITH_IPV6
+  uint16_t a;
+  unsigned int i;
+  int f;
+#endif /* NETSTACK_CONF_WITH_IPV6 */
+  if(addr == NULL) {
+    return "(NULL IP addr)";
+  }
+#if NETSTACK_CONF_WITH_IPV6
+  if(ip64_addr_is_ipv4_mapped_addr(addr)) {
+    /*
+     * Printing IPv4-mapped addresses is done according to RFC 4291 [1]
+     *
+     *     "An alternative form that is sometimes more
+     *     convenient when dealing with a mixed environment
+     *     of IPv4 and IPv6 nodes is x:x:x:x:x:x:d.d.d.d,
+     *     where the 'x's are the hexadecimal values of the
+     *     six high-order 16-bit pieces of the address, and
+     *     the 'd's are the decimal values of the four
+     *     low-order 8-bit pieces of the address (standard
+     *     IPv4 representation)."
+     *
+     * [1] https://tools.ietf.org/html/rfc4291#page-4
+     */
+    sprintf(ipaddr_buf, "::FFFF:%u.%u.%u.%u", addr->u8[12], addr->u8[13], addr->u8[14], addr->u8[15]);
+  } else {
+    ipaddr_bufptr = ipaddr_buf;
+    for(i = 0, f = 0; i < sizeof(uip_ipaddr_t); i += 2) {
+      a = (addr->u8[i] << 8) + addr->u8[i + 1];
+      if(a == 0 && f >= 0) {
+        if(f++ == 0) {
+          ipaddr_bufptr += sprintf(ipaddr_bufptr, "::");
+        }
+      } else {
+        if(f > 0) {
+          f = -1;
+        } else if(i > 0) {
+          ipaddr_bufptr += sprintf(ipaddr_bufptr, ":");
+        }
+        ipaddr_bufptr += sprintf(ipaddr_bufptr, "%x", a);
+      }
+    }
+  }
+#else /* NETSTACK_CONF_WITH_IPV6 */
+  sprintf(ipaddr_buf, "%u.%u.%u.%u", addr->u8[0], addr->u8[1], addr->u8[2], addr->u8[3]);
+#endif /* NETSTACK_CONF_WITH_IPV6 */
+
+  return ipaddr_buf;
+}
+
