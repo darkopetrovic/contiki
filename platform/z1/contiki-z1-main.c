@@ -57,14 +57,6 @@
 #include "cfs/cfs-coffee.h"
 #include "sys/autostart.h"
 
-#include "dev/battery-sensor.h"
-#include "dev/button-sensor.h"
-#include "dev/sht11/sht11-sensor.h"
-
-#include "net/ipv6/uip-ds6.h"
-
-SENSORS(&button_sensor);
-
 extern unsigned char node_mac[8];
 
 #if DCOSYNCH_CONF_ENABLED
@@ -96,7 +88,7 @@ static uint8_t is_gateway;
 #include "experiment-setup.h"
 #endif
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)

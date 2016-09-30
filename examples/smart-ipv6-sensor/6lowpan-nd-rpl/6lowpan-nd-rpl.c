@@ -64,7 +64,9 @@
 #include "dev/watchdog.h"
 #endif /* SHELL */
 
+#if APPS_SMARTLED
 #include "smart-led.h"
+#endif
 
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
@@ -99,7 +101,7 @@ SHELL_COMMAND(fast_reboot_command,
         &shell_fast_reboot_process);
 #endif /* SHELL */
 
-#if CONTIKI_TARGET_Z1
+#if CONTIKI_TARGET_Z1 && APPS_SMARTLED
 static struct etimer status_timer;
 #endif
 
@@ -112,7 +114,7 @@ static struct etimer delay_start;
 PROCESS_THREAD(nd_optimization_example, ev, data)
 {
 
-#if CONTIKI_TARGET_Z1
+#if CONTIKI_TARGET_Z1 && APPS_SMARTLED
   uip_ds6_nbr_t *nbr;
   uip_ipaddr_t *defrt_addr;
   static uint8_t na_received;
@@ -144,15 +146,11 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
 #endif
   serial_shell_init();
   shell_register_command(&fast_reboot_command);
-
-  shell_ping_init();
-  //shell_power_init();
-  shell_ps_init();
-  //shell_config_init();
   shell_ifconfig_init();
-  //shell_stackusage_init();
-  //shell_file_init();
-  //shell_coffee_init();
+#if !CONTIKI_TARGET_Z1
+  shell_file_init();
+  shell_coffee_init();
+#endif
 #endif /* SHELL */
 
 #ifndef CONTIKI_TARGET_CC2538DK
@@ -164,7 +162,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
 
   etimer_stop(&uip_ds6_timer_rs);
 
-  etimer_set(&delay_start, CLOCK_SECOND*30);
+  etimer_set(&delay_start, CLOCK_SECOND*20);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&delay_start));
 
   PROCESS_CONTEXT_BEGIN(&tcpip_process);
@@ -174,7 +172,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   PROCESS_CONTEXT_END(&tcpip_process);
 #endif
 
-#if CONTIKI_TARGET_Z1
+#if CONTIKI_TARGET_Z1 && APPS_SMARTLED
   etimer_set(&status_timer, CLOCK_SECOND*10);
 #endif
 
@@ -195,6 +193,8 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
      * ------------------------------------------------------------------------------------ */
     if( ev == PROCESS_EVENT_TIMER )
     {
+#if APPS_SMARTLED
+
       if( data == &status_timer &&
         etimer_expired(&status_timer) )
       {
@@ -240,11 +240,13 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
         } else {
           leds_off(LEDS_COOJA_GREEN);
         }
-#endif
+#endif /* UIP_CONF_IPV6_RPL */
 
         etimer_restart(&status_timer);
       }
+#endif /* APPS_SMARTLED */
     }
+
     /* ----------------------------------------------------------------------------------- */
 #endif /* CONTIKI_TARGET_Z1 */
 

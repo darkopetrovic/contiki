@@ -3,6 +3,12 @@
 #ifndef CONTIKI_CONF_H
 #define CONTIKI_CONF_H
 
+/* include the project config */
+/* PROJECT_CONF_H might be defined in the project Makefile */
+#ifdef PROJECT_CONF_H
+#include PROJECT_CONF_H
+#endif /* PROJECT_CONF_H */
+
 #include "platform-conf.h"
 
 #ifndef NETSTACK_CONF_MAC
@@ -125,7 +131,9 @@
 #define UIP_CONF_LL_802154              1
 #define UIP_CONF_LLH_LEN                0
 
+#ifndef UIP_CONF_ROUTER
 #define UIP_CONF_ROUTER                 1
+#endif
 
 /* configure number of neighbors and routes */
 #ifndef NBR_TABLE_CONF_MAX_NEIGHBORS
@@ -174,7 +182,9 @@
 #endif
 #define UIP_CONF_MAX_CONNECTIONS 4
 #define UIP_CONF_MAX_LISTENPORTS 8
+#ifndef UIP_CONF_UDP_CONNS
 #define UIP_CONF_UDP_CONNS       12
+#endif
 #define UIP_CONF_FWCACHE_SIZE    30
 #define UIP_CONF_BROADCAST       1
 #define UIP_ARCH_IPCHKSUM        1
@@ -184,11 +194,5 @@
 #define UIP_CONF_LOGGING         0
 
 #define UIP_CONF_TCP_SPLIT       0
-
-/* include the project config */
-/* PROJECT_CONF_H might be defined in the project Makefile */
-#ifdef PROJECT_CONF_H
-#include PROJECT_CONF_H
-#endif /* PROJECT_CONF_H */
 
 #endif /* CONTIKI_CONF_H */

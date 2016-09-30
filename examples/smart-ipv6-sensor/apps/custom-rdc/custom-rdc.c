@@ -217,7 +217,8 @@ crdc_lpm_enter(void)
 
   if(!rdc_is_on){
 
-    nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
+    // do we need this with cc2538?
+    //nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
     next_expiration = etimer_next_expiration_time();
 
     /* When 'next_expiration' is 0 that means there is no more etimer pending. And thus,

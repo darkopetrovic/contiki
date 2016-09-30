@@ -38,7 +38,7 @@ static uint32_t last_idle_transmit, last_idle_listen;
 static void
 energest_compute(void)
 {
-#ifdef PLATFORM_HAS_BATTERY
+#if PLATFORM_HAS_BATTERY && CONTIKI_TARGET_SSIPV6S_V1
   uint16_t battery_volt_mv;
   float battery_volt;
   battery_volt_mv = get_battery_voltage();
@@ -130,7 +130,7 @@ energest_compute(void)
       + (float)energest_data.all_leds/RTIMER_SECOND * I_LED;
 
 
-#ifdef PLATFORM_HAS_BATTERY
+#if PLATFORM_HAS_BATTERY && CONTIKI_TARGET_SSIPV6S_V1
   /* Estimate the remaining battery capacity using simple relationship with the battery level:
    *  BATTERY_NOM_VOLTAGE -> BATTERY_CAPACITY mAh ->  x 3600 = Coulomb
     BATTERY_CUT_VOLTAGE -> 0 mAh ->  0 Coulomb */

@@ -44,17 +44,21 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "contiki-net.h"
-#include "custom-coap.h"
 
 #include <string.h>
 
 #if APPS_COAPSERVER
 #include "rest-engine.h"
+#include "custom-coap.h"
+#endif
+
+#if SHELL && CONTIKI_TARGET_Z1
+#include "dev/uart0.h"
 #endif
 
 #include "dev/button-sensor.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #if SHELL
@@ -68,7 +72,7 @@
 #include "app-config.h"
 #endif
 
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
 #include "power-track.h"
 #endif
 
@@ -77,7 +81,7 @@ extern resource_t
 #if APPS_APPCONFIG
   res_config,
 #endif
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
   res_energest,
 #endif
   res_sensors,
@@ -90,7 +94,7 @@ extern resource_t
 static uint8_t
 callback(struct parameter *p)
 {
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
   if( !strncmp(p->name, "energest_enable", strlen(p->name)) ){
     if(p->value){
       powertrack_start(10*CLOCK_SECOND);
@@ -123,9 +127,9 @@ PROCESS_THREAD(erbium_server, ev, data)
 
 #if APPS_APPCONFIG
   app_config_init();
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
   app_config_create_parameter(APP_CONFIG_GENERAL, "energest_enable", "1", callback);
-#endif /* ENERGEST_CONF_ON */
+#endif /* APPS_POWERTRACK */
 #endif /* APPS_APPCONFIG */
 
 #if SHELL
@@ -135,15 +139,11 @@ PROCESS_THREAD(erbium_server, ev, data)
   serial_line_init();
 #endif
   serial_shell_init();
-
-  shell_ping_init();
-  //shell_power_init();
-  shell_ps_init();
-  //shell_config_init();
   shell_ifconfig_init();
-  //shell_stackusage_init();
+#if !CONTIKI_TARGET_Z1
   shell_file_init();
   shell_coffee_init();
+#endif
 #endif /* SHELL */
 
 #if APPS_COAPSERVER
@@ -157,9 +157,9 @@ PROCESS_THREAD(erbium_server, ev, data)
   rest_activate_resource(&res_sensors,      "sensors");
   rest_activate_resource(&res_temperature,  "sensors/temperature");
   rest_activate_resource(&res_humidity,     "sensors/humidity");
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
   rest_activate_resource(&res_energest,     "energest");
-#endif /* ENERGEST_CONF_ON */
+#endif /* APPS_POWERTRACK */
 #endif /* REST */
 
   /* Define application-specific events here. */

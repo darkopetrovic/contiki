@@ -42,13 +42,13 @@
 /* ********************************************************************** */
 
 /** Delay the start of resources.  */
-#define REST_CONF_DELAY_RES_START           1
+#define REST_CONF_DELAY_RES_START           0
 
 /** Activate energy consumption module */
-#define ENERGEST_CONF_ON                    1
+//#define ENERGEST_CONF_ON                    0
 
 /** Activate the Communication power statistics */
-#define CONTIKIMAC_CONF_COMPOWER            1
+//#define CONTIKIMAC_CONF_COMPOWER            0
 
 /* ********************************************************************** */
 /* RPL configuration                                                      */
@@ -79,14 +79,18 @@
 /* System configuration                                                   */
 /* ********************************************************************** */
 
-#define UIP_CONF_ROUTER   0
-#define RDC_CONF_SLEEPING_HOST 1
+#define UIP_CONF_TCP                        0
+
+#define	WATCHDOG_CONF_ENABLE                0
+
+//#define UIP_CONF_ROUTER   0
+//#define RDC_CONF_SLEEPING_HOST 1
 
 /**
  * The USB is initiliazed only when the USB cable is plugged in. Therefore,
  * there is no extra current consumption on the battery due to the USB process.
  */
-#define CC2538_CONF_QUIET                   1
+#define CC2538_CONF_QUIET                   0
 
 /**
  * Useful to print debug message on the terminal while debuging USB features
@@ -94,16 +98,12 @@
 #define DEBUG_USB_WITH_UART                 0
 
 /** Enable USB (commands and print) */
-#define DBG_CONF_USB                        1
+#define DBG_CONF_USB                        0
 
-#define UIP_CONF_TCP                        0
-
-#define	WATCHDOG_CONF_ENABLE                0
-
-#define UIP_CONF_BUFFER_SIZE                200
+//#define UIP_CONF_BUFFER_SIZE                200
 
 /** Reduce the maximum amount of concurrent UDP connections (default 10). */
-#define UIP_CONF_UDP_CONNS                  4
+#define UIP_CONF_UDP_CONNS                  2
 
 /** Maximum routes to store */
 #define UIP_CONF_MAX_ROUTES                 2
@@ -112,10 +112,12 @@
 #define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    4
 
 /** Maximum neighbors to store in the Neighbors Table */
+#if CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_SSIPV6S_V1
 #if CONF_6LOWPAN_ND && !UIP_CONF_ROUTER
 #define NBR_TABLE_CONF_MAX_NEIGHBORS        UIP_CONF_MAX_ROUTES
-#else
+#else /* CONF_6LOWPAN_ND && !UIP_CONF_ROUTER */
 #define NBR_TABLE_CONF_MAX_NEIGHBORS        3
+#endif /* CONF_6LOWPAN_ND && !UIP_CONF_ROUTER */
 #endif
 
 #if !UIP_CONF_ROUTER && RDC_CONF_SLEEPING_HOST
@@ -168,6 +170,5 @@
 /* Avoid spurious current consumption at device startup if UART is not in use. */
 #define STARTUP_CONF_VERBOSE                0
 #endif
-
 
 #endif /* PROJECT_CONF_H_ */

@@ -37,10 +37,6 @@
  *         Darko Petrovic
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stddef.h>
-
 #include "contiki.h"
 #include "shell-ifconfig.h"
 
@@ -51,7 +47,7 @@
 #include "net/rpl/rpl.h"
 #endif /* UIP_CONF_IPV6_RPL */
 
-#include "net/ip/uip-debug.h"
+#include <stdio.h>
 
 /*---------------------------------------------------------------------------*/
 PROCESS(shell_ifconfig_process, "ifconfig");
@@ -69,7 +65,7 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
   uip_ds6_element_t *element;
   uip_ds6_nbr_t *nbr;
   uip_ds6_prefix_t *prefix;
-  char buf[200], *bufptr;;
+  char buf[120], *bufptr;
 
 #if CONF_6LOWPAN_ND
   uip_ds6_border_router_t *br;
@@ -82,15 +78,21 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
   sprintf(buf,
       "Interface configuration:\n"
       "    Link MTU: %lu\n"
-      "    Hop limit: %d\n"
+      "    Hop limit: %d",
+      uip_ds6_if.link_mtu,
+      uip_ds6_if.cur_hop_limit);
+  shell_output_str(&ifconfig_command, buf, "");
+
+  sprintf(buf,
       "    Base reachable time: %lums\n"
-      "    Reachable time: %lums\n"
+      "    Reachable time: %lums",
+      uip_ds6_if.base_reachable_time,
+      uip_ds6_if.reachable_time);
+  shell_output_str(&ifconfig_command, buf, "");
+
+  sprintf(buf,
       "    Retransmission timer: %lums\n"
       "    Max DADNS: %d",
-      uip_ds6_if.link_mtu,
-      uip_ds6_if.cur_hop_limit,
-      uip_ds6_if.base_reachable_time,
-      uip_ds6_if.reachable_time,
       uip_ds6_if.retrans_timer,
       uip_ds6_if.maxdadns);
   shell_output_str(&ifconfig_command, buf, "");
@@ -107,20 +109,24 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
 
   /***** Prefixes list *****/
 
-  bufptr = buf;
-  bufptr += sprintf(buf, "Prefixes list (max %d):\n", UIP_DS6_PREFIX_NB);
+  
+  sprintf(buf, "Prefixes list (max %d):", UIP_DS6_PREFIX_NB);
+  shell_output_str(&ifconfig_command, buf, "");
+
   for (prefix = uip_ds6_prefix_list;
-      prefix < uip_ds6_prefix_list + UIP_DS6_PREFIX_NB; prefix++) {
+      prefix < uip_ds6_prefix_list + UIP_DS6_PREFIX_NB; prefix++) 
+  {
     if (prefix->isused) {
+      bufptr = buf;
       bufptr += sprintf(bufptr, "    %s/%d", ipaddr_print(&prefix->ipaddr), prefix->length);
       bufptr += sprintf(bufptr, " - lifetime: ");
 
       if( prefix->isinfinite ) {
-        bufptr += sprintf(bufptr, "infinite\n");
+        bufptr += sprintf(bufptr, "infinite");
       } else {
 #if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER || CONF_6LOWPAN_ND
 #if CONF_6LOWPAN_ND
-        bufptr += sprintf(bufptr, "%lus (expiring in: %lus)\n",
+        bufptr += sprintf(bufptr, "%lus (expiring in: %lus)",
             prefix->vlifetime.interval, stimer_remaining(&prefix->vlifetime));
 #else /* CONF_6LOWPAN_ND */
         bufptr += sprintf(bufptr, "%lus", prefix->vlifetime);
@@ -130,22 +136,25 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
             prefix->vlifetime.interval, stimer_remaining(&prefix->vlifetime));
 #endif /* UIP_CONF_ROUTER */
       }
+    shell_output_str(&ifconfig_command, buf, "");
     }
   }
 
-  shell_output_str(&ifconfig_command, buf, "");
-
   /***** Addresses list *****/
 
-  bufptr = buf;
-  bufptr += sprintf(buf, "Addresses list (max: %d):\n", UIP_DS6_ADDR_NB);
+  sprintf(buf, "Addresses list (max: %d):", UIP_DS6_ADDR_NB);
+  shell_output_str(&ifconfig_command, buf, "");
+
+
   for (element = (uip_ds6_element_t *) uip_ds6_if.addr_list;
       element
           < (uip_ds6_element_t *) ((uint8_t *) (uip_ds6_element_t *) uip_ds6_if.addr_list
               + (UIP_DS6_ADDR_NB * sizeof(uip_ds6_addr_t)));
       element = (uip_ds6_element_t *) ((uint8_t *) element
-          + sizeof(uip_ds6_addr_t))) {
+          + sizeof(uip_ds6_addr_t))) 
+  {
     if (element->isused) {
+      bufptr = buf;
 
       uip_ds6_addr_t *locaddr = (uip_ds6_addr_t *) element;
       bufptr += sprintf(bufptr, "    %s", ipaddr_print(&element->ipaddr));
@@ -178,38 +187,42 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
 
       bufptr += sprintf(bufptr, " - lifetime: ");
       if (locaddr->isinfinite) {
-        bufptr += sprintf(bufptr, "infinite\n");
+        bufptr += sprintf(bufptr, "infinite");
       } else {
-        bufptr += sprintf(bufptr, "%lus (expiring in: %lus)\n",
+        bufptr += sprintf(bufptr, "%lus (expiring in: %lus)",
             locaddr->vlifetime.interval, stimer_remaining(&locaddr->vlifetime));
       }
+    shell_output_str(&ifconfig_command, buf, "");
     }
   }
-
-  shell_output_str(&ifconfig_command, buf, "");
 
   /***** Default routers *****/
 
-  bufptr = buf;
-  bufptr += sprintf(buf, "Default routers (max: %d):\n", UIP_DS6_DEFRT_NB);
-  for (d = uip_ds6_defrt_list_head(); d != NULL; d = list_item_next(d)) {
+  sprintf(buf, "Default routers (max: %d):", UIP_DS6_DEFRT_NB);
+  shell_output_str(&ifconfig_command, buf, "");
+
+  for (d = uip_ds6_defrt_list_head(); d != NULL; d = list_item_next(d)) 
+  {
+    bufptr = buf;
     bufptr += sprintf(bufptr, "    %s - lifetime: ", ipaddr_print(&d->ipaddr));
     if (d->isinfinite) {
-      bufptr += sprintf(bufptr, "infinite\n");
+      bufptr += sprintf(bufptr, "infinite");
     } else {
-      bufptr += sprintf(bufptr, "%lus (expiring in: %lus)\n",
+      bufptr += sprintf(bufptr, "%lus (expiring in: %lus)",
           d->lifetime.interval, stimer_remaining(&d->lifetime));
     }
+    shell_output_str(&ifconfig_command, buf, "");
   }
-
-  shell_output_str(&ifconfig_command, buf, "");
 
   /***** Neighbors list *****/
 
-  bufptr = buf;
-  bufptr += sprintf(buf, "Neighbors list (max: %d):\n", NBR_TABLE_MAX_NEIGHBORS);
+  sprintf(buf, "Neighbors list (max: %d):", NBR_TABLE_MAX_NEIGHBORS);
+  shell_output_str(&ifconfig_command, buf, "");
+
   nbr = nbr_table_head(ds6_neighbors);
-  while (nbr != NULL) {
+  while (nbr != NULL) 
+  {
+    bufptr = buf;
     bufptr += sprintf(bufptr, "    %s - deft. router: ", ipaddr_print(&nbr->ipaddr));
 
 #if CONF_6LOWPAN_ND
@@ -276,28 +289,34 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
 #else
     bufptr += sprintf(bufptr, " - reachable: %lus", nbr->reachable.interval);
 #endif /* CONF_6LOWPAN_ND */
-    bufptr += sprintf(bufptr, " (expiring in: %lus)\n", stimer_remaining(&nbr->reachable));
+    bufptr += sprintf(bufptr, " (expiring in: %lus)", stimer_remaining(&nbr->reachable));
     nbr = nbr_table_next(ds6_neighbors, nbr);
 #endif
+    shell_output_str(&ifconfig_command, buf, "");
   }
-
-  shell_output_str(&ifconfig_command, buf, "");
 
   /***** Border router list *****/
 
 #if CONF_6LOWPAN_ND
-  bufptr = buf;
-  bufptr += sprintf(buf, "Border router list (max: %d):\n", UIP_DS6_BR_NB);
+  
+  sprintf(buf, "Border router list (max: %d):", UIP_DS6_BR_NB);
+  shell_output_str(&ifconfig_command, buf, "");
+
   for(br = uip_ds6_br_list;
       br < uip_ds6_br_list + UIP_DS6_BR_NB;
       br++)
   {
-    bufptr += sprintf(bufptr, "    %s", ipaddr_print(&br->ipaddr));
-    bufptr += sprintf(bufptr, " - version: %lu", br->version);
-    bufptr += sprintf(bufptr, " - lifetime: %lus", (uint32_t)(br->lifetime == 0 ? 10000 : br->lifetime) * 60);
-    bufptr += sprintf(bufptr, " (expiring in: %lus)\n", stimer_remaining(&br->timeout));
+    if(strlen(ipaddr_print(&br->ipaddr)) > 7)
+    {
+      bufptr = buf;
+      bufptr += sprintf(bufptr, "    %s", ipaddr_print(&br->ipaddr));
+      bufptr += sprintf(bufptr, " - version: %lu", br->version);
+      bufptr += sprintf(bufptr, " - lifetime: %lus", (uint32_t)(br->lifetime == 0 ? 10000 : br->lifetime) * 60);
+      bufptr += sprintf(bufptr, " (expiring in: %lus)", stimer_remaining(&br->timeout));
+      shell_output_str(&ifconfig_command, buf, "");
+    }
   }
-  shell_output_str(&ifconfig_command, buf, "");
+  
 #endif /* CONF_6LOWPAN_ND */
 
 
@@ -305,7 +324,6 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
   //printf("RPL:\n");
   //rpl_print_neighbor_list();
 #endif /* CONF_6LOWPAN_ND */
-
 
   PROCESS_END();
 }
@@ -317,7 +335,7 @@ void shell_ifconfig_init(void) {
 static char *
 ipaddr_print(const uip_ipaddr_t *addr)
 {
-  static char ipaddr_buf[150], *ipaddr_bufptr;
+  static char ipaddr_buf[40], *ipaddr_bufptr;
 
 #if NETSTACK_CONF_WITH_IPV6
   uint16_t a;

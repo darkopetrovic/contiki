@@ -39,8 +39,6 @@
 
 #include <string.h>
 
-#include "custom-rdc.h"
-
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 

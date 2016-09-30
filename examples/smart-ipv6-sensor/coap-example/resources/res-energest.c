@@ -41,7 +41,10 @@
 #endif
 
 #include <stdlib.h>
+
+#ifdef CONTIKI_TARGET_CC2538DK
 #include "dev/sys-ctrl.h"
+#endif
 
 /** Provide every energest duration in the /energest representation. */
 #define	STATISTICAL_DATA		1
@@ -84,9 +87,11 @@ res_init()
   app_config_create_parameter(res_energest.url, CONFIG_PERIODIC_PARAM_NAME, "0", callback);
 #endif
 }
+
 static void
 res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
+
 
 	double charge_consumed_fractpart, charge_consumed_intpart;
 	/*double remaining_charge_fractpart, remaining_charge_intpart;*/
@@ -96,7 +101,7 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 	// get sensor value only once (first block) for the blockwise transfer
 	if( OBS_NOTIF_OR_FRST_BLCK_TRSF() ){
 
-		charge_consumed_fractpart = modf(energest_data.charge_consumed, &charge_consumed_intpart);
+		//charge_consumed_fractpart = modf(energest_data.charge_consumed, &charge_consumed_intpart);
 		/*remaining_charge_fractpart = modf(energest_data.remaining_charge, &remaining_charge_intpart);*/
 
 		resource_add_message(res_energest.url, REST.type.APPLICATION_JSON,
@@ -159,6 +164,8 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 	REST.set_header_max_age(response, res_energest.periodic->period / CLOCK_SECOND);
 
 	COAP_BLOCKWISE_TRANSFER(res_energest);
+
+	
 
 }
 /*

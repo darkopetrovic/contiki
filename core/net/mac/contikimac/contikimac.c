@@ -190,11 +190,7 @@ static int we_are_receiving_burst = 0;
 
 /* STROBE_TIME is the maximum amount of time a transmitted packet
    should be repeatedly transmitted as part of a transmission. */
-#if UIP_CONF_ROUTER
 #define STROBE_TIME                        (CYCLE_TIME + 2 * CHECK_TIME)
-#else
-#define STROBE_TIME                        RTIMER_ARCH_SECOND / 100
-#endif
 
 /* GUARD_TIME is the time before the expected phase of a neighbor that
    a transmitted should begin transmitting packets. */

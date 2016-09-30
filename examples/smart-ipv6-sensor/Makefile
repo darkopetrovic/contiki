@@ -25,6 +25,7 @@ else
 	# If the node is a ROUTER
   DEFINES+=UIP_CONF_ROUTER=1
   WITH_UDPCLIENT=0
+  WITH_CUSTOMRDC=0
 endif
 
 ifeq ($(WITH_SHELL),1)
@@ -40,6 +41,9 @@ ifeq ($(WITH_CUSTOMRDC),1)
 	CFLAGS += -DRDC_CONF_SLEEPING_HOST=1
 	PROJECTDIRS += $(PROJECTDIR)/apps/custom-rdc 
   PROJECT_SOURCEFILES += custom-rdc.c
+else
+	CFLAGS += -DRDC_CONF_SLEEPING_HOST=0
+	CFLAGS += -DRDC_SLEEPING_HOST=0
 endif
 
 # Test routing by sending packet with an udp-client.
@@ -62,7 +66,7 @@ endif
 
 ifeq ($(WITH_COAPSERVER),1)
 	CFLAGS += -DAPPS_COAPSERVER=1
-	CFLAGS += -DREST=coap_rest_implementation
+	CFLAGS += -DUIP_CONF_BUFFER_SIZE=180
 ifneq ($(TARGET),native)
 	CFLAGS += -DUIP_CONF_TCP=0
 endif
@@ -82,6 +86,8 @@ ifeq ($(WITH_POWERTRACK),1)
 	CFLAGS += -DAPPS_POWERTRACK=1
 	PROJECTDIRS += $(PROJECTDIR)/apps/power-track 
   PROJECT_SOURCEFILES += power-track.c
+else
+  CFLAGS += -DENERGEST_CONF_ON=0
 endif
 
 SMALL=1
