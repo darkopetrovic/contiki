@@ -39,8 +39,10 @@
 #define SENSORS_HW_INIT 128 /* internal - used only for initialization */
 #define SENSORS_ACTIVE 129 /* ACTIVE => 0 -> turn off, 1 -> turn on */
 #define SENSORS_READY 130 /* read only */
+#define SENSORS_DO_MEASURE 131  /* really do a sensor measurement */
 
 #define SENSORS_ACTIVATE(sensor) (sensor).configure(SENSORS_ACTIVE, 1)
+#define SENSORS_MEASURE(sensor) (sensor).configure(SENSORS_DO_MEASURE, 0)
 #define SENSORS_DEACTIVATE(sensor) (sensor).configure(SENSORS_ACTIVE, 0)
 
 #define SENSORS_SENSOR(name, type, value, configure, status)        \

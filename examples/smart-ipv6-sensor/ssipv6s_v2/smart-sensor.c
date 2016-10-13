@@ -72,7 +72,7 @@
 #include "app-config.h"
 #endif
 
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
 #include "power-track.h"
 #endif
 
@@ -81,12 +81,14 @@ extern resource_t
 #if APPS_APPCONFIG
   res_config,
 #endif
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
   res_energest,
 #endif
   res_sensors,
   res_temperature,
   res_humidity,
+  res_pressure,
+  res_light,
   res_motion,
   res_power,
   res_battery,
@@ -98,7 +100,7 @@ extern resource_t
 static uint8_t
 callback(struct parameter *p)
 {
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
   if( !strncmp(p->name, "energest_enable", strlen(p->name)) ){
     if(p->value){
       powertrack_start(15*CLOCK_SECOND);
@@ -135,9 +137,9 @@ PROCESS_THREAD(controller_process, ev, data)
 
 #if APPS_APPCONFIG
   app_config_init();
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
   app_config_create_parameter(APP_CONFIG_GENERAL, "energest_enable", "1", callback);
-#endif /* ENERGEST_CONF_ON */
+#endif /* APPS_POWERTRACK */
 #endif /* APPS_APPCONFIG */
 
 #if SHELL && !USB_SHELL_IN_NRMEM
@@ -163,13 +165,15 @@ PROCESS_THREAD(controller_process, ev, data)
   rest_activate_resource(&res_sensors,      "sensors");
   rest_activate_resource(&res_temperature,  "sensors/temperature");
   rest_activate_resource(&res_humidity,     "sensors/humidity");
+  rest_activate_resource(&res_pressure,     "sensors/pressure");
+  rest_activate_resource(&res_light,        "sensors/light");
   rest_activate_resource(&res_motion,       "sensors/motion");
   rest_activate_resource(&res_power,        "power");
   rest_activate_resource(&res_battery,      "power/battery");
   rest_activate_resource(&res_solar,        "power/solar");
-#if ENERGEST_CONF_ON
+#if APPS_POWERTRACK
   rest_activate_resource(&res_energest,     "energest");
-#endif /* ENERGEST_CONF_ON */
+#endif /* APPS_POWERTRACK */
 #endif /* REST */
 
   /* Define application-specific events here. */
@@ -177,21 +181,15 @@ PROCESS_THREAD(controller_process, ev, data)
     PROCESS_WAIT_EVENT();
 
     if( ev == sensors_event ) {
-#if CONTIKI_TARGET_SSIPV6S_V1
       if(data == &button_user_sensor){
         PRINTF("Button user pushed.\n");
-#else
-      if(data == &button_sensor){
-        PRINTF("Button select pushed.\n");
-#endif
 
 #if RDC_SLEEPING_HOST
-        crdc_period_start(10);
+        crdc_period_start(30);
 #endif /* RDC_SLEEPING_HOST */
       }
     }
 
-#if CONTIKI_TARGET_SSIPV6S_V1
     if(data == &usb_plug_detect){
       if(USB_IS_PLUGGED()){
         leds_on(LEDS_YELLOW);
@@ -213,7 +211,7 @@ PROCESS_THREAD(controller_process, ev, data)
       usb_shell_init();
 #endif
     }
-#endif /* CONTIKI_TARGET_SSIPV6S_V1 */
+
 
     if(ev == sensors_event && data == &pir_sensor) {
       PRINTF("******* MOTION DETECTED *******\n");

@@ -12,7 +12,7 @@
 #include "contiki.h"
 #include "power-track.h"
 
-#if CONTIKI_TARGET_SSIPV6S_V1
+#if CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
 #include "platform-sensors.h"
 #endif
 
@@ -38,7 +38,7 @@ static uint32_t last_idle_transmit, last_idle_listen;
 static void
 energest_compute(void)
 {
-#if PLATFORM_HAS_BATTERY && CONTIKI_TARGET_SSIPV6S_V1
+#if PLATFORM_HAS_BATTERY && (CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2)
   uint16_t battery_volt_mv;
   float battery_volt;
   battery_volt_mv = get_battery_voltage();
@@ -72,6 +72,12 @@ energest_compute(void)
   energest_data.all_sensors_ina3221 = energest_type_time(ENERGEST_TYPE_SENSORS_INA3221);
   energest_data.all_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
   energest_data.all_sensors_tmp100 = energest_type_time(ENERGEST_TYPE_SENSORS_TMP100);
+  energest_data.all_sensors_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
+#endif
+
+#if CONTIKI_TARGET_SSIPV6S_V2
+  energest_data.all_sensors_ina3221 = energest_type_time(ENERGEST_TYPE_SENSORS_INA3221);
+  energest_data.all_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
   energest_data.all_sensors_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
 #endif
 
@@ -116,6 +122,10 @@ energest_compute(void)
       energest_data.all_sensors_tmp100;
 #endif
 
+#if CONTIKI_TARGET_SSIPV6S_V2
+  sup_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21;
+#endif
+
   energest_data.charge_consumed =
       (float)(energest_data.all_cpu-energest_data.all_transmit-energest_data.all_listen)/RTIMER_SECOND * I_CPU \
       + (float)(energest_data.all_lpm-energest_data.all_leds-sup_lpm)/RTIMER_SECOND * I_LPM \
@@ -127,10 +137,15 @@ energest_compute(void)
       + (float)energest_data.all_sensors_tmp100/RTIMER_SECOND * I_TMP100 \
       + (float)energest_data.all_sensors_pir/RTIMER_SECOND * I_PIR
 #endif
+#if CONTIKI_TARGET_SSIPV6S_V2
+      + (float)energest_data.all_sensors_ina3221/RTIMER_SECOND * I_INA3221 \
+      + (float)energest_data.all_sensors_sht21/RTIMER_SECOND * I_SHT21 \
+      + (float)energest_data.all_sensors_pir/RTIMER_SECOND * I_PIR
+#endif
       + (float)energest_data.all_leds/RTIMER_SECOND * I_LED;
 
 
-#if PLATFORM_HAS_BATTERY && CONTIKI_TARGET_SSIPV6S_V1
+#if PLATFORM_HAS_BATTERY && (CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2)
   /* Estimate the remaining battery capacity using simple relationship with the battery level:
    *  BATTERY_NOM_VOLTAGE -> BATTERY_CAPACITY mAh ->  x 3600 = Coulomb
     BATTERY_CUT_VOLTAGE -> 0 mAh ->  0 Coulomb */

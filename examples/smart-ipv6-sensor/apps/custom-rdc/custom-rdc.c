@@ -338,9 +338,6 @@ crdc_enable_rdc(void)
   //PROCESS_CONTEXT_BEGIN(&tcpip_process);
   //etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/10);
   //PROCESS_CONTEXT_END(&tcpip_process);
-  PROCESS_CONTEXT_BEGIN(&tcpip_process);
-  etimer_reset(&uip_ds6_timer_periodic);
-  PROCESS_CONTEXT_END(&tcpip_process);
 #endif
   enableRDC();
 }
@@ -438,6 +435,12 @@ crdc_period_start(uint32_t seconds)
     ctimer_set(&ct_rdc, CLOCK_SECOND * seconds, stop_rdc, NULL);
     PRINTF("CRDC: The RDC is PROLONGED (for %lu seconds).\n", seconds);
   }
+}
+
+uint8_t
+crdc_get_rdc_status(void)
+{
+  return rdc_is_on;
 }
 
 #endif // ENABLE_CUSTOM_RDC
