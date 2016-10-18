@@ -46,6 +46,7 @@
 #include "contiki-net.h"
 
 #include "pir-sensor.h"
+#include "mic-sensor.h"
 #include "platform-sensors.h"
 #include "dev/leds.h"
 
@@ -58,7 +59,7 @@
 
 #include "dev/button-sensor.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #if SHELL && !USB_SHELL_IN_NRMEM
@@ -76,6 +77,10 @@
 #include "power-track.h"
 #endif
 
+static struct ctimer microclap_timer;
+static rtimer_clock_t button_time_press;
+static rtimer_clock_t button_time_release;
+
 #if APPS_COAPSERVER
 extern resource_t
 #if APPS_APPCONFIG
@@ -89,12 +94,16 @@ extern resource_t
   res_humidity,
   res_pressure,
   res_light,
-  res_motion,
   res_power,
   res_battery,
-  res_solar
+  res_solar,
+  res_events,
+  res_micro,
+  res_motion
   ;
 #endif
+
+extern uint8_t res_micro_clap_counter;
 
 #if APPS_APPCONFIG
 static uint8_t
@@ -114,6 +123,72 @@ callback(struct parameter *p)
   return 1;
 }
 #endif /* REST_DELAY_RES_START */
+
+static void
+microclap_timeout(void* ptr)
+{
+#if APPS_COAPSERVER
+  res_micro.trigger();
+  res_events.trigger();
+#endif
+
+  res_micro_clap_counter = 0;
+}
+
+static char *
+float2str(float num, uint8_t preci)
+{
+  int integer=(int)num, decimal=0;
+  static char buf[20];
+  preci = preci > 10 ? 10 : preci;
+  num -= integer;
+  while((num != 0) && (preci-- > 0)) {
+    decimal *= 10;
+    num *= 10;
+    decimal += (int)num;
+    num -= (int)num;
+  }
+  switch(preci){
+    case 1:
+      sprintf(buf, "%d.%01d", integer, decimal);
+      break;
+    case 2:
+      sprintf(buf, "%d.%02d", integer, decimal);
+      break;
+    case 3:
+      sprintf(buf, "%d.%03d", integer, decimal);
+      break;
+    default:
+      sprintf(buf, "%d.%01d", integer, decimal);
+  }
+  return buf;
+}
+
+static void
+button_press_action( rtimer_clock_t delta )
+{
+  float button_press_duration;
+
+  button_press_duration = (float)(delta)/RTIMER_SECOND;
+
+  PRINTF("Button pressed during %s second(s).\n",
+        float2str(button_press_duration, 2));
+
+  if( button_press_duration >= 8){
+    // reset the device
+    // ...
+  } else if ( button_press_duration < 8 && button_press_duration >= 3) {
+    // become a router or an host
+#if UIP_CONF_DYN_HOST_ROUTER
+    if(NODE_TYPE_HOST){
+      settings_update_value(SETTINGS_RESOURCE_NAME, "router", DEVICE_TYPE_ROUTER);
+    } else {
+      settings_update_value(SETTINGS_RESOURCE_NAME, "router", DEVICE_TYPE_HOST);
+    }
+#endif
+  }
+}
+
 
 /*---------------------------------------------------------------------------*/
 
@@ -167,10 +242,12 @@ PROCESS_THREAD(controller_process, ev, data)
   rest_activate_resource(&res_humidity,     "sensors/humidity");
   rest_activate_resource(&res_pressure,     "sensors/pressure");
   rest_activate_resource(&res_light,        "sensors/light");
-  rest_activate_resource(&res_motion,       "sensors/motion");
   rest_activate_resource(&res_power,        "power");
   rest_activate_resource(&res_battery,      "power/battery");
   rest_activate_resource(&res_solar,        "power/solar");
+  rest_activate_resource(&res_events,       "events");
+  rest_activate_resource(&res_motion,       "events/motion");
+  rest_activate_resource(&res_micro,        "events/micro");
 #if APPS_POWERTRACK
   rest_activate_resource(&res_energest,     "energest");
 #endif /* APPS_POWERTRACK */
@@ -180,48 +257,86 @@ PROCESS_THREAD(controller_process, ev, data)
   while(1) {
     PROCESS_WAIT_EVENT();
 
-    if( ev == sensors_event ) {
+    if(ev == sensors_event) {
+
+      /* =========== USER BUTTON ============== */
       if(data == &button_user_sensor){
         PRINTF("Button user pushed.\n");
 
+#if USB_SERIAL_CONF_ENABLE
+        if( !USB_IS_PLUGGED() ){
+          // the RDC is activated only for few seconds/minutes
+          crdc_period_start( app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
+        }
+#else /* USB_SERIAL_CONF_ENABLE */
 #if RDC_SLEEPING_HOST
-        crdc_period_start(30);
+        if( !button_time_press ){
+          crdc_period_start( app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
+        }
 #endif /* RDC_SLEEPING_HOST */
-      }
-    }
+#endif /* USB_SERIAL_CONF_ENABLE */
 
-    if(data == &usb_plug_detect){
-      if(USB_IS_PLUGGED()){
-        leds_on(LEDS_YELLOW);
-#if RDC_SLEEPING_HOST
-        /* If RDC is already enabled when the USB cable is plugged, we clear the timer
-         * which is supposed to stop the RDC, and enable RDC indefinetely (while the usb
-         * is plugged in). */
-        crdc_clear_stop_rdc_timer();
-        crdc_enable_rdc();
-#endif
-      } else {
-        leds_off(LEDS_YELLOW);
-#if RDC_SLEEPING_HOST
-        crdc_disable_rdc(0);
-#endif
+        if( !button_time_press ){
+          button_time_press = RTIMER_NOW();
+        } else {
+          button_time_release = RTIMER_NOW();
+        }
+
+        if( button_time_release ){
+          button_press_action( (button_time_release - button_time_press) );
+          button_time_press = 0;
+          button_time_release = 0;
+        }
+
       }
+
+      /* =========== USB PLUG ============== */
+      if(data == &usb_plug_detect){
+        if(USB_IS_PLUGGED()){
+          leds_on(LEDS_YELLOW);
+#if RDC_SLEEPING_HOST
+          /* If RDC is already enabled when the USB cable is plugged, we clear the timer
+           * which is supposed to stop the RDC, and enable RDC indefinetely (while the usb
+           * is plugged in). */
+          crdc_clear_stop_rdc_timer();
+          crdc_enable_rdc();
+#endif
+        } else {
+          leds_off(LEDS_YELLOW);
+#if RDC_SLEEPING_HOST
+          crdc_disable_rdc(0);
+#endif
+        }
 
 #if SHELL && USB_SERIAL_CONF_ENABLE && USB_SHELL_IN_NRMEM
-      usb_shell_init();
+        usb_shell_init();
 #endif
-    }
+      }
 
-
-    if(ev == sensors_event && data == &pir_sensor) {
-      PRINTF("******* MOTION DETECTED *******\n");
-
+      /* =========== MOTION DETECT ============== */
+      if(data == &pir_sensor) {
+        PRINTF("******* MOTION DETECTED *******\n");
 #if APPS_COAPSERVER
-      /* Call the event_handler for this application-specific event. */
-      res_motion.trigger();
+        /* Call the event_handler for this application-specific event. */
+        res_motion.trigger();
+        res_events.trigger();
 #endif
-    }
+      }
 
+      /* =========== MICROPHONE DETECT ============== */
+      if(data == &mic_sensor) {
+        PRINTF("******* SOUND DETECTED *******\n");
+#if ADC_ACQUISITION_ON
+        SENSORS_MEASURE(mic_sensor);
+#endif
+
+        if(res_micro_clap_counter < 4){
+          res_micro_clap_counter++;
+          ctimer_set(&microclap_timer, CLOCK_SECOND, microclap_timeout, NULL);
+        }
+
+      }
+    } // if( ev == sensors_event )
   }  /* while (1) */
 
   PROCESS_END();

@@ -17,6 +17,7 @@
 #include "ccs811-sensor.h"
 #include "bmp280-sensor.h"
 #include "tsl2561-sensor.h"
+#include "mic-sensor.h"
 #include "cpu.h"
 
 #include "net/netstack.h"
@@ -221,7 +222,8 @@ usb_shell_init(void)
 
 /** \brief Exports a global symbol to be used by the sensor API */
 SENSORS(&button_user_sensor, &usb_plug_detect, &pir_sensor,
-    &ina3221_sensor, &sht21_sensor, &ccs811_sensor, &bmp280_sensor, &tsl2561_sensor);
+    &ina3221_sensor, &sht21_sensor, &ccs811_sensor, &bmp280_sensor,
+    &tsl2561_sensor, &mic_sensor);
 
 /**
  * @}

@@ -70,6 +70,7 @@
 #include "ieee-addr.h"
 #include "lpm.h"
 #include "pca9546-mux.h"
+#include "mic-sensor.h"
 
 #include "net/ipv6/uip-ds6.h"
 
@@ -88,6 +89,7 @@
 #else
 #define PUTS(s)
 #endif
+
 /*---------------------------------------------------------------------------*/
 static void
 fade(unsigned char l)
@@ -310,9 +312,7 @@ main(void)
       lpm_enter();
     }
 #else
-#if !SHELL
-      lpm_enter();
-#endif
+    lpm_enter();
 #endif
 
 #endif

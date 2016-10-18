@@ -113,23 +113,6 @@
 /* Notify various examples that we have Buttons */
 #define PLATFORM_HAS_BUTTON      1
 /** @} */
-/*---------------------------------------------------------------------------*/
-/**
- * \name ADC configuration
- *
- * These values configure which CC2538 pins and ADC channels to use for the ADC
- * inputs.
- *
- * ADC inputs can only be on port A.
- * @{
- */
-
-//#define ADC_ALS_PWR_PORT         GPIO_A_NUM /**< ALS power GPIO control port */
-//#define ADC_ALS_PWR_PIN          7 /**< ALS power GPIO control pin */
-//#define ADC_ALS_OUT_PIN          6 /**< ALS output ADC input pin on port A */
-
-/** @} */
-/*---------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------*/
 /** \name I2C pins
@@ -214,6 +197,18 @@
 
 /*---------------------------------------------------------------------------*/
 /**
+ * \name INA3221 sensor configuration
+ *
+ * @{
+ */
+#define INA3221_SLAVE_ADDRESS         0x41  /* S|1|0|0|0|0|0|1|RW */
+#define INA3221_SHUNT_RESISTOR_CH1    10    // Ohm
+#define INA3221_SHUNT_RESISTOR_CH2    0.15  // Ohm
+/** @} */
+/*---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+/**
  * \name PIR sensor configuration (movement detector)
  *
  * @{
@@ -221,25 +216,27 @@
 #define PIR_INPUT_PORT            GPIO_A_NUM
 #define PIR_INPUT_PIN             1
 #define PIR_INPUT_VECTOR          NVIC_INT_GPIO_PORT_A
-#define PIR_ENABLE_PORT           GPIO_C_NUM
-#define PIR_ENABLE_PIN            3
+#define PIR_PWR_PORT              GPIO_C_NUM
+#define PIR_PWR_PIN               3
 
 /** @} */
 /*---------------------------------------------------------------------------*/
 
-
-
 /*---------------------------------------------------------------------------*/
 /**
- * \name INA3221 sensor configuration
+ * \name ICS-40310 microphone configuration
  *
  * @{
  */
-#define INA3221_SLAVE_ADDRESS         0x41  /* S|1|0|0|0|0|0|1|RW */
-#define INA3221_SHUNT_RESISTOR_CH1    10		// Ohm
-#define INA3221_SHUNT_RESISTOR_CH2    0.15	// Ohm
-
-
+#define MIC_PWR_PORT          GPIO_C_NUM
+#define MIC_PWR_PIN           2
+#define MIC_ADC_INPUT_PORT    GPIO_A_NUM
+#define MIC_ADC_INPUT_PIN     0
+#define MIC_COMP_INPUT_PORT   GPIO_A_NUM
+#define MIC_COMP_INPUT_PIN    5
+#define MIC_COMP_INPUT_VECTOR NVIC_INT_GPIO_PORT_A
+#define MIC_COMP_REF_PORT     GPIO_A_NUM
+#define MIC_COMP_REF_PIN      4
 /** @} */
 /*---------------------------------------------------------------------------*/
 

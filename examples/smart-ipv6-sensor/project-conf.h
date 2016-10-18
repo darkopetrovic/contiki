@@ -31,7 +31,7 @@
 
 /**
  * \file
- *          Proect specific configuration.
+ *          Project specific configuration.
  */
 
 #ifndef PROJECT_CONF_H_
@@ -40,6 +40,8 @@
 /* ********************************************************************** */
 /* Application configuration                                              */
 /* ********************************************************************** */
+
+#define REST_MAX_CHUNK_SIZE                 128
 
 /** Delay the start of resources.  */
 #define REST_CONF_DELAY_RES_START           1
@@ -90,7 +92,7 @@
  * The USB is initiliazed only when the USB cable is plugged in. Therefore,
  * there is no extra current consumption on the battery due to the USB process.
  */
-#define CC2538_CONF_QUIET                   1
+#define CC2538_CONF_QUIET                   0
 
 /**
  * Useful to print debug message on the terminal while debuging USB features
@@ -103,7 +105,7 @@
 #define UIP_CONF_BUFFER_SIZE                400
 
 /** Reduce the maximum amount of concurrent UDP connections (default 10). */
-#define UIP_CONF_UDP_CONNS                  2
+#define UIP_CONF_UDP_CONNS                  5
 
 /** Maximum routes to store */
 #define UIP_CONF_MAX_ROUTES                 2

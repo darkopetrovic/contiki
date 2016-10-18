@@ -3,16 +3,16 @@
  * @{
  *
  * \file
- *      Motion detector resource
+ *      Event based sensors (motion, micro)
  * \author
  *      Darko Petrovic
  */
 
-
 #include "contiki.h"
 #include "custom-coap.h"
 
-#include "dev/pir-sensor.h"
+#include "pir-sensor.h"
+#include "mic-sensor.h"
 
 /** \cond */
 #define DEBUG 0
@@ -31,84 +31,61 @@
 static void res_init();
 static void res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 static void res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-static void res_motion_handler();
+static void res_events_handler();
 
-#define DEFAULT_MD_SLEEP_DURATION	120	// seconds
-
-EVENT_RESOURCE(res_motion,
-               "title=\"Motion detection\";rt=\"motion\";if=\"sensor\";ct=\"application/senml+json\";obs",
+EVENT_RESOURCE(res_events,
+               "title=\"Events\";rt=\"events\";if=\"sensor\";ct=\"application/senml+json\";obs",
                res_init,
                res_get_handler,
                res_post_put_handler,
                res_post_put_handler,
                NULL,
-               res_motion_handler);
+               res_events_handler);
 
-int32_t res_motion_counter = 0;
-
-#if APPS_APPCONFIG
-static uint8_t
-callback(struct parameter *p)
-{
-  if( !strncmp(p->name, "state", strlen(p->name)) ){
-    pir_sensor.configure(SENSORS_ACTIVE, p->value);
-    return 0;
-  } else if ( !strncmp(p->name, "sleep-duration", strlen(p->name)) ) {
-    pir_sensor.configure(PIR_DEACTIVATION_DELAY, p->value);
-    return 0;
-  }
-  return 1;
-}
-#endif
+extern int32_t res_motion_counter;
+extern uint8_t res_micro_clap_counter;
+extern resource_t res_motion, res_micro;
 
 static void
 res_init()
 {
-#if APPS_APPCONFIG
-  app_config_create_parameter(res_motion.url, "state", "0", callback);
-  /** \todo use DEFAULT_MD_SLEEP_DURATION */
-  app_config_create_parameter(res_motion.url, "sleep-duration", "120", callback);
-#endif
+
 }
 
 static void
 res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
+  COAP_BLOCKWISE_SETTINGS_LIST(res_events);
 
-  COAP_BLOCKWISE_SETTINGS_LIST(res_motion);
+   if( OBS_NOTIF_OR_FRST_BLCK_TRSF() ){
+     resource_add_message(res_events.url, REST.type.APPLICATION_JSON,
+             "{\"e\":["
+             "{\"n\":\"%s\",\"v\":%lu,\"u\":\"count\"},"
+             "{\"n\":\"%s\",\"v\":%lu,\"u\":\"count\"}"
+             "]}",
+             res_motion.url, res_motion_counter, res_micro.url, res_micro_clap_counter);
+   }
 
-  if( OBS_NOTIF_OR_FRST_BLCK_TRSF() ){
-    resource_add_message(res_motion.url, REST.type.APPLICATION_JSON,
-            "{\"e\":[{\"n\":\"%s\",\"v\":%lu,\"u\":\"count\"}]}",
-            res_motion.url, res_motion_counter);
-  }
-
-  COAP_BLOCKWISE_TRANSFER(res_motion);
-
+   COAP_BLOCKWISE_TRANSFER(res_events);
 }
 /*
- * Additionally, res_event_handler must be implemented for each EVENT_RESOURCE.
- * It is called through <res_name>.trigger(), usually from the server process.
+ * Additionally, a handler function named [resource name]_handler must be implemented for each PERIODIC_RESOURCE.
+ * It will be called by the REST manager process with the defined period.
  */
 static void
-res_motion_handler()
+res_events_handler()
 {
-  /* Do the update triggered by the event here, e.g., sampling a sensor. */
-  ++res_motion_counter;
-
   /* Usually a condition is defined under with subscribers are notified, e.g., event was above a threshold. */
   if(1) {
-    PRINTF("TICK %lu for /%s\n", res_motion_counter, res_motion.url);
-    //blink_led(LEDS_YELLOW, CLOCK_SECOND/4, 1);
     /* Notify the registered observers which will trigger the res_get_handler to create the response. */
-    REST.notify_subscribers(&res_motion);
+    REST.notify_subscribers(&res_events);
   }
 }
 
 static void
 res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  COAP_UPDATE_SETTINGS(res_motion);
+	COAP_UPDATE_SETTINGS(res_events);
 }
 
 /** @} */

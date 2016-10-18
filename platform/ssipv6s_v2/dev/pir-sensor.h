@@ -30,31 +30,31 @@
 #define PIR_INPUT_PORT_BASE     GPIO_PORT_TO_BASE(PIR_INPUT_PORT)
 #define PIR_INPUT_PIN_MASK      GPIO_PIN_MASK(PIR_INPUT_PIN)
 
-#define PIR_ENABLE_PORT_BASE    GPIO_PORT_TO_BASE(PIR_ENABLE_PORT)
-#define PIR_ENABLE_PIN_MASK     GPIO_PIN_MASK(PIR_ENABLE_PIN)
+#define PIR_PWR_PORT_BASE       GPIO_PORT_TO_BASE(PIR_PWR_PORT)
+#define PIR_PWR_PIN_MASK        GPIO_PIN_MASK(PIR_PWR_PIN)
 
 /** Adjust the number of seconds according the startup sequence of the PIR detector. */
 #define PIR_STARTUP_TIME        6 // in seconds
 
 /** Power-ups the PIR sensor. The function starts a timeout to enable the interrupt after
  * the pir sensor has finished to power-up. */
-#define	PIR_CIRCUIT_ON()      ioc_set_over(PIR_ENABLE_PORT, PIR_ENABLE_PIN, IOC_OVERRIDE_PDE);\
-                              internal_status |= PIR_FLAG_POWERED;\
-                              ctimer_set(&pir_timer, CLOCK_SECOND * PIR_STARTUP_TIME, enable_interrupt, NULL)
+#define	PIR_CIRCUIT_ON()        GPIO_SET_PIN(PIR_PWR_PORT_BASE, PIR_PWR_PIN_MASK);\
+                                internal_status |= PIR_FLAG_POWERED;\
+                                ctimer_set(&pir_timer, CLOCK_SECOND * PIR_STARTUP_TIME, enable_interrupt, NULL)
 
 /** Power-down the PIR sensor. */
-#define	PIR_CIRCUIT_OFF()     ioc_set_over(PIR_ENABLE_PORT, PIR_ENABLE_PIN, IOC_OVERRIDE_PUE);\
-                              internal_status &= ~(PIR_FLAG_POWERED)
+#define	PIR_CIRCUIT_OFF()       GPIO_CLR_PIN(PIR_PWR_PORT_BASE, PIR_PWR_PIN_MASK);\
+                                internal_status &= ~(PIR_FLAG_POWERED)
 
 /** Enable PIR sensor interrupt.*/
-#define PIR_IRQ_ENABLE()    GPIO_ENABLE_INTERRUPT(PIR_INPUT_PORT_BASE, PIR_INPUT_PIN_MASK);\
-                            GPIO_ENABLE_POWER_UP_INTERRUPT(PIR_INPUT_PORT, PIR_INPUT_PIN_MASK);\
-                            internal_status |= PIR_FLAG_ACTIVATED
+#define PIR_IRQ_ENABLE()        GPIO_ENABLE_INTERRUPT(PIR_INPUT_PORT_BASE, PIR_INPUT_PIN_MASK);\
+                                GPIO_ENABLE_POWER_UP_INTERRUPT(PIR_INPUT_PORT, PIR_INPUT_PIN_MASK);\
+                                internal_status |= PIR_FLAG_ACTIVATED
 
 /** Disable PIR sensor interrupt for the processor. */
-#define PIR_IRQ_DISABLE()   GPIO_DISABLE_INTERRUPT(PIR_INPUT_PORT_BASE, PIR_INPUT_PIN_MASK);\
-                            GPIO_DISABLE_POWER_UP_INTERRUPT(PIR_INPUT_PORT, PIR_INPUT_PIN_MASK);\
-                            internal_status &= ~(PIR_FLAG_ACTIVATED)
+#define PIR_IRQ_DISABLE()       GPIO_DISABLE_INTERRUPT(PIR_INPUT_PORT_BASE, PIR_INPUT_PIN_MASK);\
+                                GPIO_DISABLE_POWER_UP_INTERRUPT(PIR_INPUT_PORT, PIR_INPUT_PIN_MASK);\
+                                internal_status &= ~(PIR_FLAG_ACTIVATED)
 
 
 #define PIR_FLAG_POWERED          (1<<0)

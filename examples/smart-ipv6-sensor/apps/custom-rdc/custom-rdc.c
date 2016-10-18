@@ -88,7 +88,7 @@ extern struct process tcpip_process;
 static unsigned long irq_energest;
 #endif /* CONTIKI_TARGET_CC2538DK */
 
-char *
+static char *
 float2str(float num, uint8_t preci)
 {
   int integer=(int)num, decimal=0;

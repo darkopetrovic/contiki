@@ -10,6 +10,7 @@
  */
 
 #include "button-sensor.h"
+#include "mic-sensor.h"
 
 /** \cond */
 #define DEBUG 0
@@ -81,13 +82,6 @@ btn_callback(uint8_t port, uint8_t pin)
       case BUTTON_USER_PIN:
         sensors_changed(&button_user_sensor);
         break;
-      default:
-        return;
-    }
-  }
-
-  else if(port == GPIO_C_NUM) {
-    switch(pin) {
       case USB_PLUG_DETECT_PIN:
         sensors_changed(&usb_plug_detect);
         break;
@@ -155,7 +149,6 @@ config_usbplug(int type, int value)
 
   return 0;
 }
-
 
 void
 button_sensor_init()
