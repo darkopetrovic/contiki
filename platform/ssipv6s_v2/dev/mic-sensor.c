@@ -125,9 +125,11 @@ configure(int type, int value)
         // turn on the comparator
         REG(SOC_ADC_CMPCTL) = SOC_ADC_CMPCTL_EN;
         MIC_CIRCUIT_ON();
+        ENERGEST_ON(ENERGEST_TYPE_SENSORS_MIC);
       } else {
         MIC_CIRCUIT_OFF();
         REG(SOC_ADC_CMPCTL) = 0;
+        ENERGEST_OFF(ENERGEST_TYPE_SENSORS_MIC);
       }
       break;
 
@@ -151,6 +153,8 @@ value(int type)
 {
 #if ADC_ACQUISITION_ON
   return &adcvalues;
+#else
+  return 0;
 #endif /* ADC_ACQUISITION_ON */
 }
 

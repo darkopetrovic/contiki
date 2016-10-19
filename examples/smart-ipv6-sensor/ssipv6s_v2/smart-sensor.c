@@ -59,7 +59,7 @@
 
 #include "dev/button-sensor.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #if SHELL && !USB_SHELL_IN_NRMEM
@@ -77,9 +77,14 @@
 #include "power-track.h"
 #endif
 
+#if APPS_SMARTLED
+#include "smart-led.h"
+#endif
+
 static struct ctimer microclap_timer;
 static rtimer_clock_t button_time_press;
 static rtimer_clock_t button_time_release;
+static uint8_t starting;
 
 #if APPS_COAPSERVER
 extern resource_t
@@ -135,6 +140,7 @@ microclap_timeout(void* ptr)
   res_micro_clap_counter = 0;
 }
 
+#if DEBUG
 static char *
 float2str(float num, uint8_t preci)
 {
@@ -163,6 +169,7 @@ float2str(float num, uint8_t preci)
   }
   return buf;
 }
+#endif
 
 static void
 button_press_action( rtimer_clock_t delta )
@@ -181,14 +188,84 @@ button_press_action( rtimer_clock_t delta )
     // become a router or an host
 #if UIP_CONF_DYN_HOST_ROUTER
     if(NODE_TYPE_HOST){
-      settings_update_value(SETTINGS_RESOURCE_NAME, "router", DEVICE_TYPE_ROUTER);
+      app_config_edit_parameter(APP_CONFIG_GENERAL, "router", NULL, 1);
     } else {
-      settings_update_value(SETTINGS_RESOURCE_NAME, "router", DEVICE_TYPE_HOST);
+      app_config_edit_parameter(APP_CONFIG_GENERAL, "router", NULL, 0);
     }
 #endif
   }
 }
 
+#if RDC_SLEEPING_HOST
+static uint8_t
+change_rdc_period(struct parameter *p)
+{
+  // don't start rdc at device startup
+  if( !starting ){
+    crdc_disable_rdc(0);
+    crdc_period_start( p->value );
+  }
+  return 0;
+}
+#endif
+
+#if UIP_CONF_DYN_HOST_ROUTER
+static uint8_t
+node_change_type(struct parameter *p)
+{
+  /* Configure the device as a router or host.
+   * This function is exectued whenever we update the parameter
+   * and at startup once the setting is read from flash. */
+  if(node_type != p->value){
+
+    node_type = p->value;
+    if(NODE_TYPE_ROUTER && USB_IS_PLUGGED()){
+      set_node_type(ROUTER);
+      PRINTF("Node set as ROUTER.\n");
+#if APPS_SMARTLED
+        if(!starting){
+          blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
+        }
+#endif
+      return 0;
+    } else {
+      /* The device fails to become a router. */
+      if(NODE_TYPE_ROUTER){
+        /* If the device is set as router and the usb cable isn't plugged in
+         * at startup, the device is automatically set as an host but the
+         * setting is unchanged.
+         */
+        node_type = HOST;
+#if APPS_SMARTLED
+        if(!starting){
+          blink_leds(LEDS_RED, CLOCK_SECOND/4, 3);
+        }
+#endif
+        return 1;
+      }
+
+      /* This function doesn't need to be executed at startup since
+       * the device is by default an host. */
+      if(!starting){
+        set_node_type(HOST);
+#if RDC_SLEEPING_HOST
+        if(!USB_IS_PLUGGED()){
+          crdc_disable_rdc(0);
+        }
+#endif
+        PRINTF("Node set as HOST.\n");
+#if APPS_SMARTLED
+        blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 3);
+#endif
+      }
+      return 0;
+    }
+  }
+  /* Don't return as an error. We want the parameter to
+   * be stored in flash. */
+  return 0;
+}
+#endif /* UIP_CONF_DYN_HOST_ROUTER */
 
 /*---------------------------------------------------------------------------*/
 
@@ -202,6 +279,8 @@ PROCESS_THREAD(controller_process, ev, data)
 
   //PROCESS_PAUSE();
 
+  starting = 1;
+
 #ifndef CONTIKI_TARGET_CC2538DK
   SENSORS_ACTIVATE(button_sensor);
 #endif
@@ -212,6 +291,27 @@ PROCESS_THREAD(controller_process, ev, data)
 
 #if APPS_APPCONFIG
   app_config_init();
+
+#if UIP_CONF_DYN_HOST_ROUTER
+#if UIP_CONF_ROUTER
+  app_config_create_parameter(APP_CONFIG_GENERAL, "router", "1", node_change_type);
+#else
+  app_config_create_parameter(APP_CONFIG_GENERAL, "router", "0", node_change_type);
+#endif
+#endif
+
+#if RDC_SLEEPING_HOST
+  app_config_create_parameter(APP_CONFIG_GENERAL, "rdc_enable_period", "30", change_rdc_period);
+#endif
+
+  app_config_create_parameter(APP_CONFIG_GENERAL, "alive_message_period", "30", NULL);
+  app_config_create_parameter(APP_CONFIG_GENERAL, "bripaddr", "aaaa::212:4b00:40e:fadb", NULL);
+
+#if CONF_6LOWPAN_ND
+  /* The time the host will be registered to the router. */
+  app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
+#endif
+
 #if APPS_POWERTRACK
   app_config_create_parameter(APP_CONFIG_GENERAL, "energest_enable", "1", callback);
 #endif /* APPS_POWERTRACK */
@@ -253,6 +353,8 @@ PROCESS_THREAD(controller_process, ev, data)
 #endif /* APPS_POWERTRACK */
 #endif /* REST */
 
+  starting = 0;
+
   /* Define application-specific events here. */
   while(1) {
     PROCESS_WAIT_EVENT();
@@ -262,19 +364,18 @@ PROCESS_THREAD(controller_process, ev, data)
       /* =========== USER BUTTON ============== */
       if(data == &button_user_sensor){
         PRINTF("Button user pushed.\n");
-
+#if RDC_SLEEPING_HOST
 #if USB_SERIAL_CONF_ENABLE
         if( !USB_IS_PLUGGED() ){
           // the RDC is activated only for few seconds/minutes
-          crdc_period_start( app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
+          crdc_period_start( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
         }
 #else /* USB_SERIAL_CONF_ENABLE */
-#if RDC_SLEEPING_HOST
         if( !button_time_press ){
-          crdc_period_start( app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
+          crdc_period_start(  *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
         }
-#endif /* RDC_SLEEPING_HOST */
 #endif /* USB_SERIAL_CONF_ENABLE */
+#endif /* RDC_SLEEPING_HOST */
 
         if( !button_time_press ){
           button_time_press = RTIMER_NOW();
@@ -287,7 +388,6 @@ PROCESS_THREAD(controller_process, ev, data)
           button_time_press = 0;
           button_time_release = 0;
         }
-
       }
 
       /* =========== USB PLUG ============== */
@@ -299,13 +399,30 @@ PROCESS_THREAD(controller_process, ev, data)
            * which is supposed to stop the RDC, and enable RDC indefinetely (while the usb
            * is plugged in). */
           crdc_clear_stop_rdc_timer();
-          crdc_enable_rdc();
+          crdc_disable_rdc(1);
 #endif
+          /* Become a router if the device is set as that since the device become automatically
+           * an host when the USB cable is removed. */
+          /*if(*(uint8_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "router") == ROUTER){
+            set_node_type(ROUTER);
+          }*/
         } else {
           leds_off(LEDS_YELLOW);
+
 #if RDC_SLEEPING_HOST
-          crdc_disable_rdc(0);
+          if(NODE_TYPE_HOST){
+            crdc_disable_rdc(0);
+          } else {
+            crdc_enable_rdc();
+          }
 #endif
+
+#if UIP_CONF_DYN_HOST_ROUTER
+          // Become automatically an host if usb cable is removed.
+          //set_node_type(HOST);
+#else /* UIP_CONF_DYN_HOST_ROUTER */
+
+#endif /* UIP_CONF_DYN_HOST_ROUTER */
         }
 
 #if SHELL && USB_SERIAL_CONF_ENABLE && USB_SHELL_IN_NRMEM
@@ -329,12 +446,10 @@ PROCESS_THREAD(controller_process, ev, data)
 #if ADC_ACQUISITION_ON
         SENSORS_MEASURE(mic_sensor);
 #endif
-
         if(res_micro_clap_counter < 4){
           res_micro_clap_counter++;
           ctimer_set(&microclap_timer, CLOCK_SECOND, microclap_timeout, NULL);
         }
-
       }
     } // if( ev == sensors_event )
   }  /* while (1) */

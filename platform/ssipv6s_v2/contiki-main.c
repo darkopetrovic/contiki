@@ -301,8 +301,12 @@ main(void)
 
     /* We have serviced all pending events. Enter a Low-Power mode. */
 #if RDC_SLEEPING_HOST
-    if(NODE_TYPE_HOST && !USB_IS_PLUGGED()){
-      crdc_lpm_enter();
+    if(!USB_IS_PLUGGED()){
+      if(NODE_TYPE_HOST){
+        crdc_lpm_enter();
+      } else {
+        lpm_enter();
+      }
     }
 #else
     /* If USB cable is plugged, we don't enter in LPM mode so that we can receice
@@ -312,7 +316,7 @@ main(void)
       lpm_enter();
     }
 #else
-    lpm_enter();
+    //lpm_enter();
 #endif
 
 #endif

@@ -80,7 +80,6 @@ INA3221_write_register(uint8_t address, uint16_t value)
   return INA3221_ERR_NONE;
 }
 
-
 /*!**********************************************************************************
  * \brief 			Read sensor value
  *
@@ -165,28 +164,23 @@ configure(int type, int value)
 
       // set default values
       if(!value){
-        channels = INA3221_DEFT_CH<<12;
-        mode = INA3221_DEFT_MODE>>4;
-      } else {
-        channels = 0;
-        if(value & CH1){
-          channels |= INA3221_EN_CHANNEL_1;
-        }
-        if(value & CH2){
-          channels |= INA3221_EN_CHANNEL_2;
-        }
-        if(value & CH3){
-          channels |= INA3221_EN_CHANNEL_3;
-        }
-
-        mode = value >> 4;
-        if(!mode){
-          mode = INA3221_DEFT_MODE>>4;
-        }
+        value = INA3221_DEFT_CH | INA3221_DEFT_MODE;
       }
 
-      if(!channels){
-        return ~INA3221_ERR_NONE;
+      channels = 0;
+      if(value & CH1){
+        channels |= INA3221_EN_CHANNEL_1;
+      }
+      if(value & CH2){
+        channels |= INA3221_EN_CHANNEL_2;
+      }
+      if(value & CH3){
+        channels |= INA3221_EN_CHANNEL_3;
+      }
+
+      mode = value >> 4;
+      if(!mode){
+        mode = INA3221_DEFT_MODE>>4;
       }
 
       if ( (err = INA3221_write_register(INA3221_REG_CONF,

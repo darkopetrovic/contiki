@@ -395,7 +395,7 @@ configure(int type, int value)
         return err | (BMP280_ERR_POWER_ON << 8);
       }
       // get calibration table
-      if( (err = get_calibration_values()) != BMP280_ERR_NONE){
+      if((err = get_calibration_values()) != BMP280_ERR_NONE){
         return err | (BMP280_ERR_GET_CALIB << 8);
       }
       if((err=power_off()) != BMP280_ERR_NONE){
@@ -410,7 +410,6 @@ configure(int type, int value)
       }
       ENERGEST_ON(ENERGEST_TYPE_SENSORS_BMP280);
       deep_sleep_ms(100, NO_GPIO_INTERRUPT, 0);
-                  // TODO -> check usage mode for delay
       ENERGEST_OFF(ENERGEST_TYPE_SENSORS_BMP280);
       if((err = read_temperature(&temperature)) != BMP280_ERR_NONE){
         return err | BMP280_ERR_READ_TEMP<<8;
@@ -424,14 +423,11 @@ configure(int type, int value)
 
       break;
     case SENSORS_ACTIVE:
-      if(value == 1)
-      {
+      if(value == 1) {
         if((err=power_on()) != BMP280_ERR_NONE){
           return err | (BMP280_ERR_POWER_ON << 8);
         }
-      }
-      else
-      {
+      } else {
         if((err=power_off()) != BMP280_ERR_NONE){
           return err | (BMP280_ERR_POWER_OFF << 8);
         }

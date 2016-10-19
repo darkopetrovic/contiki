@@ -315,10 +315,10 @@ configure(int type, int value)
         return err | TSL2561_ERR_ACTIVATE<<8;
       }
 
-      nvic_interrupt_disable(NVIC_INT_SM_TIMER);
       ENERGEST_ON(ENERGEST_TYPE_SENSORS_TSL2561);
       deep_sleep_ms(430, TSL2561_INT_PORT, TSL2561_INT_PIN);
       ENERGEST_OFF(ENERGEST_TYPE_SENSORS_TSL2561);
+
       // disable chip
       data[0] = TSL2561_COMMAND_BIT | TSL2561_REGISTER_CONTROL;
       data[1] = 0x00;	// turn sensor off

@@ -97,7 +97,6 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 static void
 res_periodic_handler()
 {
-
   /* Usually a condition is defined under with subscribers are notified, e.g., large enough delta in sensor reading. */
   if(1) {
     /* Notify the registered observers which will trigger the res_get_handler to create the response. */

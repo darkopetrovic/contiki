@@ -65,12 +65,6 @@ app_config_init(void)
   list_init(parameters_list);
   memb_init(&parameters_mem);
 
-  app_config_create_parameter(APP_CONFIG_GENERAL, "router", "1", NULL);
-  app_config_create_parameter(APP_CONFIG_GENERAL, "rdc_enable_period", "30", NULL);
-  app_config_create_parameter(APP_CONFIG_GENERAL, "alive_message_period", "30", NULL);
-  app_config_create_parameter(APP_CONFIG_GENERAL, "bripaddr", "aaaa::212:4b00:40e:fadb", NULL);
-  app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
-
   /* The problem is when we update a parameter with a value longer that the old one,
    * we need to move someway the following text otherwise it is overwritten. */
 #if MAYBE_SOMEDAY
@@ -295,9 +289,12 @@ app_config_edit_parameter(const char* context, const char* name, const char* str
   char buf[MAX_PARAM_VALUE_LEN];
   struct parameter *p;
   uint8_t error = 0;
+  static uint32_t current_value;
 
   p = app_config_parameter_lookup(context, name);
   if( p != NULL ){
+
+    current_value = p->value;
 
     if(strvalue != NULL){
       /* The parameter value become a string. */
@@ -359,6 +356,9 @@ app_config_edit_parameter(const char* context, const char* name, const char* str
       }
 #endif /* APP_CONFIG_STORAGE_COFFEE */
 
+    } else {
+      // restore back the previous value
+      p->value = current_value;
     }
   } else {
     // parameter doesn't exist

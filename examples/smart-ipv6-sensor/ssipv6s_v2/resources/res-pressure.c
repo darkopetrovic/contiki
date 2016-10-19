@@ -65,7 +65,9 @@ res_init()
 static void
 res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  static uint32_t sensors_value;
+  static uint32_t sensors_value[2];
+  int8_t sense1_integral;
+  uint8_t sense1_fractional;
 
   COAP_BLOCKWISE_SETTINGS_LIST(res_pressure);
 
@@ -73,14 +75,19 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 
     SENSORS_ACTIVATE(bmp280_sensor);
     SENSORS_MEASURE(bmp280_sensor);
-    sensors_value = bmp280_sensor.value( BMP280_PRESSURE );
+    sensors_value[0] = bmp280_sensor.value( BMP280_PRESSURE );
+    sensors_value[1] = bmp280_sensor.value( BMP280_TEMP );
     SENSORS_DEACTIVATE(bmp280_sensor);
+
+    sense1_fractional = sensors_value[1] % 100;
+    sense1_integral = sensors_value[1]/100;
 
     resource_add_message(res_pressure.url, REST.type.APPLICATION_JSON,
       "{\"e\":["
-      "{\"n\":\"pressure\",\"v\":%lu,\"u\":\"Pa\"}"
+      "{\"n\":\"pressure\",\"v\":%lu,\"u\":\"Pa\"},"
+      "{\"n\":\"temp\",\"v\":%d.%02d,\"u\":\"Cel\"}"
       "]}",
-      sensors_value);
+      sensors_value[0], sense1_integral, sense1_fractional);
   }
 
   REST.set_header_max_age(response, res_pressure.periodic->period / CLOCK_SECOND);
