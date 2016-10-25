@@ -360,7 +360,6 @@ PROCESS_THREAD(controller_process, ev, data)
     PROCESS_WAIT_EVENT();
 
     if(ev == sensors_event) {
-
       /* =========== USER BUTTON ============== */
       if(data == &button_user_sensor){
         PRINTF("Button user pushed.\n");
@@ -401,11 +400,6 @@ PROCESS_THREAD(controller_process, ev, data)
           crdc_clear_stop_rdc_timer();
           crdc_disable_rdc(1);
 #endif
-          /* Become a router if the device is set as that since the device become automatically
-           * an host when the USB cable is removed. */
-          /*if(*(uint8_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "router") == ROUTER){
-            set_node_type(ROUTER);
-          }*/
         } else {
           leds_off(LEDS_YELLOW);
 
@@ -418,8 +412,6 @@ PROCESS_THREAD(controller_process, ev, data)
 #endif
 
 #if UIP_CONF_DYN_HOST_ROUTER
-          // Become automatically an host if usb cable is removed.
-          //set_node_type(HOST);
 #else /* UIP_CONF_DYN_HOST_ROUTER */
 
 #endif /* UIP_CONF_DYN_HOST_ROUTER */

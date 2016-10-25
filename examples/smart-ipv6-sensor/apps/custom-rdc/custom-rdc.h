@@ -98,8 +98,6 @@ extern void rtimer_isr(void);
  * Furthermore, we call rtimer_isr() to properly finish the LPL cycle. */
 #define disableRDC(x)     NETSTACK_RDC.off(x);\
                           rtimer_arch_schedule(0);\
-                          nvic_interrupt_unpend(NVIC_INT_SM_TIMER);\
-                          nvic_interrupt_disable(NVIC_INT_SM_TIMER);\
                           rtimer_run_next();\
                           rdc_is_on = 0
 /**

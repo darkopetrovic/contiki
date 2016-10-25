@@ -88,6 +88,7 @@ extern struct process tcpip_process;
 static unsigned long irq_energest;
 #endif /* CONTIKI_TARGET_CC2538DK */
 
+#if DEBUG
 static char *
 float2str(float num, uint8_t preci)
 {
@@ -116,6 +117,7 @@ float2str(float num, uint8_t preci)
   }
   return buf;
 }
+#endif
 
 static 
 void stop_rdc(void *ptr)
@@ -199,7 +201,7 @@ crdc_init(void)
     rdc_is_on = 1;
   } else {
     rdc_is_on = 0;
-    crdc_disable_rdc(0);
+    disableRDC(0);
   }
 #else 
   rdc_is_on = 0;
@@ -210,15 +212,13 @@ crdc_init(void)
 void
 crdc_lpm_enter(void)
 {
-  static clock_time_t next_expiration_old;
   clock_time_t next_expiration;
   rtimer_clock_t next_wakeup_time;
   //uip_ds6_nbr_t *nbr;
 
   if(!rdc_is_on){
 
-    // do we need this with cc2538?
-    //nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
+    nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
     next_expiration = etimer_next_expiration_time();
 
     /* When 'next_expiration' is 0 that means there is no more etimer pending. And thus,
@@ -226,10 +226,6 @@ crdc_lpm_enter(void)
      * to power up the device.
      * */
     if( next_expiration ){
-      if(next_expiration == next_expiration_old){
-        //return;
-      }
-      next_expiration_old = next_expiration;
       next_wakeup_time = (float)(next_expiration / CLOCK_SECOND) * RTIMER_SECOND;
 
 #ifdef CONTIKI_TARGET_CC2538DK
@@ -238,7 +234,7 @@ crdc_lpm_enter(void)
        * the future and if it's not too small. */
       if(next_wakeup_time <= RTIMER_NOW() ||
           next_wakeup_time-RTIMER_NOW() < DEEP_SLEEP_PM2_THRESHOLD){
-        next_wakeup_time = RTIMER_NOW() + RTIMER_SECOND/NETSTACK_RDC_CHANNEL_CHECK_RATE;
+        next_wakeup_time = RTIMER_NOW() + RTIMER_SECOND;
       }
 #endif /* CONTIKI_TARGET_CC2538DK */
 
@@ -246,7 +242,7 @@ crdc_lpm_enter(void)
       rtimer_arch_schedule( next_wakeup_time );
 
 #if 0
-      PRINTF("CRDC: Next wake-up in %s second(s) (next: %X) (now: %u) (clock: %lu).\n",
+      PRINTF("CRDC: Next wake-up in %s second(s) (next: %lu) (now: %lu) (clock: %lu).\n",
               float2str((float)(next_expiration-clock_time())/CLOCK_SECOND, 2),
               next_wakeup_time, RTIMER_NOW(), next_expiration);
 #else
@@ -267,7 +263,11 @@ crdc_lpm_enter(void)
 #endif /* ENERGEST_CONF_ON */
 #endif /* CONTIKI_TARGET_CC2538DK */
 
-    ENTER_SLEEP_MODE();
+    if(!process_nevents() && rtimer_arch_next_trigger()){
+      ENTER_SLEEP_MODE();
+    }
+
+
     /* ZzZZzZZzZZZzzzZzzZZzzzzzzzZzZZzZzzzzzzzzzzzZZzZZZzzZZzZZZzzzZZzzzz
      * The wake-up can come from the rtimer or the gpio, nothing else.
      * ZzZZzZZzZZZzzzZzzZZzzzzzzzZzZZzZzzzzzzzzzzzZZzZZZzzZZzZZZzzzZZzzzz */
@@ -276,8 +276,6 @@ crdc_lpm_enter(void)
     irq_energest = energest_type_time(ENERGEST_TYPE_IRQ);
     ENERGEST_SWITCH(ENERGEST_TYPE_LPM, ENERGEST_TYPE_CPU);
 #endif /* ENERGEST_CONF_ON && CONTIKI_TARGET_CC2538DK */
-
-
 
 #if 0
     /* Enable RDC for some seconds to receive RA in response to RS or ... */
@@ -335,9 +333,9 @@ crdc_enable_rdc(void)
   etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND);
   PROCESS_CONTEXT_END(&tcpip_process);
 #else
-  //PROCESS_CONTEXT_BEGIN(&tcpip_process);
-  //etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/10);
-  //PROCESS_CONTEXT_END(&tcpip_process);
+  PROCESS_CONTEXT_BEGIN(&tcpip_process);
+  etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE);
+  PROCESS_CONTEXT_END(&tcpip_process);
 #endif
   enableRDC();
 }
@@ -351,15 +349,15 @@ crdc_disable_rdc(uint8_t keep_radio)
     etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND);
     PROCESS_CONTEXT_END(&tcpip_process);
 #else
-    //PROCESS_CONTEXT_BEGIN(&tcpip_process);
-    //etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/10);
-    //PROCESS_CONTEXT_END(&tcpip_process);
+    PROCESS_CONTEXT_BEGIN(&tcpip_process);
+    etimer_set(&uip_ds6_timer_periodic, CLOCK_SECOND/NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE);
+    PROCESS_CONTEXT_END(&tcpip_process);
 #endif
   } else {
     // Deccelerate DS periodic
-    //PROCESS_CONTEXT_BEGIN(&tcpip_process);
-    //etimer_reset_with_new_interval(&uip_ds6_timer_periodic, UIP_DS6_PERIOD);
-    //PROCESS_CONTEXT_END(&tcpip_process);
+    PROCESS_CONTEXT_BEGIN(&tcpip_process);
+    etimer_set(&uip_ds6_timer_periodic, UIP_DS6_PERIOD);
+    PROCESS_CONTEXT_END(&tcpip_process);
   }
   disableRDC(keep_radio);
 }
