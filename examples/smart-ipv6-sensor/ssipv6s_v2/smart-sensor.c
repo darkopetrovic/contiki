@@ -104,7 +104,9 @@ extern resource_t
   res_solar,
   res_events,
   res_micro,
-  res_motion
+  res_motion,
+  res_air,
+  res_leds
   ;
 #endif
 
@@ -213,59 +215,73 @@ change_rdc_period(struct parameter *p)
 static uint8_t
 node_change_type(struct parameter *p)
 {
+  PRINTF("Changing node type.\n");
   /* Configure the device as a router or host.
    * This function is exectued whenever we update the parameter
    * and at startup once the setting is read from flash. */
-  if(node_type != p->value){
-
-    node_type = p->value;
-    if(NODE_TYPE_ROUTER && USB_IS_PLUGGED()){
-      set_node_type(ROUTER);
-      PRINTF("Node set as ROUTER.\n");
+  if(p->value==ROUTER && USB_IS_PLUGGED()){
+    set_node_type(ROUTER);
+    PRINTF("Node set as ROUTER.\n");
 #if APPS_SMARTLED
-        if(!starting){
-          blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
-        }
-#endif
-      return 0;
-    } else {
-      /* The device fails to become a router. */
-      if(NODE_TYPE_ROUTER){
-        /* If the device is set as router and the usb cable isn't plugged in
-         * at startup, the device is automatically set as an host but the
-         * setting is unchanged.
-         */
-        node_type = HOST;
-#if APPS_SMARTLED
-        if(!starting){
-          blink_leds(LEDS_RED, CLOCK_SECOND/4, 3);
-        }
-#endif
-        return 1;
-      }
-
-      /* This function doesn't need to be executed at startup since
-       * the device is by default an host. */
       if(!starting){
-        set_node_type(HOST);
-#if RDC_SLEEPING_HOST
-        if(!USB_IS_PLUGGED()){
-          crdc_disable_rdc(0);
-        }
-#endif
-        PRINTF("Node set as HOST.\n");
-#if APPS_SMARTLED
-        blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 3);
-#endif
+        blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
       }
-      return 0;
+#endif
+    return 0;
+  } else {
+    /* The device fails to become a router because USB cable isn't plugged in. */
+    if(p->value==ROUTER){
+      /* If the device is set as router and the usb cable isn't plugged in
+       * at startup, the device is automatically set as an host but the
+       * setting in memory is unchanged.
+       */
+      node_type = HOST;
+#if APPS_SMARTLED
+      if(!starting){
+        blink_leds(LEDS_RED, CLOCK_SECOND/4, 3);
+      }
+#endif
+      return 1;
     }
+
+    /* This function doesn't need to be executed at startup since
+     * the device is by default an host. */
+    if(!starting){
+      set_node_type(HOST);
+#if RDC_SLEEPING_HOST
+      if(!USB_IS_PLUGGED()){
+        crdc_disable_rdc(0);
+      }
+#endif
+      PRINTF("Node set as HOST.\n");
+#if APPS_SMARTLED
+      blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 3);
+#endif
+    }
+    return 0;
   }
   /* Don't return as an error. We want the parameter to
    * be stored in flash. */
   return 0;
 }
 #endif /* UIP_CONF_DYN_HOST_ROUTER */
+
+void
+ds_notification_callback(int event,
+         uip_ipaddr_t *route,
+         uip_ipaddr_t *nexthop,
+         int num_routes)
+{
+  if ( event == UIP_DS6_NOTIFICATION_DEFRT_ADD ) {
+    //blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 4);
+  } else if ( event == UIP_DS6_NOTIFICATION_DEFRT_RM ) {
+    //blink_leds(LEDS_RED, CLOCK_SECOND/4, 4);
+  } else if( event == UIP_DS6_NOTIFICATION_BR_ADD ) {
+    blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 4);
+  } else if ( event == UIP_DS6_NOTIFICATION_BR_RM ) {
+    blink_leds(LEDS_RED, CLOCK_SECOND/4, 4);
+  }
+}
 
 /*---------------------------------------------------------------------------*/
 
@@ -274,6 +290,7 @@ AUTOSTART_PROCESSES(&controller_process);
 
 PROCESS_THREAD(controller_process, ev, data)
 {
+  static struct uip_ds6_notification n;
 
   PROCESS_BEGIN();
 
@@ -342,18 +359,22 @@ PROCESS_THREAD(controller_process, ev, data)
   rest_activate_resource(&res_humidity,     "sensors/humidity");
   rest_activate_resource(&res_pressure,     "sensors/pressure");
   rest_activate_resource(&res_light,        "sensors/light");
+  rest_activate_resource(&res_air,          "sensors/air");
   rest_activate_resource(&res_power,        "power");
   rest_activate_resource(&res_battery,      "power/battery");
   rest_activate_resource(&res_solar,        "power/solar");
   rest_activate_resource(&res_events,       "events");
   rest_activate_resource(&res_motion,       "events/motion");
   rest_activate_resource(&res_micro,        "events/micro");
+  rest_activate_resource(&res_leds,         "actuator/leds");
 #if APPS_POWERTRACK
   rest_activate_resource(&res_energest,     "energest");
 #endif /* APPS_POWERTRACK */
 #endif /* REST */
 
   starting = 0;
+
+  uip_ds6_notification_add(&n, ds_notification_callback);
 
   /* Define application-specific events here. */
   while(1) {
@@ -393,6 +414,12 @@ PROCESS_THREAD(controller_process, ev, data)
       if(data == &usb_plug_detect){
         if(USB_IS_PLUGGED()){
           leds_on(LEDS_YELLOW);
+
+          if( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "router") )
+          {
+            blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
+          }
+
 #if RDC_SLEEPING_HOST
           /* If RDC is already enabled when the USB cable is plugged, we clear the timer
            * which is supposed to stop the RDC, and enable RDC indefinetely (while the usb

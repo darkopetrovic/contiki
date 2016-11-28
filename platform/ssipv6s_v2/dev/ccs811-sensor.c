@@ -22,43 +22,44 @@
 #endif
 /** \endcond */
 
-static uint16_t locBaseline = 0x85b2;		// based on test on first sample
-static uint8_t  locTemperature = 0x64;     	// default to 25 degree
-static uint8_t  locHumidity = 0x64;			// default to 50%
-static uint8_t  locModeOfMeasure = CCS811_MODE_SECOND;	// measure each second
+static uint16_t locBaseline = 0x85b2;   // based on test on first sample
+static uint8_t  locTemperature = 0x64;      // default to 25 degree
+static uint8_t  locHumidity = 0x64;     // default to 50%
+static uint8_t  locModeOfMeasure = CCS811_MODE_10_SECONDS;  // measure each second
 static uint16_t co2;
 static uint16_t tvoc;
 
 /*!**********************************************************************************
- * \brief 			CCS I2C enable nWAKE
+ * \brief       CCS I2C enable nWAKE
  *
  ***********************************************************************************/
 static void
 CCS_I2C_enable(void)
 {
-//	GPIO_SET_OUTPUT( CCS811_NWAKE_PORT_BASE, CCS811_NWAKE_PIN_MASK);
-//	GPIO_CLR_PIN( CCS811_NWAKE_PORT_BASE, CCS811_NWAKE_PIN_MASK);	// activate
-//	clock_delay_usec(50);		// datasheet delay before I2C access
+  GPIO_SET_OUTPUT( CCS811_NWAKE_PORT_BASE, CCS811_NWAKE_PIN_MASK);
+  GPIO_CLR_PIN( CCS811_NWAKE_PORT_BASE, CCS811_NWAKE_PIN_MASK); // activate
+  clock_delay_usec(50);   // datasheet delay before I2C access
 }
 
 /*!**********************************************************************************
- * \brief 			CCS I2C disable nWAKE
+ * \brief       CCS I2C disable nWAKE
  *
  ***********************************************************************************/
 static void
 CCS_I2C_disable(void)
 {
-//	clock_delay_usec(20);		// datasheet delay before I2C end of access
-//	GPIO_SET_OUTPUT( CCS811_NWAKE_PORT_BASE, CCS811_NWAKE_PIN_MASK);
-//	GPIO_SET_PIN( CCS811_NWAKE_PORT_BASE, CCS811_NWAKE_PIN_MASK);	// activate
+  clock_delay_usec(35);   // nothing
+  GPIO_SET_OUTPUT( CCS811_NWAKE_PORT_BASE, CCS811_NWAKE_PIN_MASK);
+  GPIO_SET_PIN( CCS811_NWAKE_PORT_BASE, CCS811_NWAKE_PIN_MASK); // activate
+  clock_delay_usec(35);   // datasheet delay minimum deasserted
 }
 
 /*!**********************************************************************************
- * \brief 			Read sensor values
+ * \brief       Read sensor values
  *
- * \param reg 		Location where to store the values
+ * \param reg     Location where to store the values
  *
- * \return 			\ref CCS811_ERR_NONE if success
+ * \return      \ref CCS811_ERR_NONE if success
  ***********************************************************************************/
 static uint16_t
 read_sensor(uint8_t *reg)
@@ -81,11 +82,11 @@ read_sensor(uint8_t *reg)
 }
 
 /*!**********************************************************************************
- * \brief 			Set humidity and temperature values for sensor correction
+ * \brief       Set humidity and temperature values for sensor correction
  *
- * \param reg 		Location where to store the values
+ * \param reg     Location where to store the values
  *
- * \return 			\ref CCS811_ERR_NONE if success
+ * \return      \ref CCS811_ERR_NONE if success
  ***********************************************************************************/
 static uint16_t
 set_temp_hum(void)
@@ -114,11 +115,11 @@ set_temp_hum(void)
 }
 
 /*!**********************************************************************************
- * \brief 				Set mode of the measurement.
+ * \brief         Set mode of the measurement.
  *
- * \param mode		 	Mode to be used.
+ * \param mode      Mode to be used.
  *
- * \return 				\ref CCS811_ERR_NONE if success
+ * \return        \ref CCS811_ERR_NONE if success
  ***********************************************************************************/
 static uint16_t
 set_mode(uint8_t mode)
@@ -140,11 +141,11 @@ set_mode(uint8_t mode)
 }
 
 /*!**********************************************************************************
- * \brief 				Set baseline of the measurement.
+ * \brief         Set baseline of the measurement.
  *
- * \param mode		 	Baseline to set to sensor (if 0, last readed value is written again)
+ * \param mode      Baseline to set to sensor (if 0, last readed value is written again)
  *
- * \return 				\ref CCS811_ERR_NONE if success
+ * \return        \ref CCS811_ERR_NONE if success
  ***********************************************************************************/
 static uint16_t
 set_baseline(uint16_t baseline)
@@ -171,35 +172,39 @@ set_baseline(uint16_t baseline)
 }
 
 /*!**********************************************************************************
- * \brief 			Power on the sensor
+ * \brief       Power on the sensor
  *
  *
- * \return 			\ref CCS811_ERR_NONE if success
+ * \return      \ref CCS811_ERR_NONE if success
  ***********************************************************************************/
 static int
 power_on(void)
 {
-  uint8_t fwv;
+  uint8_t fwv,stat;
   uint16_t err;
-  uint8_t data[2];
 
   i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
   //-------------------------------------------------------------------------------
   // power on chip and activate multiplexer channel
   GPIO_SET_OUTPUT( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
   GPIO_CLR_PIN( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
+
+//  GPIO_SET_OUTPUT( CCS811_RST_PORT_BASE, CCS811_RST_PIN_MASK);
+//  GPIO_SET_PIN( CCS811_RST_PORT_BASE, CCS811_RST_PIN_MASK); // activate
+  deep_sleep_ms(50, NO_GPIO_INTERRUPT, 0);
+
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
   CCS_I2C_disable();
-  if((err = pca9546_channel_enable(PCA_9546_CCS811_SEL_POS)) !=PCA9546_ERR_NONE)
+  if((err = pca9546_channel_enable(PCA_9546_CCS811_SEL_POS)) != PCA9546_ERR_NONE)
   {
     return err;
   }
   // consumption in sleep mode: tbd
 
   /* Wait power-up sequence (value from datasheet) 20 ms*/
-  clock_delay_usec(20000);
-  /*rtimer_arch_schedule( RTIMER_NOW() + RTIMER_SECOND*15 );
-  REG(SYS_CTRL_PMCTL) = SYS_CTRL_PMCTL_PM2;
-  do { asm("wfi"::); } while(0);*/
+  deep_sleep_ms(20, NO_GPIO_INTERRUPT, 0);
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
+
   //-------------------------------------------------------------------------------
   // get chip ID for security
   fwv = 0x00;
@@ -214,63 +219,106 @@ power_on(void)
     CCS_I2C_disable();    // desactivate I2C
     return err;
   }
+  CCS_I2C_disable();
   if(fwv != CCS811_HW_ID_DATA)
   {
     return fwv | (CCS811_ERR_BAD_ID<<8);
   }
   //-------------------------------------------------------------------------------
   // set mode application (not bootloader mode)
+  CCS_I2C_enable();    // activate I2C
   if((err = i2c_single_send(CCS811_SLAVE_ADDRESS,CCS811_APP_START)) != I2C_MASTER_ERR_NONE){
     err |= CCS811_ERR_APP_START<<8;
     CCS_I2C_disable();    // desactivate I2C
     return err;
   }
-  //-------------------------------------------------------------------------------
-  // set last known baseline
-  if((err = set_baseline(locBaseline)) != I2C_MASTER_ERR_NONE){
-    err |= CCS811_ERR_SET_BASELINE<<8;
-    CCS_I2C_disable();    // desactivate I2C
-    return err;
-  }
+  CCS_I2C_disable();    // desactivate I2C
+  deep_sleep_ms(100, NO_GPIO_INTERRUPT, 0);
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
+  CCS_I2C_enable();    // activate I2C
+  i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_STATUS);
+  i2c_single_receive(CCS811_SLAVE_ADDRESS, &stat);
+  CCS_I2C_disable();    // desactivate I2C
   //-------------------------------------------------------------------------------
   // set mode of measure
+  CCS_I2C_enable();    // activate I2C
   if((err = set_mode(locModeOfMeasure)) != I2C_MASTER_ERR_NONE){
     err |= CCS811_ERR_WRITE_MODE<<8;
     CCS_I2C_disable();    // desactivate I2C
     return err;
   }
   CCS_I2C_disable();    // desactivate I2C
+  deep_sleep_ms(5, NO_GPIO_INTERRUPT, 0);
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
+  CCS_I2C_enable();
+  i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_STATUS);
+  i2c_single_receive(CCS811_SLAVE_ADDRESS, &stat);
+  CCS_I2C_disable();
+  deep_sleep_ms(5, NO_GPIO_INTERRUPT, 0);
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
+  CCS_I2C_enable();
+  i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_ERROR_ID);
+  i2c_single_receive(CCS811_SLAVE_ADDRESS, &stat);
+  CCS_I2C_disable();
+  //-------------------------------------------------------------------------------
+  // set last known baseline
+//  CCS_I2C_disable();
+//  if((err = set_baseline(locBaseline)) != I2C_MASTER_ERR_NONE){
+//    err |= CCS811_ERR_SET_BASELINE<<8;
+//    CCS_I2C_disable();    // desactivate I2C
+//    return err;
+//  }
+//  deep_sleep_ms(5);
+//  CCS_I2C_enable();
+  i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_STATUS);
+  i2c_single_receive(CCS811_SLAVE_ADDRESS, &stat);
+  CCS_I2C_disable();
+  deep_sleep_ms(5, NO_GPIO_INTERRUPT, 0);
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
+  CCS_I2C_enable();
+  i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_ERROR_ID);
+  i2c_single_receive(CCS811_SLAVE_ADDRESS, &stat);
+  CCS_I2C_disable();    // desactivate I2C
   return CCS811_ERR_NONE;
 }
 
 /*!**********************************************************************************
- * \brief 			Power off the sensor
+ * \brief       Power off the sensor
  *
  *
- * \return 			\ref CCS811_ERR_NONE if success
+ * \return      \ref CCS811_ERR_NONE if success
  ***********************************************************************************/
 static int
 power_off(void)
 {
   uint16_t err;
 
-  // power off chip and deactivate multiplexer channel
-  err = pca9546_channel_disable(PCA_9546_BMP280_SEL_POS);
+  //-------------------------------------------------------------------------------
+  // power off chip and desactivate multiplexer channel
+  if((err = pca9546_channel_disable(PCA_9546_CCS811_SEL_POS)) != PCA9546_ERR_NONE)
+  {
+    GPIO_SET_OUTPUT( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
+    GPIO_SET_PIN( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
 
+    GPIO_SET_OUTPUT( CCS811_RST_PORT_BASE, CCS811_RST_PIN_MASK);
+    GPIO_CLR_PIN( CCS811_RST_PORT_BASE, CCS811_RST_PIN_MASK); // activate
+    CCS_I2C_enable();    // don't draw current (active low)
+    return err;
+  }
   GPIO_SET_OUTPUT( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
-  // todo swap lines below because no CCS811 sensor for the moment
-  //	GPIO_SET_PIN( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
-  GPIO_CLR_PIN( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
+  GPIO_SET_PIN( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
+  GPIO_SET_OUTPUT( CCS811_RST_PORT_BASE, CCS811_RST_PIN_MASK);
+  GPIO_CLR_PIN( CCS811_RST_PORT_BASE, CCS811_RST_PIN_MASK); // activate
   CCS_I2C_enable();    // don't draw current (active low)
-  return err | CCS811_ERR_NONE<<8;
+  return CCS811_ERR_NONE;
 }
 
 /*!**********************************************************************************
- * \brief 			Read sensor value
+ * \brief       Read sensor value
  *
- * \param type	 	Select the kind of value to read.
+ * \param type    Select the kind of value to read.
  *
- * \return 			The sensor value
+ * \return      The sensor value
  ***********************************************************************************/
 static int
 value(int type)
@@ -289,50 +337,61 @@ value(int type)
 }
 
 /*!************************************************************************************
- * \brief 		Configure function provided by the sensors API
+ * \brief     Configure function provided by the sensors API
  *
- * \param type 	Configuration type
+ * \param type  Configuration type
  * \param value Used as binary value to change the state of the sensor
- * 				or as a numerical value to configure a specific parameter.
- * \return 		\ref SHT21_ERR_NONE in case of success or the error value
+ *        or as a numerical value to configure a specific parameter.
+ * \return    \ref SHT21_ERR_NONE in case of success or the error value
  ************************************************************************************/
 static int
 configure(int type, int value)
 {
   uint16_t err;
   uint8_t data[8];
+  uint8_t stat;
 
   switch(type) {
     case SENSORS_HW_INIT:
-  #if 1
+#if 1
       if((err=power_off()) != CCS811_ERR_NONE)
       {
         return err | (CCS811_ERR_POWER_OFF << 8);
       }
-  #endif
+#endif
     break;
     case SENSORS_DO_MEASURE:
       // start measure one shot (mode WEATHER or SMARTSNESOR)
       if( (err = read_sensor(data)) != CCS811_ERR_NONE){
         return err | CCS811_ERR_READ_MEASURE<<8;
       }
-
+      CCS_I2C_enable();
+      i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_STATUS);
+      i2c_single_receive(CCS811_SLAVE_ADDRESS, &stat);
+      CCS_I2C_disable();
+      deep_sleep_ms(5, NO_GPIO_INTERRUPT, 0);
+      i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
+      CCS_I2C_enable();
+      i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_ERROR_ID);
+      i2c_single_receive(CCS811_SLAVE_ADDRESS, &stat);
+      CCS_I2C_disable();    // desactivate I2C
     // TODO -> define duration of measure depending on mode ... ???
-    //	ENERGEST_ON(ENERGEST_TYPE_SENSORS_CCS811);
-    //	deep_sleep_ms(100, NO_GPIO_INTERRUPT, 0);		// value for smartsensor configutation
-    //							// TODO -> check usage mode for delay
-    //	ENERGEST_OFF(ENERGEST_TYPE_SENSORS_CCS811);
+    //  ENERGEST_ON(ENERGEST_TYPE_SENSORS_CCS811);
+    //  deep_sleep_ms(100);   // value for smartsensor configutation
+    //              // TODO -> check usage mode for delay
+    //  ENERGEST_OFF(ENERGEST_TYPE_SENSORS_CCS811);
       co2 =  ((uint16_t)data[0] << 8) | data[1];
       tvoc = ((uint16_t)data[2] << 8) | data[3];
       break;
     case SENSORS_ACTIVE:
       if(value == 1)
       {
-        if((err=power_on()) != CCS811_ERR_NONE)
-        {
-          return err | (CCS811_ERR_POWER_ON << 8);
+        if(GPIO_READ_PIN( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK)){
+          if((err=power_on()) != CCS811_ERR_NONE)
+          {
+            return err | (CCS811_ERR_POWER_ON << 8);
+          }
         }
-
       }
       else
       {
@@ -340,7 +399,6 @@ configure(int type, int value)
         {
           return err | (CCS811_ERR_POWER_OFF << 8);
         }
-
       }
     break;
     case CCS811_CURRENT_MODE:
@@ -370,10 +428,10 @@ configure(int type, int value)
 }
 
 /*!************************************************************************************
- * \brief 		Status function provided by the sensors API
+ * \brief     Status function provided by the sensors API
  *
- * \param type 	Type of status to return
- * \return 		Value of the status
+ * \param type  Type of status to return
+ * \return    Value of the status
  ************************************************************************************/
 static int
 status(int type)
@@ -384,46 +442,52 @@ status(int type)
 
   switch(type) {
 
-  case CCS811_CURRENT_STATUS:
-    CCS_I2C_enable();    // activate I2C
-    if((err = i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_STATUS)) != I2C_MASTER_ERR_NONE){
+    case CCS811_POWER_STATE:
+      return !GPIO_READ_PIN( CCS811_PWR_PORT_BASE, CCS811_PWR_PIN_MASK);
+      break;
+
+    case CCS811_CURRENT_STATUS:
+      CCS_I2C_enable();    // activate I2C
+      if((err = i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_STATUS)) != I2C_MASTER_ERR_NONE){
+        CCS_I2C_disable();    // desactivate I2C
+        return err | CCS811_ERR_WRITE_REGISTER<<8;
+      }
+      if((err = i2c_single_receive(CCS811_SLAVE_ADDRESS, &data)) != I2C_MASTER_ERR_NONE){
+        CCS_I2C_disable();    // desactivate I2C
+        return err | CCS811_ERR_READ_STATUS<<8;
+      }
       CCS_I2C_disable();    // desactivate I2C
-      return err | CCS811_ERR_WRITE_REGISTER<<8;
-    }
-    if((err = i2c_single_receive(CCS811_SLAVE_ADDRESS, &data)) != I2C_MASTER_ERR_NONE){
+      return data;
+    break;
+
+    case CCS811_CURRENT_MODE:
+      CCS_I2C_enable();    // activate I2C
+      if((err = i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_MEAS_MODE)) != I2C_MASTER_ERR_NONE){
+        CCS_I2C_disable();    // desactivate I2C
+        return err | CCS811_ERR_WRITE_REGISTER<<8;
+      }
+      if((err = i2c_single_receive(CCS811_SLAVE_ADDRESS, &data)) != I2C_MASTER_ERR_NONE){
+        CCS_I2C_disable();    // desactivate I2C
+        return err | CCS811_ERR_READ_MODE<<8;
+      }
       CCS_I2C_disable();    // desactivate I2C
-      return err | CCS811_ERR_READ_STATUS<<8;
-    }
-    CCS_I2C_disable();    // desactivate I2C
-    return data;
-  break;
-  case CCS811_CURRENT_MODE:
-    CCS_I2C_enable();    // activate I2C
-    if((err = i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_MEAS_MODE)) != I2C_MASTER_ERR_NONE){
+      return data;
+    break;
+
+    case CCS811_CURRENT_BASELINE:
+      CCS_I2C_enable();    // activate I2C
+      if((err = i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_BASELINE)) != I2C_MASTER_ERR_NONE){
+        CCS_I2C_disable();    // desactivate I2C
+        return err | CCS811_ERR_WRITE_REGISTER<<8;
+      }
+      if((err = i2c_burst_receive(CCS811_SLAVE_ADDRESS, tmp, 2)) != I2C_MASTER_ERR_NONE){
+        CCS_I2C_disable();    // desactivate I2C
+        return err | CCS811_ERR_READ_BASELINE<<8;
+      }
       CCS_I2C_disable();    // desactivate I2C
-      return err | CCS811_ERR_WRITE_REGISTER<<8;
-    }
-    if((err = i2c_single_receive(CCS811_SLAVE_ADDRESS, &data)) != I2C_MASTER_ERR_NONE){
-      CCS_I2C_disable();    // desactivate I2C
-      return err | CCS811_ERR_READ_MODE<<8;
-    }
-    CCS_I2C_disable();    // desactivate I2C
-    return data;
-  break;
-  case CCS811_CURRENT_BASELINE:
-    CCS_I2C_enable();    // activate I2C
-    if((err = i2c_single_send(CCS811_SLAVE_ADDRESS, CCS811_BASELINE)) != I2C_MASTER_ERR_NONE){
-      CCS_I2C_disable();    // desactivate I2C
-      return err | CCS811_ERR_WRITE_REGISTER<<8;
-    }
-    if((err = i2c_burst_receive(CCS811_SLAVE_ADDRESS, tmp, 2)) != I2C_MASTER_ERR_NONE){
-      CCS_I2C_disable();    // desactivate I2C
-      return err | CCS811_ERR_READ_BASELINE<<8;
-    }
-    CCS_I2C_disable();    // desactivate I2C
-    locBaseline = ((uint16_t)tmp[0] << 8) | tmp[1];
-    return data;
-  break;
+      locBaseline = ((uint16_t)tmp[0] << 8) | tmp[1];
+      return locBaseline;
+    break;
   }
   CCS_I2C_disable();    // desactivate I2C
   return ~CCS811_ERR_NONE;

@@ -289,6 +289,7 @@ uip_ds6_neighbor_periodic(void)
         {
           /* Need to remove the default router too. */
           if((locdefrt = uip_ds6_defrt_lookup(&nbr->ipaddr)) != NULL) {
+            PRINTF("NBR periodic, TENTATIVE, NS max reached.\n");
             uip_ds6_defrt_rm(locdefrt);
           }
           uip_ds6_nbr_rm(nbr);

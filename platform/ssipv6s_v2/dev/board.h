@@ -143,6 +143,8 @@
  *
  * @{
  */
+#define CCS811_RST_PORT           GPIO_D_NUM
+#define CCS811_RST_PIN            4
 #define CCS811_PWR_PORT           GPIO_C_NUM
 #define CCS811_PWR_PIN            6
 #define CCS811_NWAKE_PORT         GPIO_B_NUM
@@ -228,15 +230,15 @@
  *
  * @{
  */
-#define MIC_PWR_PORT          GPIO_C_NUM
-#define MIC_PWR_PIN           2
-#define MIC_ADC_INPUT_PORT    GPIO_A_NUM
-#define MIC_ADC_INPUT_PIN     0
-#define MIC_COMP_INPUT_PORT   GPIO_A_NUM
-#define MIC_COMP_INPUT_PIN    5
-#define MIC_COMP_INPUT_VECTOR NVIC_INT_GPIO_PORT_A
-#define MIC_COMP_REF_PORT     GPIO_A_NUM
-#define MIC_COMP_REF_PIN      4
+#define MIC_PWR_PORT              GPIO_C_NUM
+#define MIC_PWR_PIN               2
+#define MIC_ADC_INPUT_PORT        GPIO_A_NUM
+#define MIC_ADC_INPUT_PIN         0
+#define MIC_COMP_INPUT_PORT       GPIO_A_NUM
+#define MIC_COMP_INPUT_PIN        5
+#define MIC_COMP_INPUT_VECTOR     NVIC_INT_GPIO_PORT_A
+#define MIC_COMP_REF_PORT         GPIO_A_NUM
+#define MIC_COMP_REF_PIN          4
 /** @} */
 /*---------------------------------------------------------------------------*/
 

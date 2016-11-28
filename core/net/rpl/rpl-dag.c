@@ -538,16 +538,19 @@ int
 rpl_set_default_route(rpl_instance_t *instance, uip_ipaddr_t *from)
 {
   if(instance->def_route != NULL) {
+
     PRINTF("RPL: Removing default route through ");
     PRINT6ADDR(&instance->def_route->ipaddr);
     PRINTF("\n");
+    uip_ds6_defrt_rm(instance->def_route);
+    instance->def_route = NULL;
 /** \sixlowpanndrpl As a host do not remove registered default router.*/
 #if CONF_6LOWPAN_ND && (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
     if(NODE_TYPE_ROUTER){
-      uip_ds6_defrt_rm(instance->def_route);
+
     }
 #endif
-    instance->def_route = NULL;
+
   }
 
   if(from != NULL) {

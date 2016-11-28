@@ -64,6 +64,10 @@ void uip_ds6_route_init(void);
 #define UIP_DS6_NOTIFICATION_DEFRT_RM  1
 #define UIP_DS6_NOTIFICATION_ROUTE_ADD 2
 #define UIP_DS6_NOTIFICATION_ROUTE_RM  3
+#if CONF_6LOWPAN_ND
+#define UIP_DS6_NOTIFICATION_BR_ADD    4
+#define UIP_DS6_NOTIFICATION_BR_RM     5
+#endif
 
 typedef void (* uip_ds6_notification_callback)(int event,
 					       uip_ipaddr_t *route,

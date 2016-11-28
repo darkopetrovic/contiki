@@ -217,7 +217,7 @@ rpl_dag_root_init_dag_immediately(void)
       }
       if(dag->instance != NULL &&
          dag->instance->def_route != NULL) {
-	uip_ds6_defrt_rm(dag->instance->def_route);
+        uip_ds6_defrt_rm(dag->instance->def_route);
         dag->instance->def_route = NULL;
       }
 

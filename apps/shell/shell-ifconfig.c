@@ -40,8 +40,8 @@
 #include "contiki.h"
 #include "shell-ifconfig.h"
 
-#include "net/ipv6/uip-ds6.h"
 #include "net/ip/ip64-addr.h"
+#include "contiki-net.h"
 
 #if UIP_CONF_IPV6_RPL
 #include "net/rpl/rpl.h"
@@ -66,6 +66,11 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
   uip_ds6_nbr_t *nbr;
   uip_ds6_prefix_t *prefix;
   char buf[120], *bufptr;
+  char *next;
+  char *parameter;
+  uip_ds6_defrt_t *defrt;
+
+  uip_ipaddr_t ipaddr;
 
 #if CONF_6LOWPAN_ND
   uip_ds6_border_router_t *br;
@@ -73,8 +78,25 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
 
   PROCESS_BEGIN();
 
-  /***** Interface configuration *****/
+  parameter = data;
+  if(strlen(parameter) > 1) {
+    if(!strncmp(parameter, "defrt-del", 9)){
+      next = strchr(parameter, ' ');
+      uiplib_ipaddrconv(++next, &ipaddr);
+      defrt = uip_ds6_defrt_lookup(&ipaddr);
+      if(defrt){
+        uip_ds6_defrt_rm(defrt);
+        shell_output_str(&ifconfig_command, "Default route removed: ", next);
+      } else {
+        shell_output_str(&ifconfig_command, "Default route not found: ", next);
+      }
+    } else {
+      shell_output_str(&ifconfig_command, "Parameter not reconized: ", data);
+    }
+    PROCESS_EXIT();
+  }
 
+  /***** Interface configuration *****/
   sprintf(buf,
       "Interface configuration:\n"
       "    Link MTU: %lu\n"

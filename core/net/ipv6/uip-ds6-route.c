@@ -751,6 +751,9 @@ uip_ds6_br_add(uint32_t version, uint16_t lifetime, uip_ipaddr_t *ipaddr)
       stimer_set(&(locbr->timeout), (lifetime == 0 ? 10000 : lifetime) * 60);
       stimer_set(&locbr->rs_timer, 0);
       uip_ipaddr_copy(&locbr->ipaddr, ipaddr);
+#if UIP_DS6_NOTIFICATIONS && CONF_6LOWPAN_ND
+      call_route_callback(UIP_DS6_NOTIFICATION_BR_ADD, &locbr->ipaddr, NULL);
+#endif
       return locbr;
     }
   }
@@ -763,10 +766,13 @@ uip_ds6_br_rm(uip_ds6_border_router_t *br)
 {
   if(br != NULL) {
     br->state = BR_ST_FREE;
-    uip_ds6_prefix_rm_all(br);
+#if UIP_DS6_NOTIFICATIONS && CONF_6LOWPAN_ND
+      call_route_callback(UIP_DS6_NOTIFICATION_BR_RM, &br->ipaddr, NULL);
+#endif
 #if CONF_6LOWPAN_ND && CONF_6LOWPAN_ND_6CO
     uip_ds6_context_pref_rm_all(br);
 #endif
+    uip_ds6_prefix_rm_all(br);
   }
 }
 /*---------------------------------------------------------------------------*/

@@ -161,6 +161,7 @@ set_node_type(nd_node_type_t type)
 #if UIP_CONF_IPV6_RPL
   rpl_instance_t *instance;
   rpl_instance_t *end;
+  rpl_parent_t *p;
 #endif /* UIP_CONF_IPV6_RPL */
 
   if(node_type != type){
@@ -186,6 +187,24 @@ set_node_type(nd_node_type_t type)
       if((locmaddr = uip_ds6_maddr_lookup(&loc_fipaddr)) != NULL) {
         uip_ds6_maddr_rm(locmaddr);
       }
+#if UIP_CONF_IPV6_RPL
+      for(instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES;
+            instance < end; ++instance) {
+          if(instance->used == 1) {
+            p = nbr_table_head(rpl_parents);
+            while(p != NULL) {
+              if(instance->current_dag == p->dag) {
+                /* Inform immediately the parents of the new node's state. */
+                instance->unicast_dio_target = p;
+                PRINTF("Send DIO immediately.\n");
+                rpl_schedule_unicast_dio_immediately(instance);
+              }
+              p = nbr_table_next(rpl_parents, p);
+            }
+          }
+      }
+#endif /* UIP_CONF_IPV6_RPL */
+
     }
   }
 }
@@ -762,12 +781,13 @@ na_input(void)
     /* remove entry in routing table */
     defrt = uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr);
     if(defrt != NULL) {
-    uip_ds6_defrt_rm(defrt);
+      PRINTF("Remove default router because not a router.\n");
+      uip_ds6_defrt_rm(defrt);
     }
     /* remove NCE if it is in */
     nbr = uip_ds6_nbr_lookup(&UIP_IP_BUF->srcipaddr);
     if(nbr != NULL) {
-    uip_ds6_nbr_rm(nbr);
+      uip_ds6_nbr_rm(nbr);
     }
     goto discard;
   }
@@ -843,6 +863,7 @@ na_input(void)
           uip_ds6_nbr_rm(nbr);
           defrt = uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr);
           if(defrt != NULL) {
+            PRINTF("Remove default router ARO lifetime = 0.\n");
             uip_ds6_defrt_rm(defrt);
           }
         } else {
@@ -863,6 +884,7 @@ na_input(void)
             /* Host SHOULD remove this router from its default router list. */
             defrt = uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr);
             if(defrt != NULL) {
+              PRINTF("ARO status, cache is full.\n");
               uip_ds6_defrt_rm(defrt);
             }
             break;
@@ -1723,6 +1745,7 @@ ra_input(void)
     }
   } else {
     if(defrt != NULL) {
+      PRINTF("Router lifetime set to 0.\n");
       uip_ds6_defrt_rm(defrt);
     }
   }

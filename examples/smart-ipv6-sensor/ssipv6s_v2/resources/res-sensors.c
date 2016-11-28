@@ -3,7 +3,7 @@
  * @{
  *
  * \file
- *      Temperature & Humidity (sht21) resource
+ *      All sensors resource
  * \author
  *      Darko Petrovic
  */
@@ -15,6 +15,7 @@
 #include "sht21-sensor.h"
 #include "bmp280-sensor.h"
 #include "tsl2561-sensor.h"
+#include "ccs811-sensor.h"
 
 #include <stdlib.h>
 
@@ -38,7 +39,7 @@ static void res_get_handler(void *request, void *response, uint8_t *buffer, uint
 static void res_periodic_handler(void);
 
 PERIODIC_RESOURCE(res_sensors,
-                  "title=\"Sensors values\";rt=\"temp-hum\";if=\"sensor\";ct=\"application/senml+json\";obs",
+                  "title=\"Sensors values\";rt=\"allsensors\";if=\"sensor\";ct=\"application/senml+json\";obs",
                   res_init,
                   res_get_handler,
                   res_post_put_handler,
@@ -50,7 +51,7 @@ PERIODIC_RESOURCE(res_sensors,
 /*
  * Use local resource state that is accessed by res_get_handler() and altered by res_periodic_handler() or PUT or POST.
  */
-static uint32_t sensors_value[5];
+static uint32_t sensors_value[6];
 
 #if REST_DELAY_RES_START && APPS_APPCONFIG
 static uint8_t
@@ -81,6 +82,11 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
   uint8_t sense2_integral;
   uint8_t sense2_fractional;
 
+#if APP_CONFIG_STORAGE_COFFEE
+    static int fd;
+    char buf[10];
+#endif /* APP_CONFIG_STORAGE_COFFEE */
+
   COAP_BLOCKWISE_SETTINGS_LIST(res_sensors);
 
   // get sensor value only once for the blockwise transfer
@@ -88,19 +94,32 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 
     SENSORS_ACTIVATE(sht21_sensor);
     SENSORS_MEASURE(sht21_sensor);
-    sensors_value[1] = sht21_sensor.value( SHT21_HUMIDITY );
-    sensors_value[0] = sht21_sensor.value( SHT21_TEMP );
+    sensors_value[1] = sht21_sensor.value(SHT21_HUMIDITY);
+    sensors_value[0] = sht21_sensor.value(SHT21_TEMP);
     SENSORS_DEACTIVATE(sht21_sensor);
 
     SENSORS_ACTIVATE(tsl2561_sensor);
     SENSORS_MEASURE(tsl2561_sensor);
-    sensors_value[2] = tsl2561_sensor.value( TSL2561_LUX );
+    sensors_value[2] = tsl2561_sensor.value(TSL2561_LUX);
     SENSORS_DEACTIVATE(tsl2561_sensor);
 
     SENSORS_ACTIVATE(bmp280_sensor);
     SENSORS_MEASURE(bmp280_sensor);
-    sensors_value[3] = bmp280_sensor.value( BMP280_PRESSURE );
+    sensors_value[3] = bmp280_sensor.value(BMP280_PRESSURE);
     SENSORS_DEACTIVATE(bmp280_sensor);
+
+    if(ccs811_sensor.status(CCS811_POWER_STATE)){
+      SENSORS_MEASURE(ccs811_sensor);
+      sensors_value[4] = ccs811_sensor.value(CCS811_SENSE_CO2);
+      sensors_value[5] = ccs811_sensor.value(CCS811_SENSE_TVOC);
+
+#if APP_CONFIG_STORAGE_COFFEE
+      sprintf(buf, "%d", ccs811_sensor.status(CCS811_CURRENT_BASELINE));
+      fd = cfs_open("ccs811_baseline", CFS_WRITE);
+      cfs_write(fd, buf, strlen(buf));
+      cfs_close(fd);
+#endif /* APP_CONFIG_STORAGE_COFFEE */
+    }
 
     // temperature from sht21
     sense1_fractional = sensors_value[0] % 100;
@@ -114,12 +133,16 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
         "{\"n\":\"temp\",\"v\":%d.%02d,\"u\":\"Cel\"},"
         "{\"n\":\"humidity\",\"v\":%d.%02d,\"u\":\"%%RH\"},"
         "{\"n\":\"light\",\"v\":%lu,\"u\":\"lx\"},"
-        "{\"n\":\"pressure\",\"v\":%lu,\"u\":\"Pa\"}"
+        "{\"n\":\"pressure\",\"v\":%lu,\"u\":\"Pa\"},"
+        "{\"n\":\"CO2\",\"v\":%d,\"u\":\"ppm\"},"
+        "{\"n\":\"TVOC\",\"v\":%d,\"u\":\"ppm\"}"
         "],\"bn\":\"sensors\"}",
           sense1_integral, sense1_fractional,
           sense2_integral, sense2_fractional,
           sensors_value[2],
-          sensors_value[3]);
+          sensors_value[3],
+          sensors_value[4],
+          sensors_value[5]);
   }
 
   REST.set_header_max_age(response, res_sensors.periodic->period / CLOCK_SECOND);

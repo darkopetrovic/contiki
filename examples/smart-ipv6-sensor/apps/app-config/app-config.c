@@ -330,7 +330,7 @@ app_config_edit_parameter(const char* context, const char* name, const char* str
       cfs_close(fd);
 
       /* Clear the content by removing the file if the value is
-       * longer that the new value. */
+       * longer than the new value. */
       if(p->is_string){
         strcpy(buf, strvalue);
       } else {
