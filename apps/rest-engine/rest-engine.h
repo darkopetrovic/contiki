@@ -114,7 +114,6 @@ struct resource_s {
   const char *url;                /*handled URL */
   rest_resource_flags_t flags;    /* handled RESTful methods */
   const char *attributes;         /* link-format attributes */
-  void (*init)(void);
   restful_handler get_handler;    /* handler function */
   restful_handler post_handler;   /* handler function */
   restful_handler put_handler;    /* handler function */
@@ -140,17 +139,17 @@ typedef struct periodic_resource_s periodic_resource_t;
  * Macro to define a RESTful resource.
  * Resources are statically defined for the sake of efficiency and better memory management.
  */
-#define RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler) \
-  resource_t name = { NULL, NULL, NO_FLAGS, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, { NULL } }
+#define RESOURCE(name, attributes, get_handler, post_handler, put_handler, delete_handler) \
+  resource_t name = { NULL, NULL, NO_FLAGS, attributes, get_handler, post_handler, put_handler, delete_handler, { NULL } }
 
-#define PARENT_RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler) \
-  resource_t name = { NULL, NULL, HAS_SUB_RESOURCES, init_handler, attributes, get_handler, post_handler, put_handler, delete_handler, { NULL } }
+#define PARENT_RESOURCE(name, attributes, get_handler, post_handler, put_handler, delete_handler) \
+  resource_t name = { NULL, NULL, HAS_SUB_RESOURCES, attributes, get_handler, post_handler, put_handler, delete_handler, { NULL } }
 
-#define SEPARATE_RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, resume_handler) \
-  resource_t name = { NULL, NULL, IS_SEPARATE, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, { .resume = resume_handler } }
+#define SEPARATE_RESOURCE(name, attributes, get_handler, post_handler, put_handler, delete_handler, resume_handler) \
+  resource_t name = { NULL, NULL, IS_SEPARATE, attributes, get_handler, post_handler, put_handler, delete_handler, { .resume = resume_handler } }
 
-#define EVENT_RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, event_handler) \
-  resource_t name = { NULL, NULL, IS_OBSERVABLE, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, { .trigger = event_handler } }
+#define EVENT_RESOURCE(name, attributes, get_handler, post_handler, put_handler, delete_handler, event_handler) \
+  resource_t name = { NULL, NULL, IS_OBSERVABLE, attributes, get_handler, post_handler, put_handler, delete_handler, { .trigger = event_handler } }
 
 /*
  * Macro to define a periodic resource.
@@ -158,9 +157,9 @@ typedef struct periodic_resource_s periodic_resource_t;
  * For instance polling a sensor and publishing a changed value to subscribed clients would be done there.
  * The subscriber list will be maintained by the final_handler rest_subscription_handler() (see rest-mapping header file).
  */
-#define PERIODIC_RESOURCE(name, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, period, periodic_handler) \
+#define PERIODIC_RESOURCE(name, attributes, get_handler, post_handler, put_handler, delete_handler, period, periodic_handler) \
   periodic_resource_t periodic_##name; \
-  resource_t name = { NULL, NULL, IS_OBSERVABLE | IS_PERIODIC, attributes, init_handler, get_handler, post_handler, put_handler, delete_handler, { .periodic = &periodic_##name } }; \
+  resource_t name = { NULL, NULL, IS_OBSERVABLE | IS_PERIODIC, attributes, get_handler, post_handler, put_handler, delete_handler, { .periodic = &periodic_##name } }; \
   periodic_resource_t periodic_##name = { NULL, &name, period, { { 0 } }, periodic_handler };
 
 struct rest_implementation {

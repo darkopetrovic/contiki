@@ -72,4 +72,6 @@
 /* Enable client-side support for COAP observe */
 #define COAP_OBSERVE_CLIENT 1
 
+#define CC2538_CONF_QUIET                   0
+
 #endif /* PROJECT_CONF_H_ */

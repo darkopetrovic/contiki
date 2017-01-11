@@ -46,7 +46,7 @@
 #include "lwm2m-object.h"
 #include "lwm2m-engine.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)

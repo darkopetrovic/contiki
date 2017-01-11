@@ -62,7 +62,7 @@
 #include "net/rpl/rpl.h"
 #endif /* UIP_CONF_IPV6_RPL */
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #ifndef LWM2M_ENGINE_CLIENT_ENDPOINT_PREFIX
@@ -352,6 +352,7 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
         /* prepare request, TID is set by COAP_BLOCKING_REQUEST() */
         coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
         coap_set_header_uri_path(request, "/rd");
+        coap_set_header_content_format(request, APPLICATION_LINK_FORMAT);
         coap_set_header_uri_query(request, endpoint);
 
         /* generate the rd data */
@@ -361,7 +362,7 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
             for(j = 0; j < objects[i]->count; j++) {
               if(objects[i]->instances[j].flag & LWM2M_INSTANCE_FLAG_USED) {
                 len = snprintf(&rd_data[pos], sizeof(rd_data) - pos,
-                               "%s<%d/%d>", pos > 0 ? "," : "",
+                               "%s</%d/%d>", pos > 0 ? "," : "",
                                objects[i]->id, objects[i]->instances[j].id);
                 if(len > 0 && len < sizeof(rd_data) - pos) {
                   pos += len;
@@ -794,7 +795,7 @@ lwm2m_engine_select_reader(lwm2m_context_t *context, unsigned int content_format
       context->reader = &lwm2m_plain_text_reader;
       break;
     default:
-      PRINTF("Unknown content type %u, using LWM2M plain text\n", accept);
+      PRINTF("Unknown content type %u, using LWM2M plain text\n", content_format);
       context->reader = &lwm2m_plain_text_reader;
       break;
   }

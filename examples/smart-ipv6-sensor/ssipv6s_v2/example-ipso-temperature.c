@@ -25,76 +25,35 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /**
  * \file
- *      OMA LWM2M and IPSO Objects example.
+ *         An dummy temperature driver as example
  * \author
- *      Joakim Eriksson, joakime@sics.se
- *      Niclas Finne, nfi@sics.se
+ *         Joakim Eriksson <joakime@sics.se>
+ *         Niclas Finne <nfi@sics.se>
  */
 
-#include "contiki.h"
-#include "lwm2m-engine.h"
 #include "ipso-objects.h"
+#include "lib/random.h"
 
-#define DEBUG DEBUG_PRINT
-#include "net/ip/uip-debug.h"
-
-#ifndef REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER
-#define REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER 0
-#endif
-
-#ifndef REGISTER_WITH_LWM2M_SERVER
-#define REGISTER_WITH_LWM2M_SERVER 1
-#endif
-
-#ifndef LWM2M_SERVER_ADDRESS
-#define LWM2M_SERVER_ADDRESS "bbbb::72"
-#endif
-
-PROCESS(example_ipso_objects, "IPSO object example");
-AUTOSTART_PROCESSES(&example_ipso_objects);
+static int32_t last_value = 27000;
 /*---------------------------------------------------------------------------*/
-static void
-setup_lwm2m_servers(void)
+static int
+read_value(int32_t *value)
 {
-#ifdef LWM2M_SERVER_ADDRESS
-  uip_ipaddr_t addr;
-  if(uiplib_ipaddrconv(LWM2M_SERVER_ADDRESS, &addr)) {
-    lwm2m_engine_register_with_bootstrap_server(&addr, 0);
-    lwm2m_engine_register_with_server(&addr, 0);
+  last_value = last_value + (random_rand() % 1000) - 500;
+  if(last_value < 18000) {
+    last_value = 18000;
+  } else if(last_value > 35000) {
+    last_value = 35000;
   }
-#endif /* LWM2M_SERVER_ADDRESS */
-
-  lwm2m_engine_use_bootstrap_server(REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER);
-  lwm2m_engine_use_registration_server(REGISTER_WITH_LWM2M_SERVER);
+  *value = last_value;
+  return 0;
 }
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(example_ipso_objects, ev, data)
-{
-  PROCESS_BEGIN();
-
-  PROCESS_PAUSE();
-
-  PRINTF("Starting IPSO objects example\n");
-
-  /* Initialize the OMA LWM2M engine */
-  lwm2m_engine_init();
-
-  /* Register default LWM2M objects */
-  lwm2m_engine_register_default_objects();
-
-  /* Register default IPSO objects */
-  ipso_objects_init();
-
-  setup_lwm2m_servers();
-
-  while(1) {
-    PROCESS_WAIT_EVENT();
-  }
-
-  PROCESS_END();
-}
+const struct ipso_objects_sensor example_ipso_temperature = {
+  .read_value = read_value
+};
+/*---------------------------------------------------------------------------*/

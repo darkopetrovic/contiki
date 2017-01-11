@@ -41,7 +41,7 @@
 /* Application configuration                                              */
 /* ********************************************************************** */
 
-#define REST_MAX_CHUNK_SIZE                 128
+#define REST_MAX_CHUNK_SIZE                 256
 
 /** Delay the start of resources.  */
 #define REST_CONF_DELAY_RES_START           1
@@ -55,6 +55,11 @@
 #define UIP_CONF_DYN_HOST_ROUTER            1
 
 #define SMART_CONF_ALIVE_MSG                1
+
+#define COAP_MAX_OBSERVERS   20
+
+#define IPSO_TEMPERATURE example_ipso_temperature
+#define LWM2M_DEVICE_MODEL_NUMBER BOARD_STRING
 
 /* ********************************************************************** */
 /* RPL configuration                                                      */

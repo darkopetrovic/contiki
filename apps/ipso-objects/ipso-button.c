@@ -121,12 +121,12 @@ PROCESS_THREAD(ipso_button_process, ev, data)
 
   PROCESS_BEGIN();
 
-  SENSORS_ACTIVATE(button_sensor);
+  SENSORS_ACTIVATE(button_user_sensor);
 
   while(1) {
     PROCESS_WAIT_EVENT();
 
-    if(ev == sensors_event && data == &button_sensor) {
+    if(ev == sensors_event && data == &button_user_sensor) {
       if(!input_state) {
         input_state = 1;
         counter++;
@@ -144,7 +144,7 @@ PROCESS_THREAD(ipso_button_process, ev, data)
     } else if(ev == PROCESS_EVENT_TIMER && data == &timer) {
       if(!input_state) {
         /* Button is not in pressed state */
-      } else if(button_sensor.value(0) != 0) {
+      } else if(button_user_sensor.value(0) != 0) {
         /* Button is still pressed */
         etimer_reset(&timer);
       } else {

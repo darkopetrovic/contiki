@@ -127,10 +127,6 @@ rest_activate_resource(resource_t *resource, char *path)
     list_add(restful_periodic_services, resource->periodic);
   }
 
-  // execute the new init() function of the resource
-  if(resource->init){
-     resource->init();
-  }
 }
 /*---------------------------------------------------------------------------*/
 /*- Internal API ------------------------------------------------------------*/

@@ -54,13 +54,15 @@
 									<listOptionValue builtIn="false" value="UIP_CONF_ROUTER=0"/>
 									<listOptionValue builtIn="false" value="CONF_6LOWPAN_ND=1"/>
 									<listOptionValue builtIn="false" value="REST=coap_rest_implementation"/>
-									<listOptionValue builtIn="false" value="APPS_COAPSERVER=1"/>
+									<listOptionValue builtIn="false" value="APPS_COAPSERVER=0"/>
 									<listOptionValue builtIn="false" value="APPS_UDPCLIENT=0"/>
 									<listOptionValue builtIn="false" value="UDP_CLIENT_AUTOSTART=1"/>
 									<listOptionValue builtIn="false" value="APPS_APPCONFIG=1"/>
 									<listOptionValue builtIn="false" value="USB_SHELL_IN_NRMEM=1"/>
 									<listOptionValue builtIn="false" value="APPS_POWERTRACK=1"/>
 									<listOptionValue builtIn="false" value="APPS_SMARTLED=1"/>
+									<listOptionValue builtIn="false" value="HAVE_OMA_LWM2M=1"/>
+									<listOptionValue builtIn="false" value="WITH_IPSO=1"/>
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.INCLUDE_PATH.2077257176" name="Include paths (-I)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.INCLUDE_PATH" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${CG_TOOL_INCLUDE_PATH}&quot;"/>
@@ -90,12 +92,15 @@
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/apps/er-coap"/>
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/apps/shell"/>
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/apps/serial-shell"/>
+									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/apps/ipso-objects"/>
+									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/apps/oma-lwm2m"/>
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/examples/smart-ipv6-sensor/apps/custom-rdc"/>
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/examples/smart-ipv6-sensor/apps/smart-led"/>
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/examples/smart-ipv6-sensor/apps/udp-client"/>
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/examples/smart-ipv6-sensor/apps/custom-coap"/>
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/examples/smart-ipv6-sensor/apps/app-config"/>
 									<listOptionValue builtIn="false" value="${CONTIKI_DIR}/examples/smart-ipv6-sensor/apps/power-track"/>
+									<listOptionValue builtIn="false" value="&quot;${CONTIKI_DIR}/examples/smart-ipv6-sensor/ssipv6s_v2/ipso-objects&quot;"/>
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.OPT_LEVEL.1914217326" name="Optimization Level" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.OPT_LEVEL" value="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.OPT_LEVEL._none" valueType="enumerated"/>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.OPT_FOR_SPACE.1581173567" name="Optimize for space rather than speed (-Os)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.OPT_FOR_SPACE" value="true" valueType="boolean"/>
@@ -185,9 +190,9 @@
 							<outputType id="org.eclipse.cdt.managedbuilder.ui.rcbs.outputtype.51059344" name="Resource Custom Build Step Output Type"/>
 						</tool>
 					</fileInfo>
-					<fileInfo id="com.ti.ccstudio.buildDefinitions.TMS470.Debug.1375647854.1376386091" name="smart-sensor.c" rcbsApplicability="disable" resourcePath="examples/smart-ipv6-sensor/ssipv6s_v2/smart-sensor.c" toolsToInvoke="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043.2039102132">
-						<tool id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043.2039102132" name="GNU Compiler" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043">
-							<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.DEFINE.330660986" name="Define symbols (-D)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.DEFINE" valueType="definedSymbols">
+					<fileInfo id="com.ti.ccstudio.buildDefinitions.TMS470.Debug.1375647854.497454548" name="smart-sensor.c" rcbsApplicability="disable" resourcePath="examples/smart-ipv6-sensor/ssipv6s_v2/smart-sensor.c" toolsToInvoke="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043.1477427266">
+						<tool id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043.1477427266" name="GNU Compiler" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043">
+							<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.DEFINE.1353867023" name="Define symbols (-D)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.DEFINE" valueType="definedSymbols">
 								<listOptionValue builtIn="false" value="PROJECT_CONF_H=\&quot;examples\smart-ipv6-sensor\project-conf.h\&quot;"/>
 								<listOptionValue builtIn="false" value="AUTOSTART_ENABLE"/>
 								<listOptionValue builtIn="false" value="NETSTACK_CONF_WITH_IPV6=1"/>
@@ -202,17 +207,19 @@
 								<listOptionValue builtIn="false" value="UIP_CONF_ROUTER=0"/>
 								<listOptionValue builtIn="false" value="CONF_6LOWPAN_ND=1"/>
 								<listOptionValue builtIn="false" value="REST=coap_rest_implementation"/>
-								<listOptionValue builtIn="false" value="APPS_COAPSERVER=1"/>
+								<listOptionValue builtIn="false" value="APPS_COAPSERVER=0"/>
 								<listOptionValue builtIn="false" value="APPS_UDPCLIENT=0"/>
 								<listOptionValue builtIn="false" value="UDP_CLIENT_AUTOSTART=1"/>
 								<listOptionValue builtIn="false" value="APPS_APPCONFIG=1"/>
 								<listOptionValue builtIn="false" value="USB_SHELL_IN_NRMEM=1"/>
 								<listOptionValue builtIn="false" value="APPS_POWERTRACK=1"/>
 								<listOptionValue builtIn="false" value="APPS_SMARTLED=1"/>
+								<listOptionValue builtIn="false" value="HAVE_OMA_LWM2M=1"/>
+								<listOptionValue builtIn="false" value="WITH_IPSO=1"/>
 							</option>
-							<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__C_SRCS.1376651251" name="C Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__C_SRCS"/>
-							<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__CPP_SRCS.108729409" name="C++ Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__CPP_SRCS"/>
-							<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__ASM_SRCS.2117584541" name="Assembly Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__ASM_SRCS"/>
+							<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__C_SRCS.632329651" name="C Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__C_SRCS"/>
+							<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__CPP_SRCS.789584" name="C++ Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__CPP_SRCS"/>
+							<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__ASM_SRCS.1757238008" name="Assembly Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__ASM_SRCS"/>
 						</tool>
 					</fileInfo>
 					<fileInfo id="com.ti.ccstudio.buildDefinitions.TMS470.Debug.1375647854.examples/cc2538dk/udp-ipv6-echo-server/udp-echo-server.c" name="udp-echo-server.c" rcbsApplicability="disable" resourcePath="examples/cc2538dk/udp-ipv6-echo-server/udp-echo-server.c" toolsToInvoke="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043.1295557501">
@@ -263,7 +270,7 @@
 						</tool>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="apps/oma-lwm2m|apps/ipso-objects|apps/ipso-objects/ipso-button.c|examples/ipso-objects|examples/ipso-objects/serial-protocol.c|examples/ipso-objects/example-server.c|platform/ssipv6s_v2/dev/cc2538.lds|examples/smart-ipv6-sensor/ssipv6s_v1|platform/ssipv6s_v1|apps/smart|platform/ssipv6s_v1/dev/cc2538.lds|examples/smart-ipv6-sensor/coap-example|examples/smart-ipv6-sensor/6lowpan-nd-rpl|examples/ipv6|apps/shell/shell-memdebug.c|apps/at-master/|apps/shell/shell-httpd.c|apps/shell/shell-tcpsend.c|cpu/cc253x/usb/cdc-acm-descriptors.c|apps/shell/shell-sky.c|cpu/arm/common/CMSIS|apps/mqtt/|apps/shell/shell-base64.c|apps/httpd-ws/|core/net/ip64|apps/webbrowser/|doc|apps/shell/shell-netperf.c|core/loader|cpu/arm/stm32l152|apps/shell/shell-rsh.c|regression-tests|apps/json/|apps/shell/shell-wget.c|platform/cc2538dk|examples/cc2538-common|cpu/arm/stm32f103|apps/webserver-nano/|core/cfs/cfs-ram.c|apps/webserver/|cpu/cc253x/soc.c|apps/calc/|apps/shell/shell-rime-debug-runicast.c|apps/collect-view/|apps/shell/shell-run.c|core/net/ipv6/multicast|apps/unit-test/|cpu/cc253x/rtimer-arch.c|core/net/http-socket|apps/shell/shell-rime-unicast.c|cpu/cc253x/dev|core/net/ipv4|apps/servreg-hack/|cpu/cc253x/stack.c|apps/shell/shell-vars.c|core/cfs/cfs-posix-dir.c|apps/ftp/|apps/shell/shell-blink.c|apps/orchestra/|apps/shell/shell-rime.c|core/net/mac/sicslowmac|dev|apps/shell/shell-udpsend.c|apps/irc/|apps/ping6/|apps/directory/|apps/http-post-auth/|apps/netconf/|core/cfs/cfs-posix.c|core/net/mac/cxmac|apps/shell/shell-text.c|apps/email/|cpu/arm/aducrf101|apps/shell/shell-rime-netcmd.c|cpu/arm/common/SD-card|cpu/arm/at91sam7s|apps/shell/shell-sendtest.c|apps/telnetd/|apps/shell/shell-rime-debug.c|apps/shell/shell-rime-sniff.c|cpu/arm/common/dbg-io/dbg-putchar.c|cpu/cc2538/cc2538.lds|apps/shell/shell-rime-ping.c|cpu/cc253x/usb/usb-arch.c|apps/program-handler/|tools|examples/cc2538dk|cpu/arm/openocd|apps/shell/shell-crc.c|apps/shell/shell-time.c|apps/about/|apps/process-list/|apps/slip-cmd/|apps/shell/shell-power.c|cpu/arm/common/usb|apps/shell/shell-exec.c|apps/antelope/|apps/shell/shell-powertrace.c|apps/telnet/|apps/shell/shell-rime-sendcmd.c|apps/cmdd/|core/net/rime|core/ctk|cpu/arm/common/dbg-io/dbg-puts.c|apps/shell/shell-rime-neighbors.c|apps/shell/shell-dsc.c|apps/shell/shell-profile.c|apps/shell/gui-shell.c|core/net/mac/tsch|apps/codeprop/|examples/cc2538dk/cc2538-demo.c|apps/shell/shell-irc.c|core/lib/random.c|apps/powertrace/|apps/shell/shell-netstat.c|apps/shell/shell-reboot.c|core/cfs/cfs-eeprom.c|apps/dhcp/|core/cfs/cfs-xmem.c|apps/shell/shell-download.c|apps/shell/shell-collect-view.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="examples/smart-ipv6-sensor/ssipv6s_v2/resources|apps/ipso-objects|examples/smart-ipv6-sensor/apps/custom-coap|apps/ipso-objects/ipso-button.c|examples/ipso-objects|examples/ipso-objects/serial-protocol.c|examples/ipso-objects/example-server.c|platform/ssipv6s_v2/dev/cc2538.lds|examples/smart-ipv6-sensor/ssipv6s_v1|platform/ssipv6s_v1|apps/smart|platform/ssipv6s_v1/dev/cc2538.lds|examples/smart-ipv6-sensor/coap-example|examples/smart-ipv6-sensor/6lowpan-nd-rpl|examples/ipv6|apps/shell/shell-memdebug.c|apps/at-master/|apps/shell/shell-httpd.c|apps/shell/shell-tcpsend.c|cpu/cc253x/usb/cdc-acm-descriptors.c|apps/shell/shell-sky.c|cpu/arm/common/CMSIS|apps/mqtt/|apps/shell/shell-base64.c|apps/httpd-ws/|core/net/ip64|apps/webbrowser/|doc|apps/shell/shell-netperf.c|core/loader|cpu/arm/stm32l152|apps/shell/shell-rsh.c|regression-tests|apps/json/|apps/shell/shell-wget.c|platform/cc2538dk|examples/cc2538-common|cpu/arm/stm32f103|apps/webserver-nano/|core/cfs/cfs-ram.c|apps/webserver/|cpu/cc253x/soc.c|apps/calc/|apps/shell/shell-rime-debug-runicast.c|apps/collect-view/|apps/shell/shell-run.c|core/net/ipv6/multicast|apps/unit-test/|cpu/cc253x/rtimer-arch.c|core/net/http-socket|apps/shell/shell-rime-unicast.c|cpu/cc253x/dev|core/net/ipv4|apps/servreg-hack/|cpu/cc253x/stack.c|apps/shell/shell-vars.c|core/cfs/cfs-posix-dir.c|apps/ftp/|apps/shell/shell-blink.c|apps/orchestra/|apps/shell/shell-rime.c|core/net/mac/sicslowmac|dev|apps/shell/shell-udpsend.c|apps/irc/|apps/ping6/|apps/directory/|apps/http-post-auth/|apps/netconf/|core/cfs/cfs-posix.c|core/net/mac/cxmac|apps/shell/shell-text.c|apps/email/|cpu/arm/aducrf101|apps/shell/shell-rime-netcmd.c|cpu/arm/common/SD-card|cpu/arm/at91sam7s|apps/shell/shell-sendtest.c|apps/telnetd/|apps/shell/shell-rime-debug.c|apps/shell/shell-rime-sniff.c|cpu/arm/common/dbg-io/dbg-putchar.c|cpu/cc2538/cc2538.lds|apps/shell/shell-rime-ping.c|cpu/cc253x/usb/usb-arch.c|apps/program-handler/|tools|examples/cc2538dk|cpu/arm/openocd|apps/shell/shell-crc.c|apps/shell/shell-time.c|apps/about/|apps/process-list/|apps/slip-cmd/|apps/shell/shell-power.c|cpu/arm/common/usb|apps/shell/shell-exec.c|apps/antelope/|apps/shell/shell-powertrace.c|apps/telnet/|apps/shell/shell-rime-sendcmd.c|apps/cmdd/|core/net/rime|core/ctk|cpu/arm/common/dbg-io/dbg-puts.c|apps/shell/shell-rime-neighbors.c|apps/shell/shell-dsc.c|apps/shell/shell-profile.c|apps/shell/gui-shell.c|core/net/mac/tsch|apps/codeprop/|examples/cc2538dk/cc2538-demo.c|apps/shell/shell-irc.c|core/lib/random.c|apps/powertrace/|apps/shell/shell-netstat.c|apps/shell/shell-reboot.c|core/cfs/cfs-eeprom.c|apps/dhcp/|core/cfs/cfs-xmem.c|apps/shell/shell-download.c|apps/shell/shell-collect-view.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

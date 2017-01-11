@@ -262,7 +262,7 @@
  * \name Device string used on startup
  * @{
  */
-#define BOARD_STRING                "SmartSensor v2.0 board"
+#define BOARD_STRING                "SmartSensor"
 /** @} */
 
 #endif /* BOARD_H_ */
