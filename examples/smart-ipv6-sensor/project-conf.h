@@ -54,6 +54,8 @@
 
 #define UIP_CONF_DYN_HOST_ROUTER            1
 
+#define SMART_CONF_ALIVE_MSG                1
+
 /* ********************************************************************** */
 /* RPL configuration                                                      */
 /* ********************************************************************** */
@@ -102,7 +104,7 @@
 #define DEBUG_USB_WITH_UART                 0
 
 /** Enable USB (commands and print) */
-#define DBG_CONF_USB                        1
+#define DBG_CONF_USB                        0
 
 #define UIP_CONF_BUFFER_SIZE                400
 

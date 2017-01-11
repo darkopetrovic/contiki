@@ -81,6 +81,31 @@
 #include "smart-led.h"
 #endif
 
+#ifndef SMART_CONF_ALIVE_MSG
+#define SMART_ALIVE_MSG           0
+#else
+#define SMART_ALIVE_MSG           SMART_CONF_ALIVE_MSG
+#endif
+
+#ifndef SMART_CONF_ALIVE_MSG_RDC_DURATION
+#define SMART_ALIVE_MSG_RDC_DURATION    3
+#else
+#define SMART_ALIVE_MSG_RDC_DURATION    SMART_CONF_ALIVE_MSG_RDC_DURATION
+#endif
+
+#ifndef SMART_CONF_ALIVE_MSG_MULTICAST
+#define SMART_ALIVE_MSG_MULTICAST     1
+#else
+#define SMART_ALIVE_MSG_MULTICAST     SMART_CONF_ALIVE_MSG_MULTICAST
+#endif
+
+/* Disable sending ALIVE message of course when the
+ * custom RDC is disabled. */
+#if !APPS_CUSTOMRDC || UIP_CONF_ROUTER
+#undef SMART_ALIVE_MSG
+#define SMART_ALIVE_MSG             0
+#endif
+
 static struct ctimer microclap_timer;
 static rtimer_clock_t button_time_press;
 static rtimer_clock_t button_time_release;
@@ -111,6 +136,10 @@ extern resource_t
 #endif
 
 extern uint8_t res_micro_clap_counter;
+
+#if SMART_ALIVE_MSG
+static struct ctimer alive_message_timer;
+#endif /* SMART_ALIVE_MSG */
 
 #if APPS_APPCONFIG
 static uint8_t
@@ -211,6 +240,71 @@ change_rdc_period(struct parameter *p)
 }
 #endif
 
+#if SMART_ALIVE_MSG
+
+static void
+send_alive_message(void *ptr)
+{
+  PRINTF("SMART: Send ALV message.\n");
+
+#if SMART_ALIVE_MSG_MULTICAST
+  static coap_packet_t message[1];
+  uip_ipaddr_t addr;
+  coap_init_message(message, COAP_TYPE_NON, CONTENT_2_05, coap_get_mid());
+  coap_set_payload(message, "ALV", 3);
+
+  /* If RDC isn't ON here, this means that another wake-up preceded very shortly
+   * the ALV wake-up. To be sure to send the packet, we turn-on the RDC here. */
+  if( !crdc_get_rdc_status() ){
+    PRINTF("SMART: Send ALV message (RDC off -> turn on).\n");
+    crdc_period_start( SMART_ALIVE_MSG_RDC_DURATION );
+  }
+
+  // Site-Local Scope Multicast Addresses
+  uip_ip6addr(&addr, 0xff05, 0, 0, 0, 0, 0, 0, 0x1);
+  coap_send_message(&addr, UIP_HTONS(COAP_DEFAULT_PORT), uip_appdata,
+      coap_serialize_message(message, uip_appdata));
+#else
+  uip_ds6_border_router_t *locbr;
+  /* Send to border routers */
+  for(locbr = uip_ds6_br_list;
+      locbr < uip_ds6_br_list + UIP_DS6_BR_NB;
+      locbr++)
+  {
+    /* If RDC isn't ON here, this means that another wake-up preceded very shortly
+     * the ALV wake-up. To be sure to send the packet, we turn-on the RDC here. */
+    if( !crdc_get_rdc_status() ){
+      PRINTF("SMART: Send ALV message (RDC off -> turn on).\n");
+      crdc_period_start( SMART_ALIVE_MSG_RDC_DURATION );
+    }
+    uip_icmp6_send(&locbr->ipaddr, 200, 0, 0);
+  }
+#endif
+
+  ctimer_restart(&alive_message_timer);
+}
+
+static void
+start_alive_msg_periodic(void)
+{
+  /* Start the alive message (ALV) periodic timer. */
+  ctimer_set(&alive_message_timer,
+          CLOCK_SECOND *  *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "alive_message_period") ,
+          send_alive_message, NULL);
+
+  PRINTF("SMART: Starting ALIVE messages with a period of %us.\n",
+      CLOCK_SECOND *  *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "alive_message_period") );
+}
+
+static uint8_t
+change_alv_period(struct parameter *p)
+{
+  alive_message_timer.etimer.timer.interval = CLOCK_SECOND * p->value;
+  return 0;
+}
+
+#endif /* SMART_ALIVE_MSG */
+
 #if UIP_CONF_DYN_HOST_ROUTER
 static uint8_t
 node_change_type(struct parameter *p)
@@ -226,6 +320,9 @@ node_change_type(struct parameter *p)
       if(!starting){
         blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
       }
+#endif
+#if SMART_ALIVE_MSG
+    ctimer_stop(&alive_message_timer);
 #endif
     return 0;
   } else {
@@ -258,6 +355,9 @@ node_change_type(struct parameter *p)
       blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 3);
 #endif
     }
+#if SMART_ALIVE_MSG
+    start_alive_msg_periodic();
+#endif
     return 0;
   }
   /* Don't return as an error. We want the parameter to
@@ -321,7 +421,7 @@ PROCESS_THREAD(controller_process, ev, data)
   app_config_create_parameter(APP_CONFIG_GENERAL, "rdc_enable_period", "30", change_rdc_period);
 #endif
 
-  app_config_create_parameter(APP_CONFIG_GENERAL, "alive_message_period", "30", NULL);
+  app_config_create_parameter(APP_CONFIG_GENERAL, "alive_message_period", "30", change_alv_period);
   app_config_create_parameter(APP_CONFIG_GENERAL, "bripaddr", "aaaa::212:4b00:40e:fadb", NULL);
 
 #if CONF_6LOWPAN_ND
