@@ -41,18 +41,18 @@
 /* Application configuration                                              */
 /* ********************************************************************** */
 
-#define REST_MAX_CHUNK_SIZE                 128
+//#define REST_MAX_CHUNK_SIZE                 128
 
 /** Delay the start of resources.  */
 #define REST_CONF_DELAY_RES_START           1
 
 /** Activate energy consumption module */
-#define ENERGEST_CONF_ON                    1
+//#define ENERGEST_CONF_ON                    1
 
 /** Activate the Communication power statistics */
-#define CONTIKIMAC_CONF_COMPOWER            1
+//#define CONTIKIMAC_CONF_COMPOWER            1
 
-#define UIP_CONF_DYN_HOST_ROUTER            1
+//#define UIP_CONF_DYN_HOST_ROUTER            0
 
 #define SMART_CONF_ALIVE_MSG                1
 
@@ -106,10 +106,10 @@
 /** Enable USB (commands and print) */
 #define DBG_CONF_USB                        0
 
-#define UIP_CONF_BUFFER_SIZE                400
+//#define UIP_CONF_BUFFER_SIZE                200
 
 /** Reduce the maximum amount of concurrent UDP connections (default 10). */
-#define UIP_CONF_UDP_CONNS                  5
+#define UIP_CONF_UDP_CONNS                  2
 
 /** Maximum routes to store */
 #define UIP_CONF_MAX_ROUTES                 2

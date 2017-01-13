@@ -6,7 +6,7 @@ WITH_IPV6 ?= 1
 WITH_RPL ?= 1
 WITH_6LOWPAN_ND ?= 1
 
-WITH_SMARTLED ?= 1
+WITH_SMARTLED ?= 0
 WITH_SHELL ?= 0
 WITH_USBSHELL ?= 0
 WITH_UDPCLIENT ?= 0
@@ -66,7 +66,7 @@ endif
 
 ifeq ($(WITH_COAPSERVER),1)
 	CFLAGS += -DAPPS_COAPSERVER=1
-	CFLAGS += -DUIP_CONF_BUFFER_SIZE=180
+	CFLAGS += -DUIP_CONF_BUFFER_SIZE=300
 ifneq ($(TARGET),native)
 	CFLAGS += -DUIP_CONF_TCP=0
 endif
@@ -87,7 +87,7 @@ ifeq ($(WITH_POWERTRACK),1)
 	PROJECTDIRS += $(PROJECTDIR)/apps/power-track 
   PROJECT_SOURCEFILES += power-track.c
 else
-  CFLAGS += -DENERGEST_CONF_ON=0
+  #CFLAGS += -DENERGEST_CONF_ON=0
 endif
 
 SMALL=1
@@ -108,8 +108,10 @@ router.$(TARGET): $(PROJECT) $(TARGET_NAME_ROUTER)-rename
 
 $(TARGET_NAME_HOST)-rename:
 	mv $(PROJECT).$(TARGET) $(TARGET_NAME_HOST).$(TARGET)
-	rm -rf *.map contiki*.a obj_$(TARGET)
+	rm -rf contiki*.a obj_$(TARGET)
+	msp430-size $(TARGET_NAME_HOST).$(TARGET)
 
 $(TARGET_NAME_ROUTER)-rename:
 	mv $(PROJECT).$(TARGET) $(TARGET_NAME_ROUTER).$(TARGET)
-	rm -rf *.map contiki*.a obj_$(TARGET)
+	rm -rf contiki*.a obj_$(TARGET)
+	msp430-size $(TARGET_NAME_ROUTER).$(TARGET)

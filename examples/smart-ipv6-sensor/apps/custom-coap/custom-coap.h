@@ -64,12 +64,12 @@
 
 /** The maximum size of a resource message stored in memory.
  * Previously: 280 is not enough with /energest full statistics enabled. */
-#define RESOURCE_REPRESENTATION_MAX_SIZE  400
+#define RESOURCE_REPRESENTATION_MAX_SIZE  150
 
 /** The maximum stored resource representation.  */
-#define MAX_RESOURCE_REPRESENTATION       6
+#define MAX_RESOURCE_REPRESENTATION       2
 
-#define MAX_PERIODIC_RESSOURCES           10
+#define MAX_PERIODIC_RESSOURCES           4
 
 /** The time the resource message is available for the client during a blockwise transfer.
  * The system keep the RDC enabled if a message is not fully retrieved. Thus to prevent the

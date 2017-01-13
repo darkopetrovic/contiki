@@ -217,8 +217,9 @@ crdc_lpm_enter(void)
   //uip_ds6_nbr_t *nbr;
 
   if(!rdc_is_on){
-
+#ifdef CONTIKI_TARGET_CC2538DK
     nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
+#endif /* CONTIKI_TARGET_CC2538DK */
     next_expiration = etimer_next_expiration_time();
 
     /* When 'next_expiration' is 0 that means there is no more etimer pending. And thus,
@@ -263,10 +264,15 @@ crdc_lpm_enter(void)
 #endif /* ENERGEST_CONF_ON */
 #endif /* CONTIKI_TARGET_CC2538DK */
 
+#if CONTIKI_TARGET_CC2538DK
     if(!process_nevents() && rtimer_arch_next_trigger()){
       ENTER_SLEEP_MODE();
     }
-
+#else
+    if(!process_nevents()){
+      ENTER_SLEEP_MODE();
+    }
+#endif /* CONTIKI_TARGET_CC2538DK */
 
     /* ZzZZzZZzZZZzzzZzzZZzzzzzzzZzZZzZzzzzzzzzzzzZZzZZZzzZZzZZZzzzZZzzzz
      * The wake-up can come from the rtimer or the gpio, nothing else.
