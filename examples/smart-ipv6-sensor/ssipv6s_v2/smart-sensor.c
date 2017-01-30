@@ -82,7 +82,10 @@
 #endif
 
 #include "lwm2m-engine.h"
+
+#if WITH_IPSO
 #include "ipso-objects.h"
+#endif
 
 #ifndef REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER
 #define REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER 0
@@ -123,7 +126,6 @@
 #define SMART_ALIVE_MSG             0
 #endif
 
-static struct ctimer microclap_timer;
 static rtimer_clock_t button_time_press;
 static rtimer_clock_t button_time_release;
 static uint8_t starting;
@@ -191,17 +193,6 @@ callback(struct parameter *p)
   return 1;
 }
 #endif /* REST_DELAY_RES_START */
-
-static void
-microclap_timeout(void* ptr)
-{
-#if APPS_COAPSERVER
-  res_micro.trigger();
-  res_events.trigger();
-#endif
-
-  //res_micro_clap_counter = 0;
-}
 
 #if DEBUG
 static char *
@@ -279,6 +270,27 @@ send_alive_message(void *ptr)
 {
   PRINTF("SMART: Send ALV message.\n");
 
+#ifdef LWM2M_SERVER_ADDRESS
+  uip_ipaddr_t addr;
+  static coap_packet_t message[1];
+
+  coap_init_message(message, COAP_TYPE_NON, CONTENT_2_05, coap_get_mid());
+  coap_set_payload(message, "ALV", 3);
+
+  /* If RDC isn't ON here, this means that another wake-up preceded very shortly
+   * the ALV wake-up. To be sure to send the packet, we turn-on the RDC here. */
+  if( !crdc_get_rdc_status() ){
+    PRINTF("SMART: Send ALV message (RDC off -> turn on).\n");
+    crdc_period_start( SMART_ALIVE_MSG_RDC_DURATION );
+  }
+
+  uiplib_ipaddrconv(LWM2M_SERVER_ADDRESS, &addr);
+
+  coap_send_message(&addr, UIP_HTONS(COAP_DEFAULT_PORT), uip_appdata,
+      coap_serialize_message(message, uip_appdata));
+
+
+#else
 #if SMART_ALIVE_MSG_MULTICAST
   static coap_packet_t message[1];
   uip_ipaddr_t addr;
@@ -294,8 +306,10 @@ send_alive_message(void *ptr)
 
   // Site-Local Scope Multicast Addresses
   uip_ip6addr(&addr, 0xff05, 0, 0, 0, 0, 0, 0, 0x1);
+
   coap_send_message(&addr, UIP_HTONS(COAP_DEFAULT_PORT), uip_appdata,
       coap_serialize_message(message, uip_appdata));
+
 #else
   uip_ds6_border_router_t *locbr;
   /* Send to border routers */
@@ -311,7 +325,8 @@ send_alive_message(void *ptr)
     }
     uip_icmp6_send(&locbr->ipaddr, 200, 0, 0);
   }
-#endif
+#endif /* SMART_ALIVE_MSG_MULTICAST */
+#endif /* LWM2M_SERVER_ADDRESS */
 
   ctimer_restart(&alive_message_timer);
 }
@@ -356,6 +371,10 @@ node_change_type(struct parameter *p)
 #if SMART_ALIVE_MSG
     ctimer_stop(&alive_message_timer);
 #endif
+#if WITH_OMA_LWM2M
+    lwm2m_engine_update_registration(86400, "U");
+#endif
+
     return 0;
   } else {
     /* The device fails to become a router because USB cable isn't plugged in. */
@@ -385,6 +404,9 @@ node_change_type(struct parameter *p)
       PRINTF("Node set as HOST.\n");
 #if APPS_SMARTLED
       blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 3);
+#endif
+#if WITH_OMA_LWM2M
+    lwm2m_engine_update_registration(30, "UQ");
 #endif
     }
 #if SMART_ALIVE_MSG
@@ -417,9 +439,9 @@ ds_notification_callback(int event,
 
 /*---------------------------------------------------------------------------*/
 
-PROCESS(example_ipso_objects, "IPSO object example");
+PROCESS(ipso_objects_process, "IPSO object process");
 PROCESS(controller_process, "Controller process");
-AUTOSTART_PROCESSES(&controller_process, &example_ipso_objects);
+AUTOSTART_PROCESSES(&controller_process, &ipso_objects_process);
 
 PROCESS_THREAD(controller_process, ev, data)
 {
@@ -454,7 +476,10 @@ PROCESS_THREAD(controller_process, ev, data)
   app_config_create_parameter(APP_CONFIG_GENERAL, "rdc_enable_period", "30", change_rdc_period);
 #endif
 
+#if SMART_ALIVE_MSG
   app_config_create_parameter(APP_CONFIG_GENERAL, "alive_message_period", "30", change_alv_period);
+#endif
+
   app_config_create_parameter(APP_CONFIG_GENERAL, "bripaddr", "aaaa::212:4b00:40e:fadb", NULL);
 
 #if CONF_6LOWPAN_ND
@@ -591,17 +616,18 @@ PROCESS_THREAD(controller_process, ev, data)
         res_events.trigger();
 #endif
       }
-
+#if WITH_IPSO
+      ipso_presence_detection();
+#endif
       /* =========== MICROPHONE DETECT ============== */
       if(data == &mic_sensor) {
         PRINTF("******* SOUND DETECTED *******\n");
 #if ADC_ACQUISITION_ON
         SENSORS_MEASURE(mic_sensor);
 #endif
-        /*if(res_micro_clap_counter < 4){
-          res_micro_clap_counter++;
-          ctimer_set(&microclap_timer, CLOCK_SECOND, microclap_timeout, NULL);
-        }*/
+#if WITH_IPSO
+        ipso_microclap_detection();
+#endif
       }
     } // if( ev == sensors_event )
   }  /* while (1) */
@@ -609,13 +635,13 @@ PROCESS_THREAD(controller_process, ev, data)
   PROCESS_END();
 }
 
-PROCESS_THREAD(example_ipso_objects, ev, data)
+PROCESS_THREAD(ipso_objects_process, ev, data)
 {
   PROCESS_BEGIN();
 
   PROCESS_PAUSE();
 
-  PRINTF("Starting IPSO objects example\n");
+  PRINTF("Starting IPSO objects process\n");
 
   /* Initialize the OMA LWM2M engine */
   lwm2m_engine_init();

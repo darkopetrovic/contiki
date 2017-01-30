@@ -1,0 +1,288 @@
+/*
+ * Copyright (c) 2015, Yanzi Networks AB.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * \addtogroup ipso-objects
+ * @{
+ */
+
+/**
+ * \file
+ *         Implementation of OMA LWM2M / IPSO Humidity
+ * \author
+ *         Darko Petrovic <darko.petrovic@hevs.ch>
+ *
+ */
+
+#include <stdint.h>
+#include "ipso-objects.h"
+#include "lwm2m-object.h"
+#include "lwm2m-engine.h"
+#include "er-coap-engine.h"
+
+#include "ina3221-sensor.h"
+
+#define DEBUG DEBUG_NONE
+#include "net/ip/uip-debug.h"
+
+#ifndef IPSO_VOLTAGE_MIN
+#define IPSO_VOLTAGE_MIN (-50 * LWM2M_FLOAT32_FRAC)
+#endif
+
+#ifndef IPSO_VOLTAGE_MAX
+#define IPSO_VOLTAGE_MAX (80 * LWM2M_FLOAT32_FRAC)
+#endif
+
+static struct ctimer periodic_timer_battery;
+static struct ctimer periodic_timer_solar;
+static int32_t min_battery_value;
+static int32_t max_battery_value;
+static int32_t min_solar_value;
+static int32_t max_solar_value;
+static int32_t interval_battery;
+static int32_t interval_solar;
+static int read_battery_voltage(int32_t *value);
+static int read_solar_voltage(int32_t *value);
+static void handle_periodic_timer_battery(void *ptr);
+static void handle_periodic_timer_solar(void *ptr);
+/*---------------------------------------------------------------------------*/
+static int
+battery_value(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+{
+  int32_t value;
+  if(read_battery_voltage(&value)) {
+    return ctx->writer->write_float32fix(ctx, outbuf, outsize,
+                                         value, LWM2M_FLOAT32_BITS);
+  }
+  return 0;
+}
+
+static int
+solar_value(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+{
+  int32_t value;
+  if(read_solar_voltage(&value)) {
+    return ctx->writer->write_float32fix(ctx, outbuf, outsize,
+                                         value, LWM2M_FLOAT32_BITS);
+  }
+  return 0;
+}
+
+static int
+read_wakeup1(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+{
+  return ctx->writer->write_int(ctx, outbuf, outsize, interval_battery);
+}
+
+static int
+write_wakeup1(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
+            uint8_t *outbuf, size_t outsize)
+{
+  int32_t value;
+  size_t len;
+
+  len = ctx->reader->read_int(ctx, inbuf, insize, &value);
+  interval_battery = value;
+
+  PRINTF("New wakeup interval set: %lu\n", interval_battery);
+
+  if(interval_battery){
+    ctimer_set(&periodic_timer_battery, CLOCK_SECOND * interval_battery, handle_periodic_timer_battery, NULL);
+  } else {
+    ctimer_stop(&periodic_timer_battery);
+  }
+
+  return len;
+}
+
+static int
+read_wakeup2(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+{
+  return ctx->writer->write_int(ctx, outbuf, outsize, interval_solar);
+}
+
+static int
+write_wakeup2(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
+            uint8_t *outbuf, size_t outsize)
+{
+  int32_t value;
+  size_t len;
+
+  len = ctx->reader->read_int(ctx, inbuf, insize, &value);
+  interval_solar = value;
+
+  PRINTF("New wakeup interval set: %lu\n", interval_solar);
+
+  if(interval_solar){
+    ctimer_set(&periodic_timer_solar, CLOCK_SECOND * interval_solar, handle_periodic_timer_solar, NULL);
+  } else {
+    ctimer_stop(&periodic_timer_solar);
+  }
+
+  return len;
+}
+
+/*---------------------------------------------------------------------------*/
+LWM2M_RESOURCES(voltage_resources_battery,
+                /* Temperature (Current) */
+                LWM2M_RESOURCE_CALLBACK(5700, { battery_value, NULL, NULL }),
+                /* Units */
+                LWM2M_RESOURCE_STRING(5701, "V"),
+                LWM2M_RESOURCE_STRING(5750, "Battery voltage"),
+                /* Min Range Value */
+                LWM2M_RESOURCE_FLOATFIX(5603, IPSO_VOLTAGE_MIN),
+                /* Max Range Value */
+                LWM2M_RESOURCE_FLOATFIX(5604, IPSO_VOLTAGE_MAX),
+                /* Min Measured Value */
+                LWM2M_RESOURCE_FLOATFIX_VAR(5601, &min_battery_value),
+                /* Max Measured Value */
+                LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_battery_value),
+
+                LWM2M_RESOURCE_CALLBACK(IPSO_OBJ_WAKEUP_INTERVAL, { read_wakeup1, write_wakeup1, NULL })
+                );
+
+LWM2M_RESOURCES(voltage_resources_solar,
+                /* Temperature (Current) */
+                LWM2M_RESOURCE_CALLBACK(5700, { solar_value, NULL, NULL }),
+                /* Units */
+                LWM2M_RESOURCE_STRING(5701, "V"),
+                LWM2M_RESOURCE_STRING(5750, "Solar panel voltage"),
+                /* Min Range Value */
+                LWM2M_RESOURCE_FLOATFIX(5603, IPSO_VOLTAGE_MIN),
+                /* Max Range Value */
+                LWM2M_RESOURCE_FLOATFIX(5604, IPSO_VOLTAGE_MAX),
+                /* Min Measured Value */
+                LWM2M_RESOURCE_FLOATFIX_VAR(5601, &min_solar_value),
+                /* Max Measured Value */
+                LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_solar_value),
+
+                LWM2M_RESOURCE_CALLBACK(IPSO_OBJ_WAKEUP_INTERVAL, { read_wakeup2, write_wakeup2, NULL })
+                );
+
+
+LWM2M_INSTANCES(voltage_instances,
+                LWM2M_INSTANCE(0, voltage_resources_battery),
+                LWM2M_INSTANCE(1, voltage_resources_solar));
+LWM2M_OBJECT(voltage, 3316, voltage_instances);
+/*---------------------------------------------------------------------------*/
+static int
+read_battery_voltage(int32_t *value)
+{
+  uint16_t sensors_value;
+
+  // read sensor value here
+  SENSORS_ACTIVATE(ina3221_sensor);
+  SENSORS_MEASURE(ina3221_sensor);
+  sensors_value = ina3221_sensor.value(INA3221_CH2_BUS_VOLTAGE);
+  SENSORS_DEACTIVATE(ina3221_sensor);
+
+  /* Convert to fix float */
+  *value = (sensors_value * LWM2M_FLOAT32_FRAC) / 1000;
+
+  if(*value < min_battery_value) {
+    min_battery_value = *value;
+    lwm2m_object_notify_observers(&voltage, "/0/5601");
+  }
+  if(*value > max_battery_value) {
+    max_battery_value = *value;
+    lwm2m_object_notify_observers(&voltage, "/0/5602");
+  }
+  return 1;
+
+}
+
+static int
+read_solar_voltage(int32_t *value)
+{
+  uint16_t sensors_value;
+
+  // read sensor value here
+  SENSORS_ACTIVATE(ina3221_sensor);
+  SENSORS_MEASURE(ina3221_sensor);
+  sensors_value = ina3221_sensor.value(INA3221_CH1_BUS_VOLTAGE);
+  SENSORS_DEACTIVATE(ina3221_sensor);
+
+  /* Convert to fix float */
+  *value = (sensors_value * LWM2M_FLOAT32_FRAC) / 1000;
+
+  if(*value < min_solar_value) {
+    min_solar_value = *value;
+    lwm2m_object_notify_observers(&voltage, "/1/5601");
+  }
+  if(*value > max_solar_value) {
+    max_solar_value = *value;
+    lwm2m_object_notify_observers(&voltage, "/1/5602");
+  }
+  return 1;
+
+}
+/*---------------------------------------------------------------------------*/
+static void
+handle_periodic_timer_battery(void *ptr)
+{
+  static int32_t last_value = IPSO_VOLTAGE_MIN;
+  int32_t v;
+
+  /* Only notify when the value has changed since last */
+  if(read_battery_voltage(&v) && v != last_value) {
+    last_value = v;
+    lwm2m_object_notify_observers(&voltage, "/0/5700");
+  }
+  ctimer_reset(&periodic_timer_battery);
+}
+
+static void
+handle_periodic_timer_solar(void *ptr)
+{
+  static int32_t last_value = IPSO_VOLTAGE_MIN;
+  int32_t v;
+
+  /* Only notify when the value has changed since last */
+  if(read_solar_voltage(&v) && v != last_value) {
+    last_value = v;
+    lwm2m_object_notify_observers(&voltage, "/1/5700");
+  }
+  ctimer_reset(&periodic_timer_solar);
+}
+/*---------------------------------------------------------------------------*/
+void
+ipso_voltage_init(void)
+{
+  min_battery_value = IPSO_VOLTAGE_MAX;
+  max_battery_value = IPSO_VOLTAGE_MIN;
+  min_solar_value = IPSO_VOLTAGE_MAX;
+  max_solar_value = IPSO_VOLTAGE_MIN;
+
+  /* register this device and its handlers - the handlers automatically
+     sends in the object to handle */
+  lwm2m_engine_register_object(&voltage);
+}
+/*---------------------------------------------------------------------------*/
+/** @} */

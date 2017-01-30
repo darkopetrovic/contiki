@@ -35,10 +35,10 @@
 
 /**
  * \file
- *         Implementation of OMA LWM2M / IPSO Temperature
+ *         Implementation of OMA LWM2M / IPSO Barometer
  * \author
- *         Joakim Eriksson <joakime@sics.se>
- *         Niclas Finne <nfi@sics.se>
+ *         Darko Petrovic <darko.petrovic@hevs.ch>
+ *
  */
 
 #include <stdint.h>
@@ -47,27 +47,23 @@
 #include "lwm2m-engine.h"
 #include "er-coap-engine.h"
 
-#include "sht21-sensor.h"
+#include "bmp280-sensor.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
-#ifdef IPSO_TEMPERATURE
-extern const struct ipso_objects_sensor IPSO_TEMPERATURE;
-#endif /* IPSO_TEMPERATURE */
-
-#ifndef IPSO_TEMPERATURE_MIN
-#define IPSO_TEMPERATURE_MIN (-50 * LWM2M_FLOAT32_FRAC)
+#ifndef IPSO_PRESSURE_MIN
+#define IPSO_PRESSURE_MIN (-50 * LWM2M_FLOAT32_FRAC)
 #endif
 
-#ifndef IPSO_TEMPERATURE_MAX
-#define IPSO_TEMPERATURE_MAX (80 * LWM2M_FLOAT32_FRAC)
+#ifndef IPSO_PRESSURE_MAX
+#define IPSO_PRESSURE_MAX (80 * LWM2M_FLOAT32_FRAC)
 #endif
 
 static struct ctimer periodic_timer;
 static int32_t min_sensor_value;
 static int32_t max_sensor_value;
-static int32_t interval=10;
+static int32_t interval;
 static int read_sensor_value(int32_t *value);
 static void handle_periodic_timer(void *ptr);
 /*---------------------------------------------------------------------------*/
@@ -98,7 +94,7 @@ write_wakeup(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
   len = ctx->reader->read_int(ctx, inbuf, insize, &value);
   interval = value;
 
-  PRINTF("New interval set for temperature: %lu\n", interval);
+  PRINTF("New wakeup interval set: %lu\n", interval);
 
   if(interval){
     ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
@@ -110,15 +106,15 @@ write_wakeup(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 }
 
 /*---------------------------------------------------------------------------*/
-LWM2M_RESOURCES(temperature_resources,
+LWM2M_RESOURCES(barometer_resources,
                 /* Temperature (Current) */
                 LWM2M_RESOURCE_CALLBACK(5700, { sensor_value, NULL, NULL }),
                 /* Units */
-                LWM2M_RESOURCE_STRING(5701, "Cel"),
+                LWM2M_RESOURCE_STRING(5701, "Pa"),
                 /* Min Range Value */
-                LWM2M_RESOURCE_FLOATFIX(5603, IPSO_TEMPERATURE_MIN),
+                LWM2M_RESOURCE_FLOATFIX(5603, IPSO_PRESSURE_MIN),
                 /* Max Range Value */
-                LWM2M_RESOURCE_FLOATFIX(5604, IPSO_TEMPERATURE_MAX),
+                LWM2M_RESOURCE_FLOATFIX(5604, IPSO_PRESSURE_MAX),
                 /* Min Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5601, &min_sensor_value),
                 /* Max Measured Value */
@@ -126,29 +122,31 @@ LWM2M_RESOURCES(temperature_resources,
 
                 LWM2M_RESOURCE_CALLBACK(IPSO_OBJ_WAKEUP_INTERVAL, { read_wakeup, write_wakeup, NULL })
                 );
-LWM2M_INSTANCES(temperature_instances,
-                LWM2M_INSTANCE(0, temperature_resources));
-LWM2M_OBJECT(temperature, 3303, temperature_instances);
+LWM2M_INSTANCES(barometer_instances,
+                LWM2M_INSTANCE(0, barometer_resources));
+LWM2M_OBJECT(barometer, 3315, barometer_instances);
 /*---------------------------------------------------------------------------*/
 static int
 read_sensor_value(int32_t *value)
 {
-  uint16_t sensors_value;
-  SENSORS_ACTIVATE(sht21_sensor);
-  sht21_sensor.configure(SENSORS_DO_MEASURE, SHT21_TEMP);
-  sensors_value = sht21_sensor.value(SHT21_TEMP);
-  SENSORS_DEACTIVATE(sht21_sensor);
+  uint32_t sensors_value;
+
+  // read sensor value here
+  SENSORS_ACTIVATE(bmp280_sensor);
+  SENSORS_MEASURE(bmp280_sensor);
+  sensors_value = bmp280_sensor.value( BMP280_PRESSURE );
+  SENSORS_DEACTIVATE(bmp280_sensor);
 
   /* Convert to fix float */
-  *value = (sensors_value * LWM2M_FLOAT32_FRAC) / 100;
+  *value = (sensors_value * LWM2M_FLOAT32_FRAC);
 
   if(*value < min_sensor_value) {
     min_sensor_value = *value;
-    lwm2m_object_notify_observers(&temperature, "/0/5601");
+    lwm2m_object_notify_observers(&barometer, "/0/5601");
   }
   if(*value > max_sensor_value) {
     max_sensor_value = *value;
-    lwm2m_object_notify_observers(&temperature, "/0/5602");
+    lwm2m_object_notify_observers(&barometer, "/0/5602");
   }
   return 1;
 
@@ -157,27 +155,26 @@ read_sensor_value(int32_t *value)
 static void
 handle_periodic_timer(void *ptr)
 {
-  static int32_t last_value = IPSO_TEMPERATURE_MIN;
+  static int32_t last_value = IPSO_PRESSURE_MIN;
   int32_t v;
 
   /* Only notify when the value has changed since last */
   if(read_sensor_value(&v) && v != last_value) {
     last_value = v;
-    lwm2m_object_notify_observers(&temperature, "/0/5700");
+    lwm2m_object_notify_observers(&barometer, "/0/5700");
   }
   ctimer_reset(&periodic_timer);
 }
 /*---------------------------------------------------------------------------*/
 void
-ipso_temperature_init(void)
+ipso_barometer_init(void)
 {
-  min_sensor_value = IPSO_TEMPERATURE_MAX;
-  max_sensor_value = IPSO_TEMPERATURE_MIN;
+  min_sensor_value = IPSO_PRESSURE_MAX;
+  max_sensor_value = IPSO_PRESSURE_MIN;
 
   /* register this device and its handlers - the handlers automatically
      sends in the object to handle */
-  lwm2m_engine_register_object(&temperature);
-
+  lwm2m_engine_register_object(&barometer);
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

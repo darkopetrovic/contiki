@@ -37,9 +37,15 @@
 #ifndef PROJECT_CONF_H_
 #define PROJECT_CONF_H_
 
-/* ********************************************************************** */
-/* Application configuration                                              */
-/* ********************************************************************** */
+/* ******************************************************************************* */
+/* Application configuration                                                       */
+/* ******************************************************************************* */
+
+#define LWM2M_DEVICE_MODEL_NUMBER          "SG_"
+
+/* ******************************************************************************* */
+/* Application protocol configuration                                              */
+/* ******************************************************************************* */
 
 #define REST_MAX_CHUNK_SIZE                 256
 
@@ -54,12 +60,8 @@
 
 #define UIP_CONF_DYN_HOST_ROUTER            1
 
-#define SMART_CONF_ALIVE_MSG                1
-
-#define COAP_MAX_OBSERVERS   20
-
-#define IPSO_TEMPERATURE example_ipso_temperature
-#define LWM2M_DEVICE_MODEL_NUMBER BOARD_STRING
+#define COAP_MAX_OBSERVERS                  10
+#define LWM2M_ENGINE_CONF_MAX_OBJECTS       20
 
 /* ********************************************************************** */
 /* RPL configuration                                                      */
@@ -117,7 +119,7 @@
 #define UIP_CONF_UDP_CONNS                  5
 
 /** Maximum routes to store */
-#define UIP_CONF_MAX_ROUTES                 2
+#define UIP_CONF_MAX_ROUTES                 5
 
 /* Expected reassembly requirements   */
 #define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    4

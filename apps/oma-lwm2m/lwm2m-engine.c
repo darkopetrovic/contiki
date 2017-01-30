@@ -83,7 +83,8 @@
 #define BS_REMOTE_PORT     UIP_HTONS(5685)
 
 static const lwm2m_object_t *objects[MAX_OBJECTS];
-static char endpoint[32];
+static lwm2m_client_t lwm2m_client;
+static char registration_query[80];
 static char rd_data[128]; /* allocate some data for the RD */
 
 PROCESS(lwm2m_rd_client, "LWM2M Engine");
@@ -100,6 +101,8 @@ static uint8_t has_registration_server_info = 0;
 static uint8_t registered = 0;
 static uint8_t bootstrapped = 0; /* bootstrap made... */
 
+static struct ctimer registration_update_timer;
+
 void lwm2m_device_init(void);
 void lwm2m_security_init(void);
 void lwm2m_server_init(void);
@@ -111,6 +114,16 @@ static const lwm2m_resource_t *get_resource(const lwm2m_instance_t *instance, lw
 static void
 client_chunk_handler(void *response)
 {
+  coap_packet_t *const coap_pkt = (coap_packet_t *)response;
+
+  // get the registered path returned by the server
+  if(coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == CREATED_2_01){
+    snprintf(lwm2m_client.location, coap_pkt->location_path_len+2, "/%s", coap_pkt->location_path);
+    PRINTF("Successfully registered at: %s\n", lwm2m_client.location);
+  } else {
+    PRINTF("Failed to register. Server not found.\n");
+  }
+
 #if (DEBUG) & DEBUG_PRINT
   const uint8_t *chunk;
 
@@ -144,6 +157,58 @@ has_network_access(void)
 #endif /* UIP_CONF_IPV6_RPL */
   return 1;
 }
+
+static void
+update_registration(char* query_string)
+{
+  static coap_packet_t request[1];
+  coap_init_message(request, COAP_TYPE_CON, COAP_POST, coap_get_mid());
+  coap_set_header_uri_path(request, lwm2m_client.location);
+  if(query_string){
+    coap_set_header_uri_query(request, query_string);
+  }
+  coap_send_message(&server_ipaddr, server_port, uip_appdata,
+        coap_serialize_message(request, uip_appdata));
+
+  PRINTF("Registration to the server updated (%s%s).\n", lwm2m_client.location, query_string ? query_string : "");
+}
+
+static void
+update_registration_callback(void *ptr)
+{
+  char *query_string;
+  query_string = (char *)ptr;
+  update_registration(query_string);
+  ctimer_reset(&registration_update_timer);
+}
+
+void
+lwm2m_engine_update_registration(uint32_t lifetime, const char* binding)
+{
+  char query_string[32];
+  size_t len = 0;
+
+  len = snprintf(query_string, sizeof(query_string) - 1, "?");
+
+  if(lifetime && lifetime != lwm2m_client.lifetime){
+    lwm2m_client.lifetime = lifetime;
+    len += snprintf(query_string+len, sizeof(query_string) - len, "lt=%lu", lifetime);
+    ctimer_set(&registration_update_timer, CLOCK_SECOND*(uint32_t)(lwm2m_client.lifetime*0.9),
+                update_registration_callback, NULL);
+  }
+
+  if(strlen(query_string) > 4){
+    len += snprintf(query_string+len, sizeof(query_string) - len, "&");
+  }
+
+  if(binding && strcmp(binding, lwm2m_client.binding)){
+    snprintf(lwm2m_client.binding, sizeof(lwm2m_client.binding), binding);
+    len += snprintf(query_string+len, sizeof(query_string) - len, "b=%s", lwm2m_client.binding);
+  }
+
+  update_registration( strlen(query_string) > 2 ? query_string : NULL );
+}
+
 /*---------------------------------------------------------------------------*/
 void
 lwm2m_engine_use_bootstrap_server(int use)
@@ -252,7 +317,7 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
 
   PROCESS_BEGIN();
 
-  printf("RD Client started with endpoint '%s'\n", endpoint);
+  printf("RD Client started with '%s'\n", registration_query);
 
   etimer_set(&et, 15 * CLOCK_SECOND);
 
@@ -267,11 +332,11 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
           /* prepare request, TID is set by COAP_BLOCKING_REQUEST() */
           coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
           coap_set_header_uri_path(request, "/bs");
-          coap_set_header_uri_query(request, endpoint);
+          coap_set_header_uri_query(request, registration_query);
 
           printf("Registering ID with bootstrap server [");
           uip_debug_ipaddr_print(&bs_server_ipaddr);
-          printf("]:%u as '%s'\n", uip_ntohs(bs_server_port), endpoint);
+          printf("]:%u as '%s'\n", uip_ntohs(bs_server_port), registration_query);
 
           COAP_BLOCKING_REQUEST(&bs_server_ipaddr, bs_server_port, request,
                                 client_chunk_handler);
@@ -353,7 +418,7 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
         coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
         coap_set_header_uri_path(request, "/rd");
         coap_set_header_content_format(request, APPLICATION_LINK_FORMAT);
-        coap_set_header_uri_query(request, endpoint);
+        coap_set_header_uri_query(request, registration_query);
 
         /* generate the rd data */
         pos = 0;
@@ -377,9 +442,13 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
         printf("Registering with [");
         uip_debug_ipaddr_print(&server_ipaddr);
         printf("]:%u lwm2m endpoint '%s': '%.*s'\n", uip_ntohs(server_port),
-               endpoint, pos, rd_data);
+               lwm2m_client.endpoint, pos, rd_data);
         COAP_BLOCKING_REQUEST(&server_ipaddr, server_port, request,
                               client_chunk_handler);
+
+        // update before registration timeouts on the server
+        ctimer_set(&registration_update_timer, CLOCK_SECOND*(uint32_t)(lwm2m_client.lifetime*0.9),
+            update_registration_callback, NULL);
       }
       /* for now only register once...   registered = 0; */
       etimer_set(&et, 15 * CLOCK_SECOND);
@@ -393,7 +462,7 @@ lwm2m_engine_init(void)
 {
 #ifdef LWM2M_ENGINE_CLIENT_ENDPOINT_NAME
 
-  snprintf(endpoint, sizeof(endpoint) - 1,
+  snprintf(registration_query, sizeof(registration_query) - 1,
            "?ep=" LWM2M_ENGINE_CLIENT_ENDPOINT_NAME);
 
 #else /* LWM2M_ENGINE_CLIENT_ENDPOINT_NAME */
@@ -401,14 +470,13 @@ lwm2m_engine_init(void)
   int len, i;
   uint8_t state;
   uip_ipaddr_t *ipaddr;
-  char client[sizeof(endpoint)];
 
   len = strlen(LWM2M_ENGINE_CLIENT_ENDPOINT_PREFIX);
   /* ensure that this fits with the hex-nums */
-  if(len > sizeof(client) - 13) {
-    len = sizeof(client) - 13;
+  if(len > sizeof(lwm2m_client.endpoint) - 13) {
+    len = sizeof(lwm2m_client.endpoint) - 13;
   }
-  memcpy(client, LWM2M_ENGINE_CLIENT_ENDPOINT_PREFIX, len);
+  memcpy(lwm2m_client.endpoint, LWM2M_ENGINE_CLIENT_ENDPOINT_PREFIX, len);
 
   /* pick an IP address that is PREFERRED or TENTATIVE */
   ipaddr = NULL;
@@ -425,15 +493,25 @@ lwm2m_engine_init(void)
     for(i = 0; i < 6; i++) {
       /* assume IPv6 for now */
       uint8_t b = ipaddr->u8[10 + i];
-      client[len++] = (b >> 4) > 9 ? 'A' - 10 + (b >> 4) : '0' + (b >> 4);
-      client[len++] = (b & 0xf) > 9 ? 'A' - 10 + (b & 0xf) : '0' + (b & 0xf);
+      lwm2m_client.endpoint[len++] = (b >> 4) > 9 ? 'A' - 10 + (b >> 4) : '0' + (b >> 4);
+      lwm2m_client.endpoint[len++] = (b & 0xf) > 9 ? 'A' - 10 + (b & 0xf) : '0' + (b & 0xf);
     }
   }
 
   /* a zero at end of string */
-  client[len] = 0;
+  lwm2m_client.endpoint[len] = 0;
   /* create endpoint */
-  snprintf(endpoint, sizeof(endpoint) - 1, "?ep=%s", client);
+#if UIP_CONF_ROUTER
+  lwm2m_client.lifetime = (uint32_t)LWM2M_DEFAULT_LIFETIME;
+  snprintf(lwm2m_client.binding, sizeof(lwm2m_client.binding), "U");
+  snprintf(registration_query, sizeof(registration_query) - 1, "?ep=%s&lt=%lu", lwm2m_client.endpoint,
+      lwm2m_client.lifetime);
+#else
+  lwm2m_client.lifetime = 30;
+  snprintf(lwm2m_client.binding, sizeof(lwm2m_client.binding), "UQ");
+  snprintf(registration_query, sizeof(registration_query) - 1, "?ep=%s&lt=%lu&b=%s", lwm2m_client.endpoint,
+      lwm2m_client.lifetime, lwm2m_client.binding);
+#endif
 
 #endif /* LWM2M_ENGINE_CLIENT_ENDPOINT_NAME */
 

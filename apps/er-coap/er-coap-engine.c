@@ -42,7 +42,7 @@
 #include <string.h>
 #include "er-coap-engine.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -92,7 +92,7 @@ coap_receive(void)
       /*TODO duplicates suppression, if required by application */
       #if DEBUG
           uint8_t etag_reversed[COAP_ETAG_LEN];
-          array_reverse(message->etag, etag_reversed, message->etag_len);
+          //array_reverse(message->etag, etag_reversed, message->etag_len);
       #endif
       PRINTF("  Parsed: v %u, t %u, tkl %u, c %u, mid %u, etag %#018x \n", message->version,
              message->type, message->token_len, message->code, message->mid, (unsigned int)*(uint32_t*)etag_reversed);

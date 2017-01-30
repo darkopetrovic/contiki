@@ -54,10 +54,20 @@
 
 #include "contiki-conf.h"
 
+#define IPSO_OBJ_WAKEUP_INTERVAL   6000
+
+#define IPSO_OBJ_MICROCLAP        7200
+
 void ipso_temperature_init(void);
-void ipso_button_init(void);
-void ipso_light_control_init(void);
-void ipso_leds_control_init(void);
+void ipso_humidity_init(void);
+void ipso_illuminance_init(void);
+void ipso_barometer_init(void);
+void ipso_voltage_init(void);
+void ipso_current_init(void);
+void ipso_presence_init(void);
+void ipso_presence_detection(void);
+void ipso_microclap_init(void);
+void ipso_microclap_detection(void);
 
 /* the init function to register the IPSO objects */
 void ipso_objects_init(void);

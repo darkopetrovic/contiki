@@ -49,6 +49,8 @@
 #define LWM2M_FLOAT32_BITS  10
 #define LWM2M_FLOAT32_FRAC (1L << LWM2M_FLOAT32_BITS)
 
+#define LWM2M_DEFAULT_LIFETIME      86400   // seconds
+
 /* LWM2M / CoAP Content-Formats */
 typedef enum {
   LWM2M_TEXT_PLAIN = 1541,
@@ -57,12 +59,20 @@ typedef enum {
   LWM2M_OPAQUE     = 1544
 } lwm2m_content_format_t;
 
+typedef struct lwm2m_client {
+  char endpoint[32];
+  char location[32];
+  uint32_t lifetime;
+  char binding[5];
+} lwm2m_client_t;
+
 void lwm2m_engine_init(void);
 void lwm2m_engine_register_default_objects(void);
 void lwm2m_engine_use_bootstrap_server(int use);
 void lwm2m_engine_use_registration_server(int use);
 void lwm2m_engine_register_with_server(const uip_ipaddr_t *server, uint16_t port);
 void lwm2m_engine_register_with_bootstrap_server(const uip_ipaddr_t *server, uint16_t port);
+void lwm2m_engine_update_registration(uint32_t lifetime, const char* binding);
 
 const lwm2m_object_t *lwm2m_engine_get_object(uint16_t id);
 

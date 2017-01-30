@@ -48,16 +48,15 @@ void
 ipso_objects_init(void)
 {
   /* initialize any relevant object for the IPSO Objects */
-#ifdef IPSO_TEMPERATURE
+
   ipso_temperature_init();
-#endif
-
-#if PLATFORM_HAS_BUTTON
-  //ipso_button_init();
-#endif
-
-  ipso_leds_control_init();
-
+  ipso_humidity_init();
+  ipso_illuminance_init();
+  ipso_barometer_init();
+  ipso_voltage_init();
+  ipso_current_init();
+  ipso_presence_init();
+  ipso_microclap_init();
 
 }
 /*---------------------------------------------------------------------------*/
