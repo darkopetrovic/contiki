@@ -43,7 +43,12 @@
 #include "rest-engine.h"
 #include "er-coap-observe.h"
 
-#define DEBUG 0
+#if WITH_OMA_LWM2M
+#include "lwm2m-engine.h"
+#include "ipso-objects.h"
+#endif
+
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -206,10 +211,64 @@ rest_invoke_restful_service(void *request, void *response, uint8_t *buffer,
 static void
 observer_periodic(void)
 {
-  periodic_resource_t *periodic_resource = NULL;
+
   coap_observer_t *obs = NULL;
   uint8_t obsfound;
   uint8_t nb_observers = 0;
+
+#if WITH_OMA_LWM2M
+  uint8_t i, j, k;
+  const lwm2m_object_t **objects;
+  const lwm2m_resource_t *resource;
+  char path[30];
+
+  objects = (const lwm2m_object_t **)lwm2m_engine_get_object_array();
+
+  for(i = 0; i < MAX_OBJECTS; i++) {
+    if(objects[i] != NULL) {
+
+      for(j = 0; j < objects[i]->count; j++) {
+        if(objects[i]->instances[j].flag & LWM2M_INSTANCE_FLAG_USED) {
+
+          for(k = 0; k < objects[i]->instances[j].count; k++) {
+              resource = &objects[i]->instances[j].resources[k];
+              /*PRINTF("Observer periodic: Looking at /%d/%d/%d\n", objects[i]->id,
+                  objects[i]->instances[j].id, resource->id);*/
+
+              if(resource->id == IPSO_RES_SAMPLING_INTERVAL){
+
+                obsfound = 0;
+                for(obs = coap_get_list_observers(); obs; obs = obs->next)
+                {
+                  nb_observers++;
+                  sprintf(path, "%d/%d/5700", objects[i]->id, objects[i]->instances[j].id);
+                  if( !strcmp(obs->url, path)  )
+                  {
+                    obsfound = 1;
+                    break;
+                  }
+                }
+
+                if( !obsfound )
+                {
+                  // Stop the periodic resource
+                  PRINTF("REST: (observer periodic) Observer not found for the resource '/%s' -> Stop sampling.\n",
+                      path);
+                  if(resource->value.callback.write != NULL) {
+                    resource->value.callback.write(NULL, NULL, 0, NULL, 0);
+                  }
+                }
+              }
+          }
+        }
+      }
+    }
+  }
+
+#else
+
+  periodic_resource_t *periodic_resource = NULL;
+
 
   for(periodic_resource = list_head(rest_get_periodic_resources());
       periodic_resource; periodic_resource = periodic_resource->next)
@@ -241,6 +300,8 @@ observer_periodic(void)
     }
 
   } // end for
+#endif /* WITH_OMA_LWM2M */
+
 
   /* Don't need to keep the observer periodic if there is zero observer. */
   if( !nb_observers ){
@@ -250,7 +311,7 @@ observer_periodic(void)
   }
 }
 /*-----------------------------------------------------------------------------------*/
-static void
+void
 start_observer_periodic(void)
 {
   /* We call the function the first time only to store the process

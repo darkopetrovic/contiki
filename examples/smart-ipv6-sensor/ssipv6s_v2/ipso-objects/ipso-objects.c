@@ -57,6 +57,7 @@ ipso_objects_init(void)
   ipso_current_init();
   ipso_presence_init();
   ipso_microclap_init();
+  ipso_energest_init();
 
 }
 /*---------------------------------------------------------------------------*/

@@ -128,6 +128,7 @@ void crdc_lpm_enter();
 uint8_t crdc_get_rdc_status();
 void crdc_enable_rdc();
 void crdc_disable_rdc(uint8_t keep_radio);
+void crdc_disable_rdc_delay(uint8_t keep_radio, uint8_t delay);
 void crdc_clear_stop_rdc_timer(void);
 
 extern uint8_t crdc_battery_level;

@@ -296,4 +296,7 @@ list_t rest_get_periodic_resources(void);
 void rest_update_resource_interval(resource_t *resource, uint32_t interval);
 #endif
 /*---------------------------------------------------------------------------*/
+
+void start_observer_periodic(void);
+
 #endif /*REST_ENGINE_H_ */

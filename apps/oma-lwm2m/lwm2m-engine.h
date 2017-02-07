@@ -51,6 +51,12 @@
 
 #define LWM2M_DEFAULT_LIFETIME      86400   // seconds
 
+#ifdef LWM2M_ENGINE_CONF_MAX_OBJECTS
+#define MAX_OBJECTS LWM2M_ENGINE_CONF_MAX_OBJECTS
+#else /* LWM2M_ENGINE_CONF_MAX_OBJECTS */
+#define MAX_OBJECTS 10
+#endif /* LWM2M_ENGINE_CONF_MAX_OBJECTS */
+
 /* LWM2M / CoAP Content-Formats */
 typedef enum {
   LWM2M_TEXT_PLAIN = 1541,
@@ -75,6 +81,7 @@ void lwm2m_engine_register_with_bootstrap_server(const uip_ipaddr_t *server, uin
 void lwm2m_engine_update_registration(uint32_t lifetime, const char* binding);
 
 const lwm2m_object_t *lwm2m_engine_get_object(uint16_t id);
+void *lwm2m_engine_get_object_array(void);
 
 int lwm2m_engine_register_object(const lwm2m_object_t *object);
 
@@ -87,6 +94,8 @@ void lwm2m_engine_delete_handler(const lwm2m_object_t *object,
                                  void *request, void *response,
                                  uint8_t *buffer, uint16_t preferred_size,
                                  int32_t *offset);
+
+extern lwm2m_client_t lwm2m_client;
 
 #endif /* LWM2M_ENGINE_H */
 /** @} */

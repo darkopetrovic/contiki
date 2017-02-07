@@ -49,7 +49,7 @@
 
 #include "pir-sensor.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #define DEFAULT_SLEEP_DURATION   30000 // ms

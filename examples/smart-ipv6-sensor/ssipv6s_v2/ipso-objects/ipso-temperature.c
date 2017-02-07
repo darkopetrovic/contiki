@@ -83,30 +83,43 @@ sensor_value(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 }
 
 static int
-read_wakeup(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+read_samping(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
   return ctx->writer->write_int(ctx, outbuf, outsize, interval);
 }
 
 static int
-write_wakeup(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
+write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
             uint8_t *outbuf, size_t outsize)
 {
   int32_t value;
-  size_t len;
+  size_t len = 0;
 
-  len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  interval = value;
+  if(ctx)
+    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
+  else
+    value = 0;
 
-  PRINTF("New interval set for temperature: %lu\n", interval);
+  // setting value to 0 stop the timer but doesn't change the parameter
+  if(value){
+    interval = value;
+  }
 
-  if(interval){
+  if(value && periodic_timer.etimer.p != PROCESS_NONE){
     ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
   } else {
     ctimer_stop(&periodic_timer);
   }
 
   return len;
+}
+
+static int
+exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
+               uint8_t *outbuf, size_t outlen)
+{
+  ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
+  return 1;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -124,7 +137,7 @@ LWM2M_RESOURCES(temperature_resources,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_sensor_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_OBJ_WAKEUP_INTERVAL, { read_wakeup, write_wakeup, NULL })
+                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_samping, write_sampling, exec_sampling })
                 );
 LWM2M_INSTANCES(temperature_instances,
                 LWM2M_INSTANCE(0, temperature_resources));

@@ -58,6 +58,8 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "ipso-objects.h"
+
 #if UIP_CONF_IPV6_RPL
 #include "net/rpl/rpl.h"
 #endif /* UIP_CONF_IPV6_RPL */
@@ -73,17 +75,11 @@
 #endif /* LWM2M_DEVICE_MODEL_NUMBER */
 #endif /* LWM2M_ENGINE_CLIENT_ENDPOINT_PREFIX */
 
-#ifdef LWM2M_ENGINE_CONF_MAX_OBJECTS
-#define MAX_OBJECTS LWM2M_ENGINE_CONF_MAX_OBJECTS
-#else /* LWM2M_ENGINE_CONF_MAX_OBJECTS */
-#define MAX_OBJECTS 10
-#endif /* LWM2M_ENGINE_CONF_MAX_OBJECTS */
-
 #define REMOTE_PORT        UIP_HTONS(COAP_DEFAULT_PORT)
 #define BS_REMOTE_PORT     UIP_HTONS(5685)
 
 static const lwm2m_object_t *objects[MAX_OBJECTS];
-static lwm2m_client_t lwm2m_client;
+lwm2m_client_t lwm2m_client;
 static char registration_query[80];
 static char rd_data[128]; /* allocate some data for the RD */
 
@@ -162,6 +158,11 @@ static void
 update_registration(char* query_string)
 {
   static coap_packet_t request[1];
+
+  if(!strlen(lwm2m_client.location)){
+    return;
+  }
+
   coap_init_message(request, COAP_TYPE_CON, COAP_POST, coap_get_mid());
   coap_set_header_uri_path(request, lwm2m_client.location);
   if(query_string){
@@ -169,6 +170,13 @@ update_registration(char* query_string)
   }
   coap_send_message(&server_ipaddr, server_port, uip_appdata,
         coap_serialize_message(request, uip_appdata));
+
+#if RDC_SLEEPING_HOST
+  // start the rdc to receive message only in Queue mode
+  if(strchr((const char*)lwm2m_client.binding, 'Q')){
+    crdc_period_start( 10 );
+  }
+#endif
 
   PRINTF("Registration to the server updated (%s%s).\n", lwm2m_client.location, query_string ? query_string : "");
 }
@@ -501,17 +509,8 @@ lwm2m_engine_init(void)
   /* a zero at end of string */
   lwm2m_client.endpoint[len] = 0;
   /* create endpoint */
-#if UIP_CONF_ROUTER
-  lwm2m_client.lifetime = (uint32_t)LWM2M_DEFAULT_LIFETIME;
-  snprintf(lwm2m_client.binding, sizeof(lwm2m_client.binding), "U");
-  snprintf(registration_query, sizeof(registration_query) - 1, "?ep=%s&lt=%lu", lwm2m_client.endpoint,
-      lwm2m_client.lifetime);
-#else
-  lwm2m_client.lifetime = 30;
-  snprintf(lwm2m_client.binding, sizeof(lwm2m_client.binding), "UQ");
   snprintf(registration_query, sizeof(registration_query) - 1, "?ep=%s&lt=%lu&b=%s", lwm2m_client.endpoint,
       lwm2m_client.lifetime, lwm2m_client.binding);
-#endif
 
 #endif /* LWM2M_ENGINE_CLIENT_ENDPOINT_NAME */
 
@@ -586,6 +585,14 @@ lwm2m_engine_get_object(uint16_t id)
   }
   return NULL;
 }
+
+void *
+lwm2m_engine_get_object_array(void)
+{
+  return objects;
+}
+
+
 /*---------------------------------------------------------------------------*/
 int
 lwm2m_engine_register_object(const lwm2m_object_t *object)
@@ -1114,6 +1121,21 @@ lwm2m_engine_handler(const lwm2m_object_t *object,
       if(content_len > 0) {
         REST.set_response_payload(response, buffer, content_len);
         REST.set_header_content_type(response, content_type);
+
+        /* activate resource periodic if observed */
+        coap_packet_t *const coap_req = (coap_packet_t *)request;
+        if(IS_OPTION(coap_req, COAP_OPTION_OBSERVE)){
+          context.resource_id = IPSO_RES_SAMPLING_INTERVAL;
+          resource = get_resource(instance, &context);
+          if(resource){
+            if(resource->value.callback.exec != NULL) {
+              resource->value.callback.exec(&context, NULL, 0, buffer, preferred_size);
+              PRINTF("Periodic resource started\n");
+              start_observer_periodic();
+            }
+          }
+        }
+
       } else {
         /* failed to produce output - it is an internal error */
         REST.set_response_status(response, INTERNAL_SERVER_ERROR_5_00);

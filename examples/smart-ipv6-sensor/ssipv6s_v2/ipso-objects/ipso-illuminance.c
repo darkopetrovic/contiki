@@ -63,7 +63,7 @@
 static struct ctimer periodic_timer;
 static int32_t min_sensor_value;
 static int32_t max_sensor_value;
-static int32_t interval;
+static int32_t interval=10;
 static int read_sensor_value(int32_t *value);
 static void handle_periodic_timer(void *ptr);
 /*---------------------------------------------------------------------------*/
@@ -72,37 +72,49 @@ sensor_value(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
   int32_t value;
   if(read_sensor_value(&value)) {
-    return ctx->writer->write_float32fix(ctx, outbuf, outsize,
-                                         value, LWM2M_FLOAT32_BITS);
+    return ctx->writer->write_int(ctx, outbuf, outsize, value);
   }
   return 0;
 }
 
 static int
-read_wakeup(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+read_sampling(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
   return ctx->writer->write_int(ctx, outbuf, outsize, interval);
 }
 
 static int
-write_wakeup(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
+write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
             uint8_t *outbuf, size_t outsize)
 {
   int32_t value;
-  size_t len;
+  size_t len = 0;
 
-  len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  interval = value;
+  if(ctx)
+    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
+  else
+    value = 0;
 
-  PRINTF("New wakeup interval set: %lu\n", interval);
+  // setting value to 0 stop the timer but doesn't change the parameter
+  if(value){
+    interval = value;
+  }
 
-  if(interval){
+  if(value && periodic_timer.etimer.p != PROCESS_NONE){
     ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
   } else {
     ctimer_stop(&periodic_timer);
   }
 
   return len;
+}
+
+static int
+exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
+               uint8_t *outbuf, size_t outlen)
+{
+  ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
+  return 1;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -120,7 +132,7 @@ LWM2M_RESOURCES(illuminance_resources,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_sensor_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_OBJ_WAKEUP_INTERVAL, { read_wakeup, write_wakeup, NULL })
+                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling })
                 );
 LWM2M_INSTANCES(illuminance_instances,
                 LWM2M_INSTANCE(0, illuminance_resources));
@@ -138,7 +150,7 @@ read_sensor_value(int32_t *value)
   SENSORS_DEACTIVATE(tsl2561_sensor);
 
   /* Convert to fix float */
-  *value = (sensors_value * LWM2M_FLOAT32_FRAC);
+  *value = sensors_value;
 
   if(*value < min_sensor_value) {
     min_sensor_value = *value;

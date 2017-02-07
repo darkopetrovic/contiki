@@ -77,6 +77,7 @@
 #define UIP_ICMP_BUF ((struct uip_icmp_hdr *)&uip_buf[UIP_LLIPH_LEN + uip_ext_len])
 
 static struct ctimer ct_rdc;
+static struct ctimer disable_rdc_delay_timer;
 static rtimer_clock_t finish_time;
 static uint8_t rdc_is_on;
 
@@ -360,6 +361,18 @@ crdc_disable_rdc(uint8_t keep_radio)
     PROCESS_CONTEXT_END(&tcpip_process);
   }
   disableRDC(keep_radio);
+}
+
+static void
+disable_rdc(void* ptr)
+{
+  crdc_disable_rdc(0);
+}
+
+void
+crdc_disable_rdc_delay(uint8_t keep_radio, uint8_t delay)
+{
+  ctimer_set(&disable_rdc_delay_timer, CLOCK_SECOND*delay, disable_rdc, NULL);
 }
 
 void

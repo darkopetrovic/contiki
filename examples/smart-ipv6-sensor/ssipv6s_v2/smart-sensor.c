@@ -59,7 +59,7 @@
 
 #include "dev/button-sensor.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #if SHELL && !USB_SHELL_IN_NRMEM
@@ -96,7 +96,7 @@
 #endif
 
 #ifndef LWM2M_SERVER_ADDRESS
-#define LWM2M_SERVER_ADDRESS "bbbb::10"
+#define LWM2M_SERVER_ADDRESS "bbbb::72"
 #endif
 
 
@@ -174,25 +174,6 @@ setup_lwm2m_servers(void)
   lwm2m_engine_use_bootstrap_server(REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER);
   lwm2m_engine_use_registration_server(REGISTER_WITH_LWM2M_SERVER);
 }
-
-#if APPS_APPCONFIG
-static uint8_t
-callback(struct parameter *p)
-{
-#if APPS_POWERTRACK
-  if( !strncmp(p->name, "energest_enable", strlen(p->name)) ){
-    if(p->value){
-      powertrack_start(15*CLOCK_SECOND);
-    } else {
-      powertrack_stop();
-      powertrack_reset();
-    }
-    return 0;
-  }
-#endif
-  return 1;
-}
-#endif /* REST_DELAY_RES_START */
 
 #if DEBUG
 static char *
@@ -405,10 +386,10 @@ node_change_type(struct parameter *p)
 #if APPS_SMARTLED
       blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 3);
 #endif
+    }
 #if WITH_OMA_LWM2M
     lwm2m_engine_update_registration(30, "UQ");
 #endif
-    }
 #if SMART_ALIVE_MSG
     start_alive_msg_periodic();
 #endif
@@ -487,9 +468,6 @@ PROCESS_THREAD(controller_process, ev, data)
   app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
 #endif
 
-#if APPS_POWERTRACK
-  app_config_create_parameter(APP_CONFIG_GENERAL, "energest_enable", "1", callback);
-#endif /* APPS_POWERTRACK */
 #endif /* APPS_APPCONFIG */
 
 #if SHELL && !USB_SHELL_IN_NRMEM
@@ -584,6 +562,7 @@ PROCESS_THREAD(controller_process, ev, data)
            * is plugged in). */
           crdc_clear_stop_rdc_timer();
           crdc_disable_rdc(1);
+          lwm2m_engine_update_registration(86400, "U");
 #endif
         } else {
           leds_off(LEDS_YELLOW);
@@ -591,6 +570,7 @@ PROCESS_THREAD(controller_process, ev, data)
 #if RDC_SLEEPING_HOST
           if(NODE_TYPE_HOST){
             crdc_disable_rdc(0);
+            lwm2m_engine_update_registration(30, "UQ");
           } else {
             crdc_enable_rdc();
           }
@@ -615,10 +595,11 @@ PROCESS_THREAD(controller_process, ev, data)
         res_motion.trigger();
         res_events.trigger();
 #endif
-      }
 #if WITH_IPSO
-      ipso_presence_detection();
+        ipso_presence_detection();
 #endif
+      }
+
       /* =========== MICROPHONE DETECT ============== */
       if(data == &mic_sensor) {
         PRINTF("******* SOUND DETECTED *******\n");

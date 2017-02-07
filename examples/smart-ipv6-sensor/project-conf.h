@@ -61,7 +61,7 @@
 #define UIP_CONF_DYN_HOST_ROUTER            1
 
 #define COAP_MAX_OBSERVERS                  10
-#define LWM2M_ENGINE_CONF_MAX_OBJECTS       20
+#define LWM2M_ENGINE_CONF_MAX_OBJECTS       15
 
 /* ********************************************************************** */
 /* RPL configuration                                                      */
@@ -116,10 +116,10 @@
 #define UIP_CONF_BUFFER_SIZE                400
 
 /** Reduce the maximum amount of concurrent UDP connections (default 10). */
-#define UIP_CONF_UDP_CONNS                  5
+#define UIP_CONF_UDP_CONNS                  3
 
 /** Maximum routes to store */
-#define UIP_CONF_MAX_ROUTES                 5
+#define UIP_CONF_MAX_ROUTES                 2
 
 /* Expected reassembly requirements   */
 #define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    4

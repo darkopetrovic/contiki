@@ -16,7 +16,7 @@
 #include "platform-sensors.h"
 #endif
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #if ENERGEST_CONF_ON
@@ -29,6 +29,7 @@ PROCESS(powertrack_process, "Periodic power tracking");
 
 static struct etimer periodic;
 energest_data_t energest_data;
+energest_data_repr_t energest_data_repr;
 static double charge_consumed_xago;
 static uint32_t last_cpu, last_lpm, last_transmit, last_listen;
 #if CONTIKIMAC_CONF_COMPOWER
@@ -46,6 +47,8 @@ energest_compute(void)
 #endif
 
   uint32_t sup_lpm = 0;
+
+  PRINTF("Compute energest.\n");
 
   energest_flush();
 
@@ -79,6 +82,10 @@ energest_compute(void)
   energest_data.all_sensors_ina3221 = energest_type_time(ENERGEST_TYPE_SENSORS_INA3221);
   energest_data.all_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
   energest_data.all_sensors_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
+  energest_data.all_sensors_bmp280 = energest_type_time(ENERGEST_TYPE_SENSORS_BMP280);
+  energest_data.all_sensors_tsl2561 = energest_type_time(ENERGEST_TYPE_SENSORS_TSL2561);
+  energest_data.all_sensors_ccs811 = energest_type_time(ENERGEST_TYPE_SENSORS_CCS811);
+  energest_data.all_sensors_mic = energest_type_time(ENERGEST_TYPE_SENSORS_MIC);
 #endif
 
 
@@ -140,7 +147,11 @@ energest_compute(void)
 #if CONTIKI_TARGET_SSIPV6S_V2
       + (float)energest_data.all_sensors_ina3221/RTIMER_SECOND * I_INA3221 \
       + (float)energest_data.all_sensors_sht21/RTIMER_SECOND * I_SHT21 \
-      + (float)energest_data.all_sensors_pir/RTIMER_SECOND * I_PIR
+      + (float)energest_data.all_sensors_pir/RTIMER_SECOND * I_PIR \
+      + (float)energest_data.all_sensors_bmp280/RTIMER_SECOND * I_BMP280 \
+      + (float)energest_data.all_sensors_tsl2561/RTIMER_SECOND * I_TSL2561 \
+      + (float)energest_data.all_sensors_ccs811/RTIMER_SECOND * I_CCS811 \
+      + (float)energest_data.all_sensors_mic/RTIMER_SECOND * I_MIC
 #endif
       + (float)energest_data.all_leds/RTIMER_SECOND * I_LED;
 
@@ -154,7 +165,27 @@ energest_compute(void)
       * 3600;
 #endif
 
+  /* Compute representational data */
+  energest_data_repr.all_cpu = (uint32_t)((float)energest_data.all_cpu/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_lpm = (uint32_t)((float)energest_data.all_lpm/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_transmit = (uint32_t)((float)energest_data.all_transmit/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_listen = (uint32_t)((float)energest_data.all_listen/RTIMER_SECOND*REPR_TIME);
+#if CONTIKIMAC_CONF_COMPOWER
+  energest_data_repr.all_idle_transmit = (uint32_t)((float)energest_data.all_idle_transmit/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_idle_listen = (uint32_t)((float)energest_data.all_idle_listen/RTIMER_SECOND*REPR_TIME);
+#endif
+#if CONTIKI_TARGET_SSIPV6S_V2
+  energest_data_repr.all_sensors_ina3221 = (uint32_t)((float)energest_data.all_sensors_ina3221/RTIMER_SECOND*REPR_TIME*REPR_TIME);
+  energest_data_repr.all_sensors_sht21 = (uint32_t)((float)energest_data.all_sensors_sht21/RTIMER_SECOND*REPR_TIME*REPR_TIME);
+  energest_data_repr.all_sensors_pir = (uint32_t)((float)energest_data.all_sensors_pir/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_sensors_bmp280 = (uint32_t)((float)energest_data.all_sensors_bmp280/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_sensors_tsl2561 = (uint32_t)((float)energest_data.all_sensors_tsl2561/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_sensors_ccs811 = (uint32_t)((float)energest_data.all_sensors_ccs811/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_sensors_mic = (uint32_t)((float)energest_data.all_sensors_mic/RTIMER_SECOND*REPR_TIME);
+#endif
+  energest_data_repr.all_leds = (uint32_t)((float)energest_data.all_leds/RTIMER_SECOND*REPR_TIME);
 }
+
 PROCESS_THREAD(powertrack_process, ev, data)
 {
   clock_time_t *period = NULL;

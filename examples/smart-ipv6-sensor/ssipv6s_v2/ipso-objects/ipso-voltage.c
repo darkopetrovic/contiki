@@ -66,8 +66,8 @@ static int32_t min_battery_value;
 static int32_t max_battery_value;
 static int32_t min_solar_value;
 static int32_t max_solar_value;
-static int32_t interval_battery;
-static int32_t interval_solar;
+static int32_t interval_battery=10;
+static int32_t interval_solar=10;
 static int read_battery_voltage(int32_t *value);
 static int read_solar_voltage(int32_t *value);
 static void handle_periodic_timer_battery(void *ptr);
@@ -96,24 +96,29 @@ solar_value(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 }
 
 static int
-read_wakeup1(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+read_sampling1(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
   return ctx->writer->write_int(ctx, outbuf, outsize, interval_battery);
 }
 
 static int
-write_wakeup1(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
+write_sampling1(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
             uint8_t *outbuf, size_t outsize)
 {
   int32_t value;
-  size_t len;
+  size_t len = 0;
 
-  len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  interval_battery = value;
+  if(ctx)
+    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
+  else
+    value = 0;
 
-  PRINTF("New wakeup interval set: %lu\n", interval_battery);
+  // setting value to 0 stop the timer but doesn't change the parameter
+  if(value){
+    interval_battery = value;
+  }
 
-  if(interval_battery){
+  if(value && periodic_timer_battery.etimer.p != PROCESS_NONE){
     ctimer_set(&periodic_timer_battery, CLOCK_SECOND * interval_battery, handle_periodic_timer_battery, NULL);
   } else {
     ctimer_stop(&periodic_timer_battery);
@@ -123,30 +128,51 @@ write_wakeup1(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 }
 
 static int
-read_wakeup2(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+exec_sampling1(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
+               uint8_t *outbuf, size_t outlen)
+{
+  ctimer_set(&periodic_timer_battery, CLOCK_SECOND * interval_battery, handle_periodic_timer_battery, NULL);
+  return 1;
+}
+
+static int
+read_sampling2(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
   return ctx->writer->write_int(ctx, outbuf, outsize, interval_solar);
 }
 
 static int
-write_wakeup2(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
+write_sampling2(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
             uint8_t *outbuf, size_t outsize)
 {
   int32_t value;
-  size_t len;
+  size_t len = 0;
 
-  len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  interval_solar = value;
+  if(ctx)
+    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
+  else
+    value = 0;
 
-  PRINTF("New wakeup interval set: %lu\n", interval_solar);
+  // setting value to 0 stop the timer but doesn't change the parameter
+  if(value){
+    interval_battery = value;
+  }
 
-  if(interval_solar){
+  if(value && periodic_timer_solar.etimer.p != PROCESS_NONE){
     ctimer_set(&periodic_timer_solar, CLOCK_SECOND * interval_solar, handle_periodic_timer_solar, NULL);
   } else {
     ctimer_stop(&periodic_timer_solar);
   }
 
   return len;
+}
+
+static int
+exec_sampling2(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
+               uint8_t *outbuf, size_t outlen)
+{
+  ctimer_set(&periodic_timer_solar, CLOCK_SECOND * interval_solar, handle_periodic_timer_solar, NULL);
+  return 1;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -165,7 +191,7 @@ LWM2M_RESOURCES(voltage_resources_battery,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_battery_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_OBJ_WAKEUP_INTERVAL, { read_wakeup1, write_wakeup1, NULL })
+                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling1, write_sampling1, exec_sampling1 })
                 );
 
 LWM2M_RESOURCES(voltage_resources_solar,
@@ -183,7 +209,7 @@ LWM2M_RESOURCES(voltage_resources_solar,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_solar_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_OBJ_WAKEUP_INTERVAL, { read_wakeup2, write_wakeup2, NULL })
+                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling2, write_sampling2, exec_sampling2 })
                 );
 
 
