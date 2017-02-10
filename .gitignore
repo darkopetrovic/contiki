@@ -130,3 +130,11 @@ LOG_OPENOCD
 *.jlink
 *.nrf52dk
 /.project
+.ccsproject
+.launches/Contiki-3.x-CC2538EM.launch
+.settings/org.eclipse.cdt.codan.core.prefs
+.settings/org.eclipse.cdt.debug.core.prefs
+.settings/org.eclipse.core.resources.prefs
+targetConfigs/CC2538SF53.ccxml
+targetConfigs/readme.txt
+us.stackdump

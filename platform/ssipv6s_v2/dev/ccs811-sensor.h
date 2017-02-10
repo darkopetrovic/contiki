@@ -24,8 +24,6 @@
 
 #define CCS811_SENSOR         "CCS811"
 
-
-
 /**
  * If set, the device goes in PM2 during measurement.
  * In the hold master mode, the SHT2x pulls down the SCL
@@ -36,11 +34,11 @@
  */
 #define CCS811_NO_HOLD_MODE     1
 
-#define CCS811_PWR_PORT_BASE  GPIO_PORT_TO_BASE(CCS811_PWR_PORT)
+#define CCS811_PWR_PORT_BASE    GPIO_PORT_TO_BASE(CCS811_PWR_PORT)
 #define CCS811_PWR_PIN_MASK     GPIO_PIN_MASK(CCS811_PWR_PIN)
 #define CCS811_NWAKE_PORT_BASE  GPIO_PORT_TO_BASE(CCS811_NWAKE_PORT)
-#define CCS811_NWAKE_PIN_MASK     GPIO_PIN_MASK(CCS811_NWAKE_PIN)
-#define CCS811_RST_PORT_BASE  GPIO_PORT_TO_BASE(CCS811_RST_PORT)
+#define CCS811_NWAKE_PIN_MASK   GPIO_PIN_MASK(CCS811_NWAKE_PIN)
+#define CCS811_RST_PORT_BASE    GPIO_PORT_TO_BASE(CCS811_RST_PORT)
 #define CCS811_RST_PIN_MASK     GPIO_PIN_MASK(CCS811_RST_PIN)
 
 /* -----------------------------------------------------------------*/
@@ -59,23 +57,23 @@
  * @{
  */
 
-#define CCS811_STATUS       0x00
-#define CCS811_MEAS_MODE      0x01
-#define CCS811_ALG_RESULT_DATA    0x02
-#define CCS811_RAW_DATA       0x03
-#define CCS811_ENV_DATA       0x05
-#define CCS811_NTC          0x06
-#define CCS811_THRESHOLDS     0x10
-#define CCS811_BASELINE       0x11
-#define CCS811_HW_ID        0x20
+#define CCS811_STATUS           0x00
+#define CCS811_MEAS_MODE        0x01
+#define CCS811_ALG_RESULT_DATA  0x02
+#define CCS811_RAW_DATA         0x03
+#define CCS811_ENV_DATA         0x05
+#define CCS811_NTC              0x06
+#define CCS811_THRESHOLDS       0x10
+#define CCS811_BASELINE         0x11
+#define CCS811_HW_ID            0x20
 #define CCS811_HW_ID_DATA       0x81
-#define CCS811_HW VERSION     0x21
-#define CCS811_FW_BOOT_VERSION    0x23
+#define CCS811_HW VERSION       0x21
+#define CCS811_FW_BOOT_VERSION  0x23
 #define CCS811_FW_APP_VERSION   0x24
-#define CCS811_ERROR_ID       0xE0
-#define CCS811_SW_RESET       0xFF
+#define CCS811_ERROR_ID         0xE0
+#define CCS811_SW_RESET         0xFF
 
-#define CCS811_APP_START      0xF4
+#define CCS811_APP_START        0xF4
 
 /** @} */
 /****************************************************/
@@ -84,7 +82,7 @@
 #define CCS811_FW_MODE        (1 << 7)
 #define CCS811_APP_VALID      (1 << 4)
 #define CCS811_DATA_RDY       (1 << 3)
-#define CCS811_ERROR        (1 << 0)
+#define CCS811_ERROR          (1 << 0)
 /****************************************************/
 /**\name CCS811_MEAS_MODE DEFINITION        */
 /****************************************************/
@@ -93,24 +91,24 @@
 #define CCS811_DRIVE_MODE_2     (2 << 4)
 #define CCS811_DRIVE_MODE_3     (3 << 4)
 #define CCS811_DRIVE_MODE_4     (4 << 4)
-#define CCS811_INTERRUPT      (1 << 3)
-#define CCS811_THRES        (1 << 2)
+#define CCS811_INTERRUPT        (1 << 3)
+#define CCS811_THRES            (1 << 2)
 /****************************************************/
 /**\name CCS811_ERROR_ID DEFINITION         */
 /****************************************************/
-#define CCS_811_HEATER_SUPPLY   (1 << 5)
-#define CCS_811_HEATER_FAULT    (1 << 4)
+#define CCS_811_HEATER_SUPPLY     (1 << 5)
+#define CCS_811_HEATER_FAULT      (1 << 4)
 #define CCS_811_MAX_RESISTANCE    (1 << 3)
 #define CCS_811_MEASMODE_INVALID  (1 << 2)
 #define CCS_811_READ_REG_INVALID  (1 << 1)
-#define CCS_811_MSG_INVALID     (1 << 0)
+#define CCS_811_MSG_INVALID       (1 << 0)
 
 
-#define CCS811_MODE_IDLE    CCS811_DRIVE_MODE_0
-#define CCS811_MODE_SECOND    CCS811_DRIVE_MODE_1
+#define CCS811_MODE_IDLE        CCS811_DRIVE_MODE_0
+#define CCS811_MODE_SECOND      CCS811_DRIVE_MODE_1
 #define CCS811_MODE_10_SECONDS  CCS811_DRIVE_MODE_2
 #define CCS811_MODE_60_SECONDS  CCS811_DRIVE_MODE_3
-#define CCS811_MODE_250_MS    CCS811_DRIVE_MODE_4
+#define CCS811_MODE_250_MS      CCS811_DRIVE_MODE_4
 
 
 
@@ -122,21 +120,21 @@
  *
  * @{
  */
-#define  CCS811_ERR_NONE        0x00
+#define  CCS811_ERR_NONE              0x00
 #define  CCS811_ERR_WRITE_REGISTER    0x01
-#define  CCS811_ERR_READ_ID       0x02
-#define  CCS811_ERR_BAD_ID        0x03
-#define  CCS811_ERR_WRITE_MODE      0x04
-#define  CCS811_ERR_READ_STATUS     0x05
-#define  CCS811_ERR_READ_MODE     0x06
-#define  CCS811_ERR_POWER_OFF     0x07
-#define  CCS811_ERR_POWER_ON      0x08
-#define  CCS811_ERR_SET_MODE      0x09
-#define  CCS811_ERR_READ_MEASURE    0x0A
-#define  CCS811_ERR_READ_BASELINE   0x0B
-#define  CCS811_ERR_SET_BASELINE    0x0C
+#define  CCS811_ERR_READ_ID           0x02
+#define  CCS811_ERR_BAD_ID            0x03
+#define  CCS811_ERR_WRITE_MODE        0x04
+#define  CCS811_ERR_READ_STATUS       0x05
+#define  CCS811_ERR_READ_MODE         0x06
+#define  CCS811_ERR_POWER_OFF         0x07
+#define  CCS811_ERR_POWER_ON          0x08
+#define  CCS811_ERR_SET_MODE          0x09
+#define  CCS811_ERR_READ_MEASURE      0x0A
+#define  CCS811_ERR_READ_BASELINE     0x0B
+#define  CCS811_ERR_SET_BASELINE      0x0C
 #define  CCS811_ERR_WRITE_ENV_DATA    0x0D
-#define  CCS811_ERR_APP_START     0x0E
+#define  CCS811_ERR_APP_START         0x0E
 /** @} */
 
 /**

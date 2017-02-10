@@ -84,8 +84,6 @@ read_sensor(uint8_t *reg)
 /*!**********************************************************************************
  * \brief       Set humidity and temperature values for sensor correction
  *
- * \param reg     Location where to store the values
- *
  * \return      \ref CCS811_ERR_NONE if success
  ***********************************************************************************/
 static uint16_t
@@ -361,7 +359,7 @@ configure(int type, int value)
 #endif
     break;
     case SENSORS_DO_MEASURE:
-      // start measure one shot (mode WEATHER or SMARTSNESOR)
+      // start measure one shot (mode WEATHER or SMARTSENSOR)
       if( (err = read_sensor(data)) != CCS811_ERR_NONE){
         return err | CCS811_ERR_READ_MEASURE<<8;
       }

@@ -35,7 +35,7 @@
 
 /**
  * \file
- *         Implementation of OMA LWM2M / IPSO Micro
+ *         Implementation of proprietary Microphone object
  * \author
  *         Darko Petrovic <darko.petrovic@hevs.ch>
  *
@@ -52,15 +52,14 @@
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
-
-static uint8_t power_state;
 static uint32_t detection_counter;
 static struct ctimer microclap_timer;
 
 static int
 read_power_state(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
-  return ctx->writer->write_int(ctx, outbuf, outsize, power_state);
+  int real_power_status = mic_sensor.status(MIC_POWER);
+  return ctx->writer->write_int(ctx, outbuf, outsize, real_power_status);
 }
 
 static int
@@ -70,8 +69,7 @@ write_power_state(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
   int32_t value;
   size_t len;
   len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  power_state = value;
-  mic_sensor.configure(SENSORS_ACTIVE, power_state);
+  mic_sensor.configure(SENSORS_ACTIVE, value);
   return len;
 }
 
@@ -83,7 +81,7 @@ LWM2M_RESOURCES(microclap_resources,
                 );
 LWM2M_INSTANCES(microclap_instances,
                 LWM2M_INSTANCE(0, microclap_resources));
-LWM2M_OBJECT(microclap, IPSO_OBJ_MICROCLAP, microclap_instances);
+LWM2M_OBJECT(microclap, OBJ_MICROCLAP, microclap_instances);
 /*---------------------------------------------------------------------------*/
 
 static void

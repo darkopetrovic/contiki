@@ -144,7 +144,7 @@ LWM2M_RESOURCES(energest_resources,
           LWM2M_RESOURCE_CALLBACK(8100, { NULL, NULL, reset_counter})
                 );
 LWM2M_INSTANCES(energest_instances, LWM2M_INSTANCE(0, energest_resources));
-LWM2M_OBJECT(energest, 7500, energest_instances);
+LWM2M_OBJECT(energest, OBJ_ENERGEST, energest_instances);
 /*---------------------------------------------------------------------------*/
 void
 ipso_energest_init(void)

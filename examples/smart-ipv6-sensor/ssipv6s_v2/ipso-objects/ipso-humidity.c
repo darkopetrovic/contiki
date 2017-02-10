@@ -53,11 +53,11 @@
 #include "net/ip/uip-debug.h"
 
 #ifndef IPSO_HUMIDITY_MIN
-#define IPSO_HUMIDITY_MIN (-50 * LWM2M_FLOAT32_FRAC)
+#define IPSO_HUMIDITY_MIN (0 * LWM2M_FLOAT32_FRAC)
 #endif
 
 #ifndef IPSO_HUMIDITY_MAX
-#define IPSO_HUMIDITY_MAX (80 * LWM2M_FLOAT32_FRAC)
+#define IPSO_HUMIDITY_MAX (100 * LWM2M_FLOAT32_FRAC)
 #endif
 
 static struct ctimer periodic_timer;

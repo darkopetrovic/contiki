@@ -55,7 +55,6 @@
 #define DEFAULT_SLEEP_DURATION   30000 // ms
 
 static uint8_t input_state;
-static uint8_t power_state;
 static uint32_t detection_counter;
 static uint32_t sleep_duration_ms = DEFAULT_SLEEP_DURATION;
 static struct ctimer pir_sleep;
@@ -69,7 +68,8 @@ read_state(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 static int
 read_power_state(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
-  return ctx->writer->write_int(ctx, outbuf, outsize, power_state);
+  int real_power_status = pir_sensor.status(PIR_POWER);
+  return ctx->writer->write_int(ctx, outbuf, outsize, real_power_status);
 }
 
 static int
@@ -79,8 +79,7 @@ write_power_state(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
   int32_t value;
   size_t len;
   len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  power_state = value;
-  pir_sensor.configure(SENSORS_ACTIVE, power_state);
+  pir_sensor.configure(SENSORS_ACTIVE, value);
   return len;
 }
 

@@ -52,13 +52,8 @@
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
-#ifndef IPSO_VOLTAGE_MIN
-#define IPSO_VOLTAGE_MIN (-50 * LWM2M_FLOAT32_FRAC)
-#endif
-
-#ifndef IPSO_VOLTAGE_MAX
-#define IPSO_VOLTAGE_MAX (80 * LWM2M_FLOAT32_FRAC)
-#endif
+#define IPSO_VOLTAGE_MIN (0 * LWM2M_FLOAT32_FRAC)
+#define IPSO_VOLTAGE_MAX (4 * LWM2M_FLOAT32_FRAC)
 
 static struct ctimer periodic_timer_battery;
 static struct ctimer periodic_timer_solar;

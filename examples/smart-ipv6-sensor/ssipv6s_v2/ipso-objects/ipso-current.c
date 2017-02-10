@@ -52,13 +52,8 @@
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
-#ifndef IPSO_CURRENT_MIN
-#define IPSO_CURRENT_MIN (-50 * LWM2M_FLOAT32_FRAC)
-#endif
-
-#ifndef IPSO_CURRENT_MAX
-#define IPSO_CURRENT_MAX (80 * LWM2M_FLOAT32_FRAC)
-#endif
+#define IPSO_CURRENT_MIN  (0 * LWM2M_FLOAT32_FRAC)
+#define IPSO_CURRENT_MAX  (16 * LWM2M_FLOAT32_FRAC)
 
 static struct ctimer periodic_timer;
 static int32_t min_sensor_value;

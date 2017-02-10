@@ -52,13 +52,8 @@
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
-#ifndef IPSO_ILLUMINANCE_MIN
-#define IPSO_ILLUMINANCE_MIN (-50 * LWM2M_FLOAT32_FRAC)
-#endif
-
-#ifndef IPSO_ILLUMINANCE_MAX
-#define IPSO_ILLUMINANCE_MAX (80 * LWM2M_FLOAT32_FRAC)
-#endif
+#define IPSO_ILLUMINANCE_MIN    0
+#define IPSO_ILLUMINANCE_MAX    40000
 
 static struct ctimer periodic_timer;
 static int32_t min_sensor_value;
@@ -122,15 +117,15 @@ LWM2M_RESOURCES(illuminance_resources,
                 /* Temperature (Current) */
                 LWM2M_RESOURCE_CALLBACK(5700, { sensor_value, NULL, NULL }),
                 /* Units */
-                LWM2M_RESOURCE_STRING(5701, "%RH"),
+                LWM2M_RESOURCE_STRING(5701, "Lux"),
                 /* Min Range Value */
-                LWM2M_RESOURCE_FLOATFIX(5603, IPSO_ILLUMINANCE_MIN),
+                LWM2M_RESOURCE_INTEGER(5603, IPSO_ILLUMINANCE_MIN),
                 /* Max Range Value */
-                LWM2M_RESOURCE_FLOATFIX(5604, IPSO_ILLUMINANCE_MAX),
+                LWM2M_RESOURCE_INTEGER(5604, IPSO_ILLUMINANCE_MAX),
                 /* Min Measured Value */
-                LWM2M_RESOURCE_FLOATFIX_VAR(5601, &min_sensor_value),
+                LWM2M_RESOURCE_INTEGER_VAR(5601, &min_sensor_value),
                 /* Max Measured Value */
-                LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_sensor_value),
+                LWM2M_RESOURCE_INTEGER_VAR(5602, &max_sensor_value),
 
                 LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling })
                 );

@@ -52,13 +52,8 @@
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
-#ifndef IPSO_PRESSURE_MIN
-#define IPSO_PRESSURE_MIN (-50 * LWM2M_FLOAT32_FRAC)
-#endif
-
-#ifndef IPSO_PRESSURE_MAX
-#define IPSO_PRESSURE_MAX (80 * LWM2M_FLOAT32_FRAC)
-#endif
+#define IPSO_PRESSURE_MIN 30000
+#define IPSO_PRESSURE_MAX 110000
 
 static struct ctimer periodic_timer;
 static int32_t min_sensor_value;
@@ -124,13 +119,13 @@ LWM2M_RESOURCES(barometer_resources,
                 /* Units */
                 LWM2M_RESOURCE_STRING(5701, "Pa"),
                 /* Min Range Value */
-                LWM2M_RESOURCE_FLOATFIX(5603, IPSO_PRESSURE_MIN),
+                LWM2M_RESOURCE_INTEGER(5603, IPSO_PRESSURE_MIN),
                 /* Max Range Value */
-                LWM2M_RESOURCE_FLOATFIX(5604, IPSO_PRESSURE_MAX),
+                LWM2M_RESOURCE_INTEGER(5604, IPSO_PRESSURE_MAX),
                 /* Min Measured Value */
-                LWM2M_RESOURCE_FLOATFIX_VAR(5601, &min_sensor_value),
+                LWM2M_RESOURCE_INTEGER_VAR(5601, &min_sensor_value),
                 /* Max Measured Value */
-                LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_sensor_value),
+                LWM2M_RESOURCE_INTEGER_VAR(5602, &max_sensor_value),
 
                 LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling })
                 );

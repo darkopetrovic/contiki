@@ -56,7 +56,8 @@
 
 #define IPSO_RES_SAMPLING_INTERVAL   6000
 
-#define IPSO_OBJ_MICROCLAP        7200
+#define OBJ_ENERGEST          27000
+#define OBJ_MICROCLAP         27200
 
 void ipso_temperature_init(void);
 void ipso_humidity_init(void);
@@ -68,7 +69,11 @@ void ipso_presence_init(void);
 void ipso_presence_detection(void);
 void ipso_microclap_init(void);
 void ipso_microclap_detection(void);
+void ipso_concentration_init(void);
 void ipso_energest_init(void);
+
+void lwm2m_connectivity_init(void);
+
 
 /* the init function to register the IPSO objects */
 void ipso_objects_init(void);

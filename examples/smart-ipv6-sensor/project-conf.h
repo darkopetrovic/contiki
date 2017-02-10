@@ -61,7 +61,7 @@
 #define UIP_CONF_DYN_HOST_ROUTER            1
 
 #define COAP_MAX_OBSERVERS                  10
-#define LWM2M_ENGINE_CONF_MAX_OBJECTS       15
+#define LWM2M_ENGINE_CONF_MAX_OBJECTS       20
 
 /* ********************************************************************** */
 /* RPL configuration                                                      */

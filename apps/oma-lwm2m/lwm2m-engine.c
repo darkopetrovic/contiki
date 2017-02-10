@@ -81,7 +81,7 @@
 static const lwm2m_object_t *objects[MAX_OBJECTS];
 lwm2m_client_t lwm2m_client;
 static char registration_query[80];
-static char rd_data[128]; /* allocate some data for the RD */
+static char rd_data[160]; /* allocate some data for the RD */
 
 PROCESS(lwm2m_rd_client, "LWM2M Engine");
 

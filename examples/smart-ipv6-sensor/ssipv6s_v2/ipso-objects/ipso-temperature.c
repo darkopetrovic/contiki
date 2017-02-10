@@ -52,17 +52,8 @@
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
-#ifdef IPSO_TEMPERATURE
-extern const struct ipso_objects_sensor IPSO_TEMPERATURE;
-#endif /* IPSO_TEMPERATURE */
-
-#ifndef IPSO_TEMPERATURE_MIN
-#define IPSO_TEMPERATURE_MIN (-50 * LWM2M_FLOAT32_FRAC)
-#endif
-
-#ifndef IPSO_TEMPERATURE_MAX
-#define IPSO_TEMPERATURE_MAX (80 * LWM2M_FLOAT32_FRAC)
-#endif
+#define IPSO_TEMPERATURE_MIN (-30 * LWM2M_FLOAT32_FRAC)
+#define IPSO_TEMPERATURE_MAX (60 * LWM2M_FLOAT32_FRAC)
 
 static struct ctimer periodic_timer;
 static int32_t min_sensor_value;

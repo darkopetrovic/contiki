@@ -139,8 +139,8 @@ configure(int type, int value)
           ENERGEST_ON(ENERGEST_TYPE_SENSORS_PIR);
           PRINTF("Sensor [PIR]: Powering-on.\n");
         } else {
-          PIR_IRQ_ENABLE();
           PRINTF("Sensor [PIR]: Activation (enable interrupt).\n");
+          PIR_IRQ_ENABLE();
         }
       } else {
         PIR_IRQ_DISABLE();
