@@ -343,8 +343,8 @@ PROCESS_THREAD(shell_ifconfig_process, ev, data)
 
 
 #if UIP_CONF_IPV6_RPL
-  //printf("RPL:\n");
-  //rpl_print_neighbor_list();
+  printf("RPL:\n");
+  rpl_print_neighbor_list();
 #endif /* CONF_6LOWPAN_ND */
 
   PROCESS_END();

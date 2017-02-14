@@ -41,7 +41,11 @@
 /* Application configuration                                                       */
 /* ******************************************************************************* */
 
+#if CONTIKI_TARGET_SSIPV6S_V2
 #define LWM2M_DEVICE_MODEL_NUMBER                   "SG_"
+#else
+#define LWM2M_DEVICE_MODEL_NUMBER          "COOJA_"
+#endif
 
 #define LWM2M_CONF_REGISTRATION_RETRY_PERIOD        15
 
@@ -60,10 +64,10 @@
 /** Activate the Communication power statistics */
 #define CONTIKIMAC_CONF_COMPOWER            1
 
-#define UIP_CONF_DYN_HOST_ROUTER            1
+#define UIP_CONF_DYN_HOST_ROUTER            0
 
-#define COAP_MAX_OBSERVERS                  12
-#define LWM2M_ENGINE_CONF_MAX_OBJECTS       15
+#define COAP_MAX_OBSERVERS                  5
+#define LWM2M_ENGINE_CONF_MAX_OBJECTS       5
 
 /* ********************************************************************** */
 /* RPL configuration                                                      */
@@ -118,7 +122,7 @@
 #define UIP_CONF_UDP_CONNS                  2
 
 /** Maximum routes to store */
-#define UIP_CONF_MAX_ROUTES                 5
+#define UIP_CONF_MAX_ROUTES                 10
 
 /* Expected reassembly requirements   */
 #define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    2

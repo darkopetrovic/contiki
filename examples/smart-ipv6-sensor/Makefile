@@ -6,7 +6,7 @@ WITH_IPV6 ?= 1
 WITH_RPL ?= 1
 WITH_6LOWPAN_ND ?= 1
 
-WITH_SMARTLED ?= 1
+WITH_SMARTLED ?= 0
 WITH_SHELL ?= 0
 WITH_USBSHELL ?= 0
 WITH_UDPCLIENT ?= 0
@@ -14,6 +14,7 @@ WITH_CUSTOMRDC ?= 0
 WITH_APPCONFIG ?= 0
 WITH_COAPSERVER ?= 0
 WITH_POWERTRACK ?= 0
+WITH_OMA_LWM2M ?= 0
 
 TARGET_NAME_HOST = $(PROJECT)-host
 TARGET_NAME_ROUTER = $(PROJECT)-router
@@ -39,11 +40,13 @@ endif
 ifeq ($(WITH_CUSTOMRDC),1)
 	CFLAGS += -DAPPS_CUSTOMRDC=1
 	CFLAGS += -DRDC_CONF_SLEEPING_HOST=1
+	CFLAGS += -DRPL_CONF_LEAF_ONLY=1
 	PROJECTDIRS += $(PROJECTDIR)/apps/custom-rdc 
   PROJECT_SOURCEFILES += custom-rdc.c
 else
 	CFLAGS += -DRDC_CONF_SLEEPING_HOST=0
 	CFLAGS += -DRDC_SLEEPING_HOST=0
+	CFLAGS += -DRPL_CONF_LEAF_ONLY=0
 endif
 
 # Test routing by sending packet with an udp-client.
@@ -74,6 +77,31 @@ endif
   APPS += rest-engine
   PROJECTDIRS += $(PROJECTDIR)/apps/custom-coap
   PROJECT_SOURCEFILES += custom-coap.c
+endif
+
+ifeq ($(WITH_OMA_LWM2M),1)
+	CFLAGS += -DUIP_CONF_BUFFER_SIZE=256
+	CFLAGS += -DWITH_OMA_LWM2M=1
+	CFLAGS += -DAPPS_OMALWM2M=1
+	CFLAGS += -DWITH_IPSO=1
+ifneq ($(TARGET),native)
+	CFLAGS += -DUIP_CONF_TCP=0
+endif
+  APPS += rest-engine
+	APPS += er-coap
+	APPS += oma-lwm2m
+endif
+
+ifeq ($(WITH_OMA_LWM2M),1)
+	CFLAGS += -DUIP_CONF_BUFFER_SIZE=256
+	CFLAGS += -DWITH_OMA_LWM2M=1
+	CFLAGS += -DWITH_IPSO=1
+ifneq ($(TARGET),native)
+	CFLAGS += -DUIP_CONF_TCP=0
+endif
+  APPS += rest-engine
+	APPS += er-coap
+	APPS += oma-lwm2m
 endif
 
 ifeq ($(WITH_SMARTLED),1)
@@ -109,7 +137,9 @@ router.$(TARGET): $(PROJECT) $(TARGET_NAME_ROUTER)-rename
 $(TARGET_NAME_HOST)-rename:
 	mv $(PROJECT).$(TARGET) $(TARGET_NAME_HOST).$(TARGET)
 	rm -rf *.map contiki*.a obj_$(TARGET)
+	msp430-size $(TARGET_NAME_HOST).$(TARGET)
 
 $(TARGET_NAME_ROUTER)-rename:
 	mv $(PROJECT).$(TARGET) $(TARGET_NAME_ROUTER).$(TARGET)
 	rm -rf *.map contiki*.a obj_$(TARGET)
+	msp430-size $(TARGET_NAME_ROUTER).$(TARGET)

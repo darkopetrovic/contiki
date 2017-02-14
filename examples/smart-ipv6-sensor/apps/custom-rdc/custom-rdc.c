@@ -48,7 +48,10 @@
 #include "net/netstack.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ipv6/uip-icmp6.h"
+
+#if APPS_COAPSERVER || APPS_OMALWM2M
 #include "er-coap-engine.h"
+#endif
 
 #ifdef CONTIKI_TARGET_CC2538DK
 #include "lpm.h"
@@ -399,6 +402,16 @@ crdc_clear_stop_rdc_timer(void)
 static uint8_t
 expect_response(void)
 {
+ /* coap_packet_t message[1];
+  uint8_t confirmable_coap_msg = 0;
+
+  if( UIP_UDP_BUF->destport == COAP_DEFAULT_PORT ){
+    coap_parse_message(message, uip_appdata, uip_datalen());
+    if(message->type == COAP_TYPE_CON){
+      confirmable_coap_msg = 1;
+    }
+  }*/
+
 #if UIP_CONF_IPV6_RPL
   if( (UIP_ICMP_BUF->type == ICMP6_RS || UIP_ICMP_BUF->type == ICMP6_NS)
       || (UIP_ICMP_BUF->type == ICMP6_RPL && UIP_ICMP_BUF->icode == RPL_CODE_DIS)

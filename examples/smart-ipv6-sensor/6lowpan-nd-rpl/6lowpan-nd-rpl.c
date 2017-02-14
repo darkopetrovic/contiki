@@ -53,7 +53,7 @@
 #include "usb/usb-serial.h"
 #endif
 
-#if CONTIKI_TARGET_Z1
+#if CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE
 #include "dev/uart0.h"
 #endif
 
@@ -71,7 +71,7 @@
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
-#if CONTIKI_TARGET_Z1
+#if CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE
 /* Used to verify network status and turn on the leds in cooja.
  * Note that green is blue, red is green in the network view.
  */
@@ -101,11 +101,11 @@ SHELL_COMMAND(fast_reboot_command,
         &shell_fast_reboot_process);
 #endif /* SHELL */
 
-#if CONTIKI_TARGET_Z1 && APPS_SMARTLED
+#if (CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE) && APPS_SMARTLED
 static struct etimer status_timer;
 #endif
 
-#if CONTIKI_TARGET_Z1 && !UIP_CONF_ROUTER
+#if (CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE) && !UIP_CONF_ROUTER
 static struct etimer delay_start;
 #endif
 
@@ -114,7 +114,7 @@ static struct etimer delay_start;
 PROCESS_THREAD(nd_optimization_example, ev, data)
 {
 
-#if CONTIKI_TARGET_Z1 && APPS_SMARTLED
+#if (CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE) && APPS_SMARTLED
   uip_ds6_nbr_t *nbr;
   uip_ipaddr_t *defrt_addr;
   static uint8_t na_received;
@@ -158,11 +158,11 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
 #endif
 
 /* Delay the start of the host. Wait network to setup properly. */
-#if CONTIKI_TARGET_Z1 && !UIP_CONF_ROUTER
+#if (CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE) && !UIP_CONF_ROUTER
 
   etimer_stop(&uip_ds6_timer_rs);
 
-  etimer_set(&delay_start, CLOCK_SECOND*20);
+  etimer_set(&delay_start, CLOCK_SECOND*3);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&delay_start));
 
   PROCESS_CONTEXT_BEGIN(&tcpip_process);
@@ -172,7 +172,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   PROCESS_CONTEXT_END(&tcpip_process);
 #endif
 
-#if CONTIKI_TARGET_Z1 && APPS_SMARTLED
+#if (CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE) && APPS_SMARTLED
   etimer_set(&status_timer, CLOCK_SECOND*10);
 #endif
 
@@ -183,7 +183,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   while(1) {
     PROCESS_YIELD();
 
-#if CONTIKI_TARGET_Z1
+#if (CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE)
     /* ------------------------------------------------------------------------------------ *
      * Show network status in cooja with the leds.                                          *
      * Blue led starts blinking when the node found a router. Then turn-on permanently      *

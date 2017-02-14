@@ -64,6 +64,8 @@
 #define MAX_OBJECTS 10
 #endif /* LWM2M_ENGINE_CONF_MAX_OBJECTS */
 
+ #define IPSO_RES_SAMPLING_INTERVAL 6000
+
 /* LWM2M / CoAP Content-Formats */
 typedef enum {
   LWM2M_TEXT_PLAIN = 1541,

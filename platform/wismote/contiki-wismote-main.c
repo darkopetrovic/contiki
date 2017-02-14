@@ -404,6 +404,10 @@ main(int argc, char **argv)
 #endif /* !PROCESS_CONF_NO_PROCESS_NAMES */
   autostart_start(autostart_processes);
 
+#if RDC_SLEEPING_HOST
+  crdc_init();
+#endif /* RDC_SLEEPING_HOST */
+
   /*
    * This is the scheduler loop.
    */
@@ -433,12 +437,18 @@ main(int argc, char **argv)
 	 were awake. */
       energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
       watchdog_stop();
+#if RDC_SLEEPING_HOST && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+    if(!USB_IS_PLUGGED()){
+      crdc_lpm_enter();
+    }
+#else /* RDC_SLEEPING_HOST */
       _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF); /* LPM3 sleep. This
                                               statement will block
                                               until the CPU is
                                               woken up by an
                                               interrupt that sets
                                               the wake up flag. */
+#endif /* RDC_SLEEPING_HOST */
 
       /* We get the current processing time for interrupts that was
          done during the LPM and store it for next time around.  */

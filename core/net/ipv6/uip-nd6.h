@@ -479,12 +479,12 @@ extern nd_node_type_t node_type;
 #if UIP_CONF_ROUTER
 #define NODE_TYPE_ROUTER  1
 #define NODE_TYPE_HOST    0
-#undef RPL_LEAF_ONLY
+//#undef RPL_LEAF_ONLY
 #define RPL_CONF_LEAF_ONLY     0
 #else
 #define NODE_TYPE_ROUTER  0
 #define NODE_TYPE_HOST    1
-#undef RPL_LEAF_ONLY
+//#undef RPL_LEAF_ONLY
 #define RPL_CONF_LEAF_ONLY     1
 #endif
 #endif /* UIP_CONF_DYN_HOST_ROUTER */
