@@ -147,6 +147,7 @@ PROCESS_THREAD(nd_optimization_example, ev, data)
   serial_shell_init();
   shell_register_command(&fast_reboot_command);
   shell_ifconfig_init();
+  shell_collect_view_init();
 #if !CONTIKI_TARGET_Z1
   shell_file_init();
   shell_coffee_init();

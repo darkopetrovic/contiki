@@ -79,7 +79,7 @@
 /* 6LoWPAN-ND configuration                                               */
 /* ********************************************************************** */
 
-#define UIP_CONF_ND6_REGISTRATION_LIFETIME  5
+#define UIP_CONF_ND6_REGISTRATION_LIFETIME  20
 
 /* ********************************************************************** */
 /* System configuration                                                   */
@@ -112,7 +112,7 @@
 #define UIP_CONF_UDP_CONNS                  2
 
 /** Maximum routes to store */
-#define UIP_CONF_MAX_ROUTES                 2
+#define UIP_CONF_MAX_ROUTES                 10
 
 /* Expected reassembly requirements   */
 #define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    4
