@@ -461,7 +461,7 @@ PROCESS_THREAD(controller_process, ev, data)
   app_config_create_parameter(APP_CONFIG_GENERAL, "alive_message_period", "30", change_alv_period);
 #endif
 
-  app_config_create_parameter(APP_CONFIG_GENERAL, "bripaddr", "aaaa::212:4b00:40e:fadb", NULL);
+  //app_config_create_parameter(APP_CONFIG_GENERAL, "bripaddr", "aaaa::212:4b00:40e:fadb", NULL);
 
 #if CONF_6LOWPAN_ND
   /* The time the host will be registered to the router. */

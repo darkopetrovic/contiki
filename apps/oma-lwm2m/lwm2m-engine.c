@@ -106,6 +106,7 @@ void lwm2m_server_init(void);
 static const lwm2m_instance_t *get_first_instance_of_object(uint16_t id, lwm2m_context_t *context);
 static const lwm2m_instance_t *get_instance(const lwm2m_object_t *object, lwm2m_context_t *context, int depth);
 static const lwm2m_resource_t *get_resource(const lwm2m_instance_t *instance, lwm2m_context_t *context);
+static void update_registration_callback(void *ptr);
 /*---------------------------------------------------------------------------*/
 static void
 client_chunk_handler(void *response)
@@ -116,6 +117,10 @@ client_chunk_handler(void *response)
   if(coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == CREATED_2_01){
     snprintf(lwm2m_client.location, coap_pkt->location_path_len+2, "/%s", coap_pkt->location_path);
     PRINTF("Successfully registered at: %s\n", lwm2m_client.location);
+    // update before registration timeouts on the server
+    registered = 1;
+    ctimer_set(&registration_update_timer, CLOCK_SECOND*(uint32_t)(lwm2m_client.lifetime*0.9),
+        update_registration_callback, NULL);
   } else {
     PRINTF("Failed to register. Server not found.\n");
   }
@@ -327,7 +332,7 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
 
   printf("RD Client started with '%s'\n", registration_query);
 
-  etimer_set(&et, 15 * CLOCK_SECOND);
+  etimer_set(&et, 3 * CLOCK_SECOND);
 
   while(1) {
     PROCESS_YIELD();
@@ -420,7 +425,6 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
                 update_registration_server()) {
         int pos;
         int len, i, j;
-        registered = 1;
 
         /* prepare request, TID is set by COAP_BLOCKING_REQUEST() */
         coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
@@ -453,10 +457,6 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
                lwm2m_client.endpoint, pos, rd_data);
         COAP_BLOCKING_REQUEST(&server_ipaddr, server_port, request,
                               client_chunk_handler);
-
-        // update before registration timeouts on the server
-        ctimer_set(&registration_update_timer, CLOCK_SECOND*(uint32_t)(lwm2m_client.lifetime*0.9),
-            update_registration_callback, NULL);
       }
       /* for now only register once...   registered = 0; */
       etimer_set(&et, 15 * CLOCK_SECOND);

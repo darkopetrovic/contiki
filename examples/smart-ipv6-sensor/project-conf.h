@@ -86,7 +86,7 @@
 /* 6LoWPAN-ND configuration                                               */
 /* ********************************************************************** */
 
-#define UIP_CONF_ND6_REGISTRATION_LIFETIME  5
+#define UIP_CONF_ND6_REGISTRATION_LIFETIME  10
 
 /* ********************************************************************** */
 /* System configuration                                                   */
