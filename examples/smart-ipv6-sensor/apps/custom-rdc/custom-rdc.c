@@ -48,6 +48,7 @@
 #include "net/netstack.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ipv6/uip-icmp6.h"
+#include "er-coap-engine.h"
 
 #ifdef CONTIKI_TARGET_CC2538DK
 #include "lpm.h"
@@ -67,14 +68,21 @@
 #endif
 
 #if CRDC_COAP_IS_ENALBED
+#if APPS_COAPSERVER
 #include "custom-coap.h"
+#endif
 #include "er-coap-transactions.h"
 #else
 #define coap_confirmable_transaction_exist()  0
 #define resource_pending_msg()                0
 #endif
 
+#if !APPS_COAPSERVER
+#define resource_pending_msg()                0
+#endif
+
 #define UIP_ICMP_BUF ((struct uip_icmp_hdr *)&uip_buf[UIP_LLIPH_LEN + uip_ext_len])
+#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 
 static struct ctimer ct_rdc;
 static struct ctimer disable_rdc_delay_timer;
@@ -144,7 +152,7 @@ void stop_rdc(void *ptr)
   if( coap_confirmable_transaction_exist() ){
     PRINTF("CRDC: > Confirmable notification found!\n");
   }
-
+#if APPS_COAPSERVER
   if( resource_pending_msg() ){
     resource_message_t *m = NULL;
     PRINTF("CRDC: > Blockwise transfer not finished! Remaining representations:\n");
@@ -154,6 +162,7 @@ void stop_rdc(void *ptr)
           timer_remaining(&(m->lifetime.etimer.timer)));
     }
   }
+#endif /* APPS_COAPSERVER */
 #endif /* DEBUG && CRDC_COAP_IS_ENALBED */
 
   /* Check whether the node has sent an NS message to register
@@ -218,8 +227,9 @@ crdc_lpm_enter(void)
   //uip_ds6_nbr_t *nbr;
 
   if(!rdc_is_on){
-
+#ifdef CONTIKI_TARGET_CC2538DK
     nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
+#endif /* CONTIKI_TARGET_CC2538DK */
     next_expiration = etimer_next_expiration_time();
 
     /* When 'next_expiration' is 0 that means there is no more etimer pending. And thus,
@@ -264,10 +274,15 @@ crdc_lpm_enter(void)
 #endif /* ENERGEST_CONF_ON */
 #endif /* CONTIKI_TARGET_CC2538DK */
 
+#ifdef CONTIKI_TARGET_CC2538DK
     if(!process_nevents() && rtimer_arch_next_trigger()){
       ENTER_SLEEP_MODE();
     }
-
+#else
+    if(!process_nevents()){
+      ENTER_SLEEP_MODE();
+    }
+#endif
 
     /* ZzZZzZZzZZZzzzZzzZZzzzzzzzZzZZzZzzzzzzzzzzzZZzZZZzzZZzZZZzzzZZzzzz
      * The wake-up can come from the rtimer or the gpio, nothing else.

@@ -54,7 +54,11 @@
 
 #include "contiki-conf.h"
 
-#define IPSO_RES_SAMPLING_INTERVAL   6000
+#define LWM2M_REG_LIFETIME_ROUTER     3600
+#define LWM2M_REG_LIFETIME_HOST       30
+
+#define REURES_SAMPLING_INTERVAL   6000
+#define REURES_NODE_ROUTER         6100
 
 #define OBJ_ENERGEST          27000
 #define OBJ_MICROCLAP         27200

@@ -166,24 +166,24 @@ energest_compute(void)
 #endif
 
   /* Compute representational data */
-  energest_data_repr.all_cpu = (uint32_t)((float)energest_data.all_cpu/RTIMER_SECOND*REPR_TIME);
-  energest_data_repr.all_lpm = (uint32_t)((float)energest_data.all_lpm/RTIMER_SECOND*REPR_TIME);
-  energest_data_repr.all_transmit = (uint32_t)((float)energest_data.all_transmit/RTIMER_SECOND*REPR_TIME);
-  energest_data_repr.all_listen = (uint32_t)((float)energest_data.all_listen/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_cpu = (float)(energest_data.all_cpu/RTIMER_SECOND)*REPR_TIME*(1L << 10);
+  energest_data_repr.all_lpm = (float)(energest_data.all_lpm/RTIMER_SECOND)*REPR_TIME*(1L << 10);
+  energest_data_repr.all_transmit = (float)energest_data.all_transmit/RTIMER_SECOND*REPR_TIME*(1L << 10);
+  energest_data_repr.all_listen = (float)energest_data.all_listen/RTIMER_SECOND*REPR_TIME*(1L << 10);
 #if CONTIKIMAC_CONF_COMPOWER
-  energest_data_repr.all_idle_transmit = (uint32_t)((float)energest_data.all_idle_transmit/RTIMER_SECOND*REPR_TIME);
-  energest_data_repr.all_idle_listen = (uint32_t)((float)energest_data.all_idle_listen/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_idle_transmit = (float)energest_data.all_idle_transmit/RTIMER_SECOND*REPR_TIME*(1L << 10);
+  energest_data_repr.all_idle_listen = (float)energest_data.all_idle_listen/RTIMER_SECOND*REPR_TIME*(1L << 10);
 #endif
 #if CONTIKI_TARGET_SSIPV6S_V2
-  energest_data_repr.all_sensors_ina3221 = (uint32_t)((float)energest_data.all_sensors_ina3221/RTIMER_SECOND*REPR_TIME*REPR_TIME);
-  energest_data_repr.all_sensors_sht21 = (uint32_t)((float)energest_data.all_sensors_sht21/RTIMER_SECOND*REPR_TIME*REPR_TIME);
-  energest_data_repr.all_sensors_pir = (uint32_t)((float)energest_data.all_sensors_pir/RTIMER_SECOND*REPR_TIME);
-  energest_data_repr.all_sensors_bmp280 = (uint32_t)((float)energest_data.all_sensors_bmp280/RTIMER_SECOND*REPR_TIME);
-  energest_data_repr.all_sensors_tsl2561 = (uint32_t)((float)energest_data.all_sensors_tsl2561/RTIMER_SECOND*REPR_TIME);
-  energest_data_repr.all_sensors_ccs811 = (uint32_t)((float)energest_data.all_sensors_ccs811/RTIMER_SECOND*REPR_TIME);
-  energest_data_repr.all_sensors_mic = (uint32_t)((float)energest_data.all_sensors_mic/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_sensors_ina3221 = (float)energest_data.all_sensors_ina3221/RTIMER_SECOND*REPR_TIME;
+  energest_data_repr.all_sensors_sht21 = (float)energest_data.all_sensors_sht21/RTIMER_SECOND*REPR_TIME;
+  energest_data_repr.all_sensors_pir = (float)energest_data.all_sensors_pir/RTIMER_SECOND*REPR_TIME;
+  energest_data_repr.all_sensors_bmp280 = (float)energest_data.all_sensors_bmp280/RTIMER_SECOND*REPR_TIME;
+  energest_data_repr.all_sensors_tsl2561 = (float)energest_data.all_sensors_tsl2561/RTIMER_SECOND*REPR_TIME;
+  energest_data_repr.all_sensors_ccs811 = (float)energest_data.all_sensors_ccs811/RTIMER_SECOND*REPR_TIME;
+  energest_data_repr.all_sensors_mic = (float)energest_data.all_sensors_mic/RTIMER_SECOND*REPR_TIME;
 #endif
-  energest_data_repr.all_leds = (uint32_t)((float)energest_data.all_leds/RTIMER_SECOND*REPR_TIME);
+  energest_data_repr.all_leds = (float)energest_data.all_leds/RTIMER_SECOND*REPR_TIME;
 }
 
 PROCESS_THREAD(powertrack_process, ev, data)

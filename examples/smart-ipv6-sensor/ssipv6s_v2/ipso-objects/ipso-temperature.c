@@ -128,7 +128,7 @@ LWM2M_RESOURCES(temperature_resources,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_sensor_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_samping, write_sampling, exec_sampling })
+                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_samping, write_sampling, exec_sampling })
                 );
 LWM2M_INSTANCES(temperature_instances,
                 LWM2M_INSTANCE(0, temperature_resources));

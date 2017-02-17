@@ -186,7 +186,7 @@ LWM2M_RESOURCES(voltage_resources_battery,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_battery_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling1, write_sampling1, exec_sampling1 })
+                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_sampling1, write_sampling1, exec_sampling1 })
                 );
 
 LWM2M_RESOURCES(voltage_resources_solar,
@@ -204,7 +204,7 @@ LWM2M_RESOURCES(voltage_resources_solar,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_solar_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling2, write_sampling2, exec_sampling2 })
+                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_sampling2, write_sampling2, exec_sampling2 })
                 );
 
 

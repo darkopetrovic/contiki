@@ -70,7 +70,7 @@
 /* The custom rdc looks if there is pending transations to not stop
  * the RDC if this is the case.
  * */
-#if APPS_COAPSERVER
+#if APPS_COAPSERVER || APPS_OMALWM2M
 #define CRDC_COAP_IS_ENALBED          1
 #else
 #define CRDC_COAP_IS_ENALBED          0

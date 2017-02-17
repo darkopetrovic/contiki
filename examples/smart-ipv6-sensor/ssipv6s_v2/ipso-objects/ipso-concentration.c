@@ -240,7 +240,7 @@ LWM2M_RESOURCES(co2_resource,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_INTEGER_VAR(5602, &max_co2_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling }),
+                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling }),
                 LWM2M_RESOURCE_CALLBACK(5850, {read_power_state, write_power_state, NULL}),
                 LWM2M_RESOURCE_CALLBACK(8000, {read_baseline, write_baseline, NULL}),
                 LWM2M_RESOURCE_STRING(5750, "CO2"),
@@ -261,7 +261,7 @@ LWM2M_RESOURCES(tvoc_resource,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_INTEGER_VAR(5602, &max_tvoc_value),
 
-                LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling }),
+                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling }),
                 LWM2M_RESOURCE_CALLBACK(5850, {read_power_state, write_power_state, NULL}),
                 LWM2M_RESOURCE_STRING(5750, "TVOC"),
                 LWM2M_RESOURCE_STRING(5751, "MOX Gas Sensor")

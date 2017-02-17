@@ -41,7 +41,9 @@
 /* Application configuration                                                       */
 /* ******************************************************************************* */
 
-#define LWM2M_DEVICE_MODEL_NUMBER          "SG_"
+#define LWM2M_DEVICE_MODEL_NUMBER                   "SG_"
+
+#define LWM2M_CONF_REGISTRATION_RETRY_PERIOD        15
 
 /* ******************************************************************************* */
 /* Application protocol configuration                                              */
@@ -119,10 +121,10 @@
 #define UIP_CONF_UDP_CONNS                  3
 
 /** Maximum routes to store */
-#define UIP_CONF_MAX_ROUTES                 2
+#define UIP_CONF_MAX_ROUTES                 5
 
 /* Expected reassembly requirements   */
-#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    4
+#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    3
 
 /** Maximum neighbors to store in the Neighbors Table */
 #if CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
@@ -183,5 +185,10 @@
 /* Avoid spurious current consumption at device startup if UART is not in use. */
 #define STARTUP_CONF_VERBOSE                0
 #endif
+
+#undef COAP_LINK_FORMAT_FILTERING
+#define COAP_LINK_FORMAT_FILTERING     0
+#undef COAP_PROXY_OPTION_PROCESSING
+#define COAP_PROXY_OPTION_PROCESSING   0
 
 #endif /* PROJECT_CONF_H_ */

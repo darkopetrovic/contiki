@@ -99,8 +99,6 @@
 #define LWM2M_SERVER_ADDRESS "bbbb::72"
 #endif
 
-
-
 #ifndef SMART_CONF_ALIVE_MSG
 #define SMART_ALIVE_MSG           0
 #else
@@ -352,8 +350,8 @@ node_change_type(struct parameter *p)
 #if SMART_ALIVE_MSG
     ctimer_stop(&alive_message_timer);
 #endif
-#if WITH_OMA_LWM2M
-    lwm2m_engine_update_registration(86400, "U");
+#if APPS_OMALWM2M
+    lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_ROUTER, "U");
 #endif
 
     return 0;
@@ -387,8 +385,8 @@ node_change_type(struct parameter *p)
       blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 3);
 #endif
     }
-#if WITH_OMA_LWM2M
-    lwm2m_engine_update_registration(30, "UQ");
+#if APPS_OMALWM2M
+    lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_HOST, "UQ");
 #endif
 #if SMART_ALIVE_MSG
     start_alive_msg_periodic();
@@ -562,7 +560,7 @@ PROCESS_THREAD(controller_process, ev, data)
            * is plugged in). */
           crdc_clear_stop_rdc_timer();
           crdc_disable_rdc(1);
-          lwm2m_engine_update_registration(86400, "U");
+          lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_ROUTER, "U");
 #endif
         } else {
           leds_off(LEDS_YELLOW);
@@ -570,7 +568,7 @@ PROCESS_THREAD(controller_process, ev, data)
 #if RDC_SLEEPING_HOST
           if(NODE_TYPE_HOST){
             crdc_disable_rdc(0);
-            lwm2m_engine_update_registration(30, "UQ");
+            lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_HOST, "UQ");
           } else {
             crdc_enable_rdc();
           }

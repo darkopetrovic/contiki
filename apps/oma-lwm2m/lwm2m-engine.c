@@ -97,7 +97,10 @@ static uint8_t has_registration_server_info = 0;
 static uint8_t registered = 0;
 static uint8_t bootstrapped = 0; /* bootstrap made... */
 
-static struct ctimer registration_update_timer;
+//static struct ctimer registration_update_timer;
+static struct etimer registration_update_timer;
+static char query_string[32];
+static uint8_t qs_len;
 
 void lwm2m_device_init(void);
 void lwm2m_security_init(void);
@@ -106,7 +109,6 @@ void lwm2m_server_init(void);
 static const lwm2m_instance_t *get_first_instance_of_object(uint16_t id, lwm2m_context_t *context);
 static const lwm2m_instance_t *get_instance(const lwm2m_object_t *object, lwm2m_context_t *context, int depth);
 static const lwm2m_resource_t *get_resource(const lwm2m_instance_t *instance, lwm2m_context_t *context);
-static void update_registration_callback(void *ptr);
 /*---------------------------------------------------------------------------*/
 static void
 client_chunk_handler(void *response)
@@ -116,20 +118,31 @@ client_chunk_handler(void *response)
   // get the registered path returned by the server
   if(coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == CREATED_2_01){
     snprintf(lwm2m_client.location, coap_pkt->location_path_len+2, "/%s", coap_pkt->location_path);
-    PRINTF("Successfully registered at: %s\n", lwm2m_client.location);
-    // update before registration timeouts on the server
+    PRINTF("LWM2M: Successfully registered at: %s\n", lwm2m_client.location);
     registered = 1;
-    ctimer_set(&registration_update_timer, CLOCK_SECOND*(uint32_t)(lwm2m_client.lifetime*0.9),
-        update_registration_callback, NULL);
-  } else {
-    PRINTF("Failed to register. Server not found.\n");
+
+  } else if (coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == CHANGED_2_04){
+    PRINTF("LWM2M: Successfully updated registration at: %s\n", lwm2m_client.location);
+#if RDC_SLEEPING_HOST
+  // start the rdc to receive message only in Queue mode
+  if(strchr((const char*)lwm2m_client.binding, 'Q')){
+    crdc_period_start( 5 );
+  }
+#endif
+
+  } else if (coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == NOT_FOUND_4_04){
+    PRINTF("LWM2M: Device not found on the server at: %s\n", lwm2m_client.location);
+    // registration is lost
+    registered = 0;
+  }
+
+  else {
+    PRINTF("LWM2M: Failed to update/register. Server not found.\n");
   }
 
 #if (DEBUG) & DEBUG_PRINT
   const uint8_t *chunk;
-
   int len = coap_get_payload(response, &chunk);
-
   PRINTF("|%.*s\n", len, (char *)chunk);
 #endif /* (DEBUG) & DEBUG_PRINT */
 }
@@ -159,46 +172,9 @@ has_network_access(void)
   return 1;
 }
 
-static void
-update_registration(char* query_string)
-{
-  static coap_packet_t request[1];
-
-  if(!strlen(lwm2m_client.location)){
-    return;
-  }
-
-  coap_init_message(request, COAP_TYPE_CON, COAP_POST, coap_get_mid());
-  coap_set_header_uri_path(request, lwm2m_client.location);
-  if(query_string){
-    coap_set_header_uri_query(request, query_string);
-  }
-  coap_send_message(&server_ipaddr, server_port, uip_appdata,
-        coap_serialize_message(request, uip_appdata));
-
-#if RDC_SLEEPING_HOST
-  // start the rdc to receive message only in Queue mode
-  if(strchr((const char*)lwm2m_client.binding, 'Q')){
-    crdc_period_start( 10 );
-  }
-#endif
-
-  PRINTF("Registration to the server updated (%s%s).\n", lwm2m_client.location, query_string ? query_string : "");
-}
-
-static void
-update_registration_callback(void *ptr)
-{
-  char *query_string;
-  query_string = (char *)ptr;
-  update_registration(query_string);
-  ctimer_reset(&registration_update_timer);
-}
-
 void
 lwm2m_engine_update_registration(uint32_t lifetime, const char* binding)
 {
-  char query_string[32];
   size_t len = 0;
 
   len = snprintf(query_string, sizeof(query_string) - 1, "?");
@@ -206,8 +182,6 @@ lwm2m_engine_update_registration(uint32_t lifetime, const char* binding)
   if(lifetime && lifetime != lwm2m_client.lifetime){
     lwm2m_client.lifetime = lifetime;
     len += snprintf(query_string+len, sizeof(query_string) - len, "lt=%lu", lifetime);
-    ctimer_set(&registration_update_timer, CLOCK_SECOND*(uint32_t)(lwm2m_client.lifetime*0.9),
-                update_registration_callback, NULL);
   }
 
   if(strlen(query_string) > 4){
@@ -219,7 +193,15 @@ lwm2m_engine_update_registration(uint32_t lifetime, const char* binding)
     len += snprintf(query_string+len, sizeof(query_string) - len, "b=%s", lwm2m_client.binding);
   }
 
-  update_registration( strlen(query_string) > 2 ? query_string : NULL );
+  if(strlen(query_string) > 2){
+    qs_len = strlen(query_string);
+  } else {
+    qs_len = 0;
+  }
+
+  etimer_stop(&registration_update_timer);
+  process_poll(&lwm2m_rd_client);
+
 }
 
 /*---------------------------------------------------------------------------*/
@@ -326,20 +308,20 @@ update_bootstrap_server(void)
 PROCESS_THREAD(lwm2m_rd_client, ev, data)
 {
   static coap_packet_t request[1];      /* This way the packet can be treated as pointer as usual. */
-  static struct etimer et;
 
   PROCESS_BEGIN();
 
   printf("RD Client started with '%s'\n", registration_query);
 
-  etimer_set(&et, 3 * CLOCK_SECOND);
+  etimer_set(&registration_update_timer, 15 * CLOCK_SECOND);
 
   while(1) {
     PROCESS_YIELD();
-
-    if(etimer_expired(&et)) {
+    if(etimer_expired(&registration_update_timer)) {
       if(!has_network_access()) {
         /* Wait until for a network to join */
+        PRINTF("Still no network. New attempt to register in %d seconds.\n", LWM2M_REGISTRATION_RETRY_PERIOD);
+        etimer_restart(&registration_update_timer);
       } else if(use_bootstrap && bootstrapped == 0) {
         if(update_bootstrap_server()) {
           /* prepare request, TID is set by COAP_BLOCKING_REQUEST() */
@@ -457,9 +439,36 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
                lwm2m_client.endpoint, pos, rd_data);
         COAP_BLOCKING_REQUEST(&server_ipaddr, server_port, request,
                               client_chunk_handler);
+
+        if(registered){
+          // set timer for Registration Update
+          etimer_set(&registration_update_timer, lwm2m_client.lifetime*0.9 * CLOCK_SECOND);
+        } else {
+          PRINTF("New attempt to register in %d seconds.\n", LWM2M_REGISTRATION_RETRY_PERIOD);
+          etimer_set(&registration_update_timer, LWM2M_REGISTRATION_RETRY_PERIOD * CLOCK_SECOND);
+        }
+
+      } else if (registered) {
+        // update registration
+        coap_init_message(request, COAP_TYPE_CON, COAP_POST, coap_get_mid());
+        coap_set_header_uri_path(request, lwm2m_client.location);
+        if(qs_len){
+          coap_set_header_uri_query(request, query_string);
+        }
+
+        PRINTF("LWM2M: Updating registration to the server with: %s%s.\n",
+                    lwm2m_client.location, qs_len ? query_string : "");
+        COAP_BLOCKING_REQUEST(&server_ipaddr, server_port, request,
+                                      client_chunk_handler);
+
+        if(!registered){
+          // register again immediatelly
+          etimer_set(&registration_update_timer, CLOCK_SECOND);
+        } else {
+          etimer_set(&registration_update_timer, lwm2m_client.lifetime*0.9 * CLOCK_SECOND);
+        }
+
       }
-      /* for now only register once...   registered = 0; */
-      etimer_set(&et, 15 * CLOCK_SECOND);
     }
   }
   PROCESS_END();
@@ -1125,7 +1134,7 @@ lwm2m_engine_handler(const lwm2m_object_t *object,
         /* activate resource periodic if observed */
         coap_packet_t *const coap_req = (coap_packet_t *)request;
         if(IS_OPTION(coap_req, COAP_OPTION_OBSERVE)){
-          context.resource_id = IPSO_RES_SAMPLING_INTERVAL;
+          context.resource_id = REURES_SAMPLING_INTERVAL;
           resource = get_resource(instance, &context);
           if(resource){
             if(resource->value.callback.exec != NULL) {

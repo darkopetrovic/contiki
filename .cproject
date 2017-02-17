@@ -61,7 +61,7 @@
 									<listOptionValue builtIn="false" value="USB_SHELL_IN_NRMEM=1"/>
 									<listOptionValue builtIn="false" value="APPS_POWERTRACK=1"/>
 									<listOptionValue builtIn="false" value="APPS_SMARTLED=1"/>
-									<listOptionValue builtIn="false" value="WITH_OMA_LWM2M=1"/>
+									<listOptionValue builtIn="false" value="APPS_OMALWM2M=1"/>
 									<listOptionValue builtIn="false" value="WITH_IPSO=1"/>
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.INCLUDE_PATH.2077257176" name="Include paths (-I)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.INCLUDE_PATH" valueType="includePath">
@@ -191,7 +191,7 @@
 					</fileInfo>
 					<fileInfo id="com.ti.ccstudio.buildDefinitions.TMS470.Debug.1375647854.497454548" name="smart-sensor.c" rcbsApplicability="disable" resourcePath="examples/smart-ipv6-sensor/ssipv6s_v2/smart-sensor.c" toolsToInvoke="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043.1477427266">
 						<tool id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043.1477427266" name="GNU Compiler" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.exe.compilerDebug.307888043">
-							<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.DEFINE.909491851" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.DEFINE" valueType="definedSymbols">
+							<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.DEFINE.2077375435" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compilerID.DEFINE" valueType="definedSymbols">
 								<listOptionValue builtIn="false" value="PROJECT_CONF_H=\&quot;examples\smart-ipv6-sensor\project-conf.h\&quot;"/>
 								<listOptionValue builtIn="false" value="AUTOSTART_ENABLE"/>
 								<listOptionValue builtIn="false" value="NETSTACK_CONF_WITH_IPV6=1"/>
@@ -213,7 +213,7 @@
 								<listOptionValue builtIn="false" value="USB_SHELL_IN_NRMEM=1"/>
 								<listOptionValue builtIn="false" value="APPS_POWERTRACK=1"/>
 								<listOptionValue builtIn="false" value="APPS_SMARTLED=1"/>
-								<listOptionValue builtIn="false" value="WITH_OMA_LWM2M=1"/>
+								<listOptionValue builtIn="false" value="APPS_OMALWM2M=1"/>
 								<listOptionValue builtIn="false" value="WITH_IPSO=1"/>
 							</option>
 							<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__C_SRCS.632329651" name="C Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_5.0.compiler.inputType__C_SRCS"/>

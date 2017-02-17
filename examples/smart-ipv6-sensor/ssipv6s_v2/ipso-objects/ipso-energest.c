@@ -127,20 +127,20 @@ write_power_state(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 /*---------------------------------------------------------------------------*/
 LWM2M_RESOURCES(energest_resources,
           LWM2M_RESOURCE_FLOATFIX_VAR(8001, &energest_data.charge_consumed),
-          LWM2M_RESOURCE_INTEGER_VAR(8010, &energest_data_repr.all_cpu),
-          LWM2M_RESOURCE_INTEGER_VAR(8011, &energest_data_repr.all_lpm),
-          LWM2M_RESOURCE_INTEGER_VAR(8021, &energest_data_repr.all_transmit),
-          LWM2M_RESOURCE_INTEGER_VAR(8022, &energest_data_repr.all_listen),
-          LWM2M_RESOURCE_INTEGER_VAR(8030, &energest_data_repr.all_leds),
-          LWM2M_RESOURCE_INTEGER_VAR(8040, &energest_data_repr.all_sensors_ina3221),
-          LWM2M_RESOURCE_INTEGER_VAR(8041, &energest_data_repr.all_sensors_sht21),
+          LWM2M_RESOURCE_FLOATFIX_VAR(8010, &energest_data_repr.all_cpu),
+          LWM2M_RESOURCE_FLOATFIX_VAR(8011, &energest_data_repr.all_lpm),
+          LWM2M_RESOURCE_FLOATFIX_VAR(8021, &energest_data_repr.all_transmit),
+          LWM2M_RESOURCE_FLOATFIX_VAR(8022, &energest_data_repr.all_listen),
+          LWM2M_RESOURCE_FLOATFIX_VAR(8030, &energest_data_repr.all_leds),
+          LWM2M_RESOURCE_FLOATFIX_VAR(8040, &energest_data_repr.all_sensors_ina3221),
+          LWM2M_RESOURCE_FLOATFIX_VAR(8041, &energest_data_repr.all_sensors_sht21),
           /*LWM2M_RESOURCE_INTEGER_VAR(8042, &energest_data_repr.all_sensors_pir),
           LWM2M_RESOURCE_INTEGER_VAR(8043, &energest_data_repr.all_sensors_bmp280),
           LWM2M_RESOURCE_INTEGER_VAR(8044, &energest_data_repr.all_sensors_tsl2561),
           LWM2M_RESOURCE_INTEGER_VAR(8045, &energest_data_repr.all_sensors_ccs811),
           LWM2M_RESOURCE_INTEGER_VAR(8046, &energest_data_repr.all_sensors_mic),*/
           LWM2M_RESOURCE_CALLBACK(5850, {read_power_state, write_power_state, NULL}),
-          LWM2M_RESOURCE_CALLBACK(IPSO_RES_SAMPLING_INTERVAL, { read_samping, write_sampling, exec_sampling}),
+          LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_samping, write_sampling, exec_sampling}),
           LWM2M_RESOURCE_CALLBACK(8100, { NULL, NULL, reset_counter})
                 );
 LWM2M_INSTANCES(energest_instances, LWM2M_INSTANCE(0, energest_resources));

@@ -43,7 +43,7 @@
 #include "rest-engine.h"
 #include "er-coap-observe.h"
 
-#if WITH_OMA_LWM2M
+#if APPS_OMALWM2M
 #include "lwm2m-engine.h"
 #include "ipso-objects.h"
 #endif
@@ -216,7 +216,7 @@ observer_periodic(void)
   uint8_t obsfound;
   uint8_t nb_observers = 0;
 
-#if WITH_OMA_LWM2M
+#if APPS_OMALWM2M
   uint8_t i, j, k;
   const lwm2m_object_t **objects;
   const lwm2m_resource_t *resource;
@@ -235,7 +235,7 @@ observer_periodic(void)
               /*PRINTF("Observer periodic: Looking at /%d/%d/%d\n", objects[i]->id,
                   objects[i]->instances[j].id, resource->id);*/
 
-              if(resource->id == IPSO_RES_SAMPLING_INTERVAL){
+              if(resource->id == REURES_SAMPLING_INTERVAL){
 
                 obsfound = 0;
                 for(obs = coap_get_list_observers(); obs; obs = obs->next)
@@ -300,7 +300,7 @@ observer_periodic(void)
     }
 
   } // end for
-#endif /* WITH_OMA_LWM2M */
+#endif /* APPS_OMALWM2M */
 
 
   /* Don't need to keep the observer periodic if there is zero observer. */
