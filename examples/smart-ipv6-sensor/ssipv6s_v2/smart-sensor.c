@@ -173,37 +173,6 @@ setup_lwm2m_servers(void)
   lwm2m_engine_use_registration_server(REGISTER_WITH_LWM2M_SERVER);
 }
 
-#if DEBUG
-static char *
-float2str(float num, uint8_t preci)
-{
-  int integer=(int)num, decimal=0;
-  static char buf[20];
-  preci = preci > 10 ? 10 : preci;
-  num -= integer;
-  while((num != 0) && (preci-- > 0)) {
-    decimal *= 10;
-    num *= 10;
-    decimal += (int)num;
-    num -= (int)num;
-  }
-  switch(preci){
-    case 1:
-      sprintf(buf, "%d.%01d", integer, decimal);
-      break;
-    case 2:
-      sprintf(buf, "%d.%02d", integer, decimal);
-      break;
-    case 3:
-      sprintf(buf, "%d.%03d", integer, decimal);
-      break;
-    default:
-      sprintf(buf, "%d.%01d", integer, decimal);
-  }
-  return buf;
-}
-#endif
-
 static void
 button_press_action( rtimer_clock_t delta )
 {
@@ -211,8 +180,8 @@ button_press_action( rtimer_clock_t delta )
 
   button_press_duration = (float)(delta)/RTIMER_SECOND;
 
-  PRINTF("Button pressed during %s second(s).\n",
-        float2str(button_press_duration, 2));
+  /*PRINTF("Button pressed during %s second(s).\n",
+        float2str(button_press_duration, 2));*/
 
   if( button_press_duration >= 8){
     // reset the device

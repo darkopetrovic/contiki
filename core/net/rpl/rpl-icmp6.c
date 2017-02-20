@@ -59,7 +59,7 @@
 #include <limits.h>
 #include <string.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -556,6 +556,7 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   if(NODE_TYPE_HOST){
     PRINTF("RPL: LEAF ONLY DIO rank set to INFINITE_RANK\n");
     set16(buffer, pos, INFINITE_RANK);
+    dag->rank = INFINITE_RANK;
   } else {
     set16(buffer, pos, dag->rank);
   }

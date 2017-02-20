@@ -241,8 +241,8 @@ observer_periodic(void)
                 for(obs = coap_get_list_observers(); obs; obs = obs->next)
                 {
                   nb_observers++;
-                  sprintf(path, "%d/%d/5700", objects[i]->id, objects[i]->instances[j].id);
-                  if( !strcmp(obs->url, path)  )
+                  sprintf(path, "%d/%d/", objects[i]->id, objects[i]->instances[j].id);
+                  if( !strncmp(obs->url, path, strlen(path)) )
                   {
                     obsfound = 1;
                     break;
@@ -252,7 +252,7 @@ observer_periodic(void)
                 if( !obsfound )
                 {
                   // Stop the periodic resource
-                  PRINTF("REST: (observer periodic) Observer not found for the resource '/%s' -> Stop sampling.\n",
+                  PRINTF("REST: (observer periodic) Observer not found for the resource '/%sxxxx' -> Stop sampling.\n",
                       path);
                   if(resource->value.callback.write != NULL) {
                     resource->value.callback.write(NULL, NULL, 0, NULL, 0);

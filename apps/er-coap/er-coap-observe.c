@@ -100,6 +100,14 @@ coap_remove_observer(coap_observer_t *o)
   memb_free(&observers_memb, o);
   list_remove(observers_list, o);
 }
+
+void
+coap_clear_observers(void)
+{
+  memb_init(&observers_memb);
+  list_init(observers_list);
+}
+
 /*---------------------------------------------------------------------------*/
 int
 coap_remove_observer_by_client(uip_ipaddr_t *addr, uint16_t port)
@@ -290,7 +298,7 @@ coap_observe_handler(resource_t *resource, void *request, void *response)
                                     COAP_MAX_OBSERVERS));
 #endif
         } else {
-          coap_res->code = SERVICE_UNAVAILABLE_5_03;
+          coap_res->code = NOT_FOUND_4_04;
           coap_set_payload(coap_res, "TooManyObservers", 16);
         }
       } else if(coap_req->observe == 1) {

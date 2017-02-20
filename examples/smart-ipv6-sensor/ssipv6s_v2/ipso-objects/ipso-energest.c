@@ -54,8 +54,47 @@
 #define PRINTF(...)
 #endif
 
+#define REPR_TIME 1e3 // in miliseconds
+
+typedef struct energest_data_repr {
+
+  uint32_t all_cpu;
+  uint32_t all_lpm;
+  uint32_t all_transmit;
+  uint32_t all_listen;
+  uint32_t all_flash_read;
+  uint32_t all_flash_write;
+  uint32_t all_flash_erase;
+
+#if CONTIKI_TARGET_SSIPV6S_V2
+  uint32_t all_sensors_ina3221;
+  uint32_t all_sensors_sht21;
+  uint32_t all_sensors_pir;
+  uint32_t all_sensors_bmp280;
+  uint32_t all_sensors_tsl2561;
+  uint32_t all_sensors_ccs811;
+  uint32_t all_sensors_mic;
+
+#endif
+#if CONTIKIMAC_CONF_COMPOWER
+  uint32_t idle_transmit;
+  uint32_t idle_listen;
+  uint32_t all_idle_transmit;
+  uint32_t all_idle_listen;
+#endif
+  uint32_t all_led_red;
+  uint32_t all_led_yellow;
+  uint32_t all_time;
+  uint32_t all_leds;
+
+  uint32_t charge_consumed;
+
+} energest_data_repr_t;
+
+
 static int32_t sampling_interval=10;
 static uint8_t power_state;
+static energest_data_repr_t energest_data_repr;
 
 static int
 read_samping(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
@@ -78,6 +117,9 @@ write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
   // setting value to 0 stop the timer but doesn't change the parameter
   if(value){
     sampling_interval = value;
+    powertrack_update_period(sampling_interval);
+  } else {
+    powertrack_stop();
   }
 
   return len;
@@ -87,7 +129,7 @@ static int
 exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
                uint8_t *outbuf, size_t outlen)
 {
-  powertrack_start(sampling_interval*CLOCK_SECOND);
+  powertrack_start(sampling_interval);
   power_state = 1;
   return 1;
 }
@@ -96,6 +138,7 @@ static int
 reset_counter(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
                uint8_t *outbuf, size_t outlen)
 {
+  memset((void*)&energest_data_repr, 0, sizeof(energest_data_repr_t));
   powertrack_reset();
   return 1;
 }
@@ -116,7 +159,7 @@ write_power_state(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
   power_state = value;
 
   if(power_state){
-    powertrack_start(sampling_interval*CLOCK_SECOND);
+    powertrack_start(sampling_interval);
   } else {
     powertrack_stop();
   }
@@ -126,7 +169,7 @@ write_power_state(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 
 /*---------------------------------------------------------------------------*/
 LWM2M_RESOURCES(energest_resources,
-          LWM2M_RESOURCE_FLOATFIX_VAR(8001, &energest_data.charge_consumed),
+          LWM2M_RESOURCE_FLOATFIX_VAR(8001, &energest_data_repr.charge_consumed),
           LWM2M_RESOURCE_FLOATFIX_VAR(8010, &energest_data_repr.all_cpu),
           LWM2M_RESOURCE_FLOATFIX_VAR(8011, &energest_data_repr.all_lpm),
           LWM2M_RESOURCE_FLOATFIX_VAR(8021, &energest_data_repr.all_transmit),
@@ -134,11 +177,11 @@ LWM2M_RESOURCES(energest_resources,
           LWM2M_RESOURCE_FLOATFIX_VAR(8030, &energest_data_repr.all_leds),
           LWM2M_RESOURCE_FLOATFIX_VAR(8040, &energest_data_repr.all_sensors_ina3221),
           LWM2M_RESOURCE_FLOATFIX_VAR(8041, &energest_data_repr.all_sensors_sht21),
-          /*LWM2M_RESOURCE_INTEGER_VAR(8042, &energest_data_repr.all_sensors_pir),
+          LWM2M_RESOURCE_INTEGER_VAR(8042, &energest_data_repr.all_sensors_pir),
           LWM2M_RESOURCE_INTEGER_VAR(8043, &energest_data_repr.all_sensors_bmp280),
           LWM2M_RESOURCE_INTEGER_VAR(8044, &energest_data_repr.all_sensors_tsl2561),
           LWM2M_RESOURCE_INTEGER_VAR(8045, &energest_data_repr.all_sensors_ccs811),
-          LWM2M_RESOURCE_INTEGER_VAR(8046, &energest_data_repr.all_sensors_mic),*/
+          LWM2M_RESOURCE_INTEGER_VAR(8046, &energest_data_repr.all_sensors_mic),
           LWM2M_RESOURCE_CALLBACK(5850, {read_power_state, write_power_state, NULL}),
           LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_samping, write_sampling, exec_sampling}),
           LWM2M_RESOURCE_CALLBACK(8100, { NULL, NULL, reset_counter})
@@ -146,9 +189,43 @@ LWM2M_RESOURCES(energest_resources,
 LWM2M_INSTANCES(energest_instances, LWM2M_INSTANCE(0, energest_resources));
 LWM2M_OBJECT(energest, OBJ_ENERGEST, energest_instances);
 /*---------------------------------------------------------------------------*/
+
+static void
+callback()
+{
+  /* Compute representational data */
+
+  energest_data_repr.charge_consumed = energest_data.charge_consumed*LWM2M_FLOAT32_FRAC;
+
+  energest_data_repr.all_cpu = ((float)energest_data.all_cpu/RTIMER_SECOND)*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_lpm = ((float)energest_data.all_lpm/RTIMER_SECOND)*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_transmit = (float)energest_data.all_transmit/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_listen = (float)energest_data.all_listen/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+#if CONTIKIMAC_CONF_COMPOWER
+  energest_data_repr.all_idle_transmit = (float)energest_data.all_idle_transmit/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_idle_listen = (float)energest_data.all_idle_listen/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+#endif
+#if CONTIKI_TARGET_SSIPV6S_V2
+  energest_data_repr.all_sensors_ina3221 = (float)energest_data.all_sensors_ina3221/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_sensors_sht21 = (float)energest_data.all_sensors_sht21/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_sensors_pir = (float)energest_data.all_sensors_pir/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_sensors_bmp280 = (float)energest_data.all_sensors_bmp280/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_sensors_tsl2561 = (float)energest_data.all_sensors_tsl2561/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_sensors_ccs811 = (float)energest_data.all_sensors_ccs811/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+  energest_data_repr.all_sensors_mic = (float)energest_data.all_sensors_mic/RTIMER_SECOND*REPR_TIME*LWM2M_FLOAT32_FRAC;
+#endif
+  energest_data_repr.all_leds = (float)energest_data.all_leds/RTIMER_SECOND*REPR_TIME;
+
+  lwm2m_object_notify_observers(&energest, "/0/8001");
+}
+
+
 void
 ipso_energest_init(void)
 {
+
+  powertrack_set_callback(callback);
+
   /**
    * Register this device and its handlers - the handlers
    * automatically sends in the object to handle.

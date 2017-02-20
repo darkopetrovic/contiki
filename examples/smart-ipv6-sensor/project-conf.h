@@ -62,8 +62,8 @@
 
 #define UIP_CONF_DYN_HOST_ROUTER            1
 
-#define COAP_MAX_OBSERVERS                  10
-#define LWM2M_ENGINE_CONF_MAX_OBJECTS       20
+#define COAP_MAX_OBSERVERS                  12
+#define LWM2M_ENGINE_CONF_MAX_OBJECTS       15
 
 /* ********************************************************************** */
 /* RPL configuration                                                      */
@@ -115,16 +115,16 @@
 /** Enable USB (commands and print) */
 #define DBG_CONF_USB                        0
 
-#define UIP_CONF_BUFFER_SIZE                400
+#define UIP_CONF_BUFFER_SIZE                370
 
 /** Reduce the maximum amount of concurrent UDP connections (default 10). */
-#define UIP_CONF_UDP_CONNS                  3
+#define UIP_CONF_UDP_CONNS                  2
 
 /** Maximum routes to store */
 #define UIP_CONF_MAX_ROUTES                 5
 
 /* Expected reassembly requirements   */
-#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    3
+#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    2
 
 /** Maximum neighbors to store in the Neighbors Table */
 #if CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
@@ -159,7 +159,7 @@
 #define COFFEE_CONF_NAME_LENGTH             60
 #endif
 
-#if CONTIKI_TARGET_Z1
+#if CONTIKI_TARGET_Z1 || CONTIKI_TARGET_WISMOTE
 #define ENTER_SLEEP_MODE()  _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF)
 #endif
 

@@ -29,12 +29,13 @@ PROCESS(powertrack_process, "Periodic power tracking");
 
 static struct etimer periodic;
 energest_data_t energest_data;
-energest_data_repr_t energest_data_repr;
 static double charge_consumed_xago;
 static uint32_t last_cpu, last_lpm, last_transmit, last_listen;
 #if CONTIKIMAC_CONF_COMPOWER
 static uint32_t last_idle_transmit, last_idle_listen;
 #endif
+
+static void (* callback)(void);
 
 static void
 energest_compute(void)
@@ -130,7 +131,8 @@ energest_compute(void)
 #endif
 
 #if CONTIKI_TARGET_SSIPV6S_V2
-  sup_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21;
+  sup_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21
+      + energest_data.all_sensors_bmp280 + energest_data.all_sensors_tsl2561;
 #endif
 
   energest_data.charge_consumed =
@@ -165,25 +167,6 @@ energest_compute(void)
       * 3600;
 #endif
 
-  /* Compute representational data */
-  energest_data_repr.all_cpu = (float)(energest_data.all_cpu/RTIMER_SECOND)*REPR_TIME*(1L << 10);
-  energest_data_repr.all_lpm = (float)(energest_data.all_lpm/RTIMER_SECOND)*REPR_TIME*(1L << 10);
-  energest_data_repr.all_transmit = (float)energest_data.all_transmit/RTIMER_SECOND*REPR_TIME*(1L << 10);
-  energest_data_repr.all_listen = (float)energest_data.all_listen/RTIMER_SECOND*REPR_TIME*(1L << 10);
-#if CONTIKIMAC_CONF_COMPOWER
-  energest_data_repr.all_idle_transmit = (float)energest_data.all_idle_transmit/RTIMER_SECOND*REPR_TIME*(1L << 10);
-  energest_data_repr.all_idle_listen = (float)energest_data.all_idle_listen/RTIMER_SECOND*REPR_TIME*(1L << 10);
-#endif
-#if CONTIKI_TARGET_SSIPV6S_V2
-  energest_data_repr.all_sensors_ina3221 = (float)energest_data.all_sensors_ina3221/RTIMER_SECOND*REPR_TIME;
-  energest_data_repr.all_sensors_sht21 = (float)energest_data.all_sensors_sht21/RTIMER_SECOND*REPR_TIME;
-  energest_data_repr.all_sensors_pir = (float)energest_data.all_sensors_pir/RTIMER_SECOND*REPR_TIME;
-  energest_data_repr.all_sensors_bmp280 = (float)energest_data.all_sensors_bmp280/RTIMER_SECOND*REPR_TIME;
-  energest_data_repr.all_sensors_tsl2561 = (float)energest_data.all_sensors_tsl2561/RTIMER_SECOND*REPR_TIME;
-  energest_data_repr.all_sensors_ccs811 = (float)energest_data.all_sensors_ccs811/RTIMER_SECOND*REPR_TIME;
-  energest_data_repr.all_sensors_mic = (float)energest_data.all_sensors_mic/RTIMER_SECOND*REPR_TIME;
-#endif
-  energest_data_repr.all_leds = (float)energest_data.all_leds/RTIMER_SECOND*REPR_TIME;
 }
 
 PROCESS_THREAD(powertrack_process, ev, data)
@@ -197,7 +180,7 @@ PROCESS_THREAD(powertrack_process, ev, data)
   if(period == NULL) {
     PROCESS_EXIT();
   }
-  etimer_set(&periodic, *period);
+  etimer_set(&periodic, *period*CLOCK_SECOND);
 
   while(1) {
     PROCESS_WAIT_UNTIL(etimer_expired(&periodic));
@@ -212,6 +195,8 @@ PROCESS_THREAD(powertrack_process, ev, data)
         energest_data.remaining_charge*1e6 / energest_data.avg_current;
 #endif
     charge_consumed_xago = energest_data.charge_consumed;
+
+    callback();
   }
 
   PROCESS_END();
@@ -228,6 +213,16 @@ powertrack_stop(void)
 {
   PRINTF("Stopping power tracking.\n");
   process_exit(&powertrack_process);
+}
+
+void
+powertrack_update_period(clock_time_t period)
+{
+  if(process_is_running(&powertrack_process)){
+    PROCESS_CONTEXT_BEGIN(&powertrack_process);
+    etimer_set(&periodic, period*CLOCK_SECOND);
+    PROCESS_CONTEXT_END(&powertrack_process);
+  }
 }
 
 void
@@ -254,6 +249,12 @@ powertrack_reset(void)
   PROCESS_CONTEXT_BEGIN(&powertrack_process);
   etimer_restart(&periodic);
   PROCESS_CONTEXT_END(&powertrack_process);
+}
+
+void
+powertrack_set_callback(void* cb)
+{
+  callback = cb;
 }
 
 #endif /* ENERGEST_CONF_ON */

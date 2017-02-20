@@ -15,8 +15,6 @@
 #ifndef _POWER_TRACK_H
 #define _POWER_TRACK_H
 
-#define REPR_TIME 1e3 // in miliseconds
-
 typedef struct energest_data {
 
   uint32_t all_cpu;
@@ -64,41 +62,7 @@ typedef struct energest_data {
 #endif
 } energest_data_t;
 
-typedef struct energest_data_repr {
-
-  uint32_t all_cpu;
-  uint32_t all_lpm;
-  uint32_t all_transmit;
-  uint32_t all_listen;
-  uint32_t all_flash_read;
-  uint32_t all_flash_write;
-  uint32_t all_flash_erase;
-
-#if CONTIKI_TARGET_SSIPV6S_V2
-  uint32_t all_sensors_ina3221;
-  uint32_t all_sensors_sht21;
-  uint32_t all_sensors_pir;
-  uint32_t all_sensors_bmp280;
-  uint32_t all_sensors_tsl2561;
-  uint32_t all_sensors_ccs811;
-  uint32_t all_sensors_mic;
-
-#endif
-#if CONTIKIMAC_CONF_COMPOWER
-  uint32_t idle_transmit;
-  uint32_t idle_listen;
-  uint32_t all_idle_transmit;
-  uint32_t all_idle_listen;
-#endif
-  uint32_t all_led_red;
-  uint32_t all_led_yellow;
-  uint32_t all_time;
-  uint32_t all_leds;
-
-} energest_data_repr_t;
-
 extern energest_data_t energest_data;
-extern energest_data_repr_t energest_data_repr;
 
 /**
  * \name Current consumption in A
@@ -125,6 +89,8 @@ extern energest_data_repr_t energest_data_repr;
 void powertrack_start(clock_time_t period);
 void powertrack_stop(void);
 void powertrack_reset(void);
+void powertrack_update_period(clock_time_t period);
+void powertrack_set_callback(void* cb);
 
 #endif /* _POWER_TRACK_H */
 

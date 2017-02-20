@@ -48,6 +48,7 @@
 
 #include "watchdog.h"
 #include "platform-sensors.h"
+#include "er-coap-observe.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -99,6 +100,15 @@ reboot(lwm2m_context_t *ctx, const uint8_t *arg, size_t argsize,
 {
   PRINTF("Device will reboot!\n");
   ctimer_set(&reboot_timer, CLOCK_SECOND / 2, do_the_reboot, NULL);
+  return 0;
+}
+
+static int
+factory_reset(lwm2m_context_t *ctx, const uint8_t *arg, size_t argsize,
+       uint8_t *outbuf, size_t outsize)
+{
+  coap_clear_observers();
+
   return 0;
 }
 
@@ -173,7 +183,7 @@ LWM2M_RESOURCES(device_resources,
                 LWM2M_RESOURCE_CALLBACK(4, { NULL, NULL, reboot }),
                 LWM2M_RESOURCE_CALLBACK(9, { read_battery_level, NULL, NULL }),
                 LWM2M_RESOURCE_CALLBACK(REURES_NODE_ROUTER, { read_node_router, write_node_router, NULL }),
-                //LWM2M_RESOURCE_CALLBACK(5, { NULL, NULL, factory_reset }),
+                LWM2M_RESOURCE_CALLBACK(5, { NULL, NULL, factory_reset }),
                 /* Current Time */
                 LWM2M_RESOURCE_CALLBACK(13, { read_lwtime, set_lwtime, NULL }),
                 );

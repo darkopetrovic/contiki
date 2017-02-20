@@ -58,7 +58,7 @@
 #include <limits.h>
 #include <string.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /* A configurable function called after every RPL parent switch */
@@ -323,9 +323,14 @@ should_send_dao(rpl_instance_t *instance, rpl_dio_t *dio, rpl_parent_t *p)
 static int
 acceptable_rank(rpl_dag_t *dag, rpl_rank_t rank)
 {
-  return rank != INFINITE_RANK &&
-    ((dag->instance->max_rankinc == 0) ||
-     DAG_RANK(rank, dag->instance) <= DAG_RANK(dag->min_rank + dag->instance->max_rankinc, dag->instance));
+  if(NODE_TYPE_HOST){
+    return rank == INFINITE_RANK || ((dag->instance->max_rankinc == 0) ||
+         DAG_RANK(rank, dag->instance) <= DAG_RANK(dag->min_rank + dag->instance->max_rankinc, dag->instance));
+  } else {
+    return rank != INFINITE_RANK &&
+        ((dag->instance->max_rankinc == 0) ||
+         DAG_RANK(rank, dag->instance) <= DAG_RANK(dag->min_rank + dag->instance->max_rankinc, dag->instance));
+  }
 }
 /*---------------------------------------------------------------------------*/
 static rpl_dag_t *
@@ -813,7 +818,11 @@ rpl_select_dag(rpl_instance_t *instance, rpl_parent_t *p)
 
   instance->of->update_metric_container(instance);
   /* Update the DAG rank. */
-  best_dag->rank = rpl_rank_via_parent(best_dag->preferred_parent);
+  if(NODE_TYPE_HOST){
+    best_dag->rank = INFINITE_RANK;
+  } else {
+    best_dag->rank = rpl_rank_via_parent(best_dag->preferred_parent);
+  }
   if(last_parent == NULL || best_dag->rank < best_dag->min_rank) {
     /* This is a slight departure from RFC6550: if we had no preferred parent before,
      * reset min_rank. This helps recovering from temporary bad link conditions. */
@@ -821,7 +830,7 @@ rpl_select_dag(rpl_instance_t *instance, rpl_parent_t *p)
   }
 
   if(!acceptable_rank(best_dag, best_dag->rank)) {
-    PRINTF("RPL: New rank unacceptable!\n");
+    PRINTF("RPL: New rank unacceptable: %d!\n", best_dag->rank);
     rpl_set_preferred_parent(instance->current_dag, NULL);
     if(RPL_IS_STORING(instance) && last_parent != NULL) {
       /* Send a No-Path DAO to the removed preferred parent. */
@@ -1155,7 +1164,13 @@ rpl_join_instance(uip_ipaddr_t *from, rpl_dio_t *dio)
 
   rpl_set_preferred_parent(dag, p);
   instance->of->update_metric_container(instance);
-  dag->rank = rpl_rank_via_parent(p);
+
+  if(NODE_TYPE_HOST){
+    dag->rank = INFINITE_RANK;
+  } else {
+    dag->rank = rpl_rank_via_parent(p);
+  }
+
   /* So far this is the lowest rank we are aware of. */
   dag->min_rank = dag->rank;
 
