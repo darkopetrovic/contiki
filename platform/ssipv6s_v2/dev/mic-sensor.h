@@ -42,13 +42,11 @@
 #define MIC_FLAG_POWERED            (1<<0)
 
 /** Power-ups the Microphone sensor. */
-#define MIC_CIRCUIT_ON()            ioc_set_over(MIC_COMP_REF_PORT, MIC_COMP_REF_PIN, IOC_OVERRIDE_DIS);\
-                                    GPIO_SET_PIN(MIC_PWR_PORT_BASE, MIC_PWR_PIN_MASK);\
+#define MIC_CIRCUIT_ON()            GPIO_SET_PIN(MIC_PWR_PORT_BASE, MIC_PWR_PIN_MASK);\
                                     internal_status |= MIC_FLAG_POWERED
 
 /** Power-down the PIR sensor. */
-#define MIC_CIRCUIT_OFF()           ioc_set_over(MIC_COMP_REF_PORT, MIC_COMP_REF_PIN, IOC_OVERRIDE_PDE);\
-                                    GPIO_CLR_PIN(MIC_PWR_PORT_BASE, MIC_PWR_PIN_MASK);\
+#define MIC_CIRCUIT_OFF()           GPIO_CLR_PIN(MIC_PWR_PORT_BASE, MIC_PWR_PIN_MASK);\
                                     internal_status &= ~(MIC_FLAG_POWERED)
 
 #ifdef ADC_ACQUISITION_ON

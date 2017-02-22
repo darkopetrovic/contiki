@@ -77,8 +77,8 @@ extern energest_data_t energest_data;
 #define I_SHT21   0.000277    // measured
 #define I_TMP100  0.000047    // measured
 #define I_PIR     0.0000038   // measured
-#define I_BMP280  0.0000038   // measured
-#define I_TSL2561 0.0000038   // measured
+#define I_BMP280  0.000600   // measured
+#define I_TSL2561 0.000240   // measured
 #define I_CCS811  0.0000038   // measured
 #define I_MIC     0.000016   // measured
 #define I_LED     0.000776    // measured

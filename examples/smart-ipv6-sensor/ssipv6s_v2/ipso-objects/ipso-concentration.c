@@ -53,7 +53,7 @@
 #include <stdlib.h> /* strtol */
 #endif
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #define IPSO_CO2_MIN      400

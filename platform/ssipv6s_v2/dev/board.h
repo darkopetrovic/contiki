@@ -62,6 +62,8 @@
  */
 #define USB_PULLUP_PORT       GPIO_C_NUM
 #define USB_PULLUP_PIN        0
+#define USB_REG_EN_PORT       GPIO_C_NUM
+#define USB_REG_EN_PIN        7
 
 /** @} */
 /*---------------------------------------------------------------------------*/

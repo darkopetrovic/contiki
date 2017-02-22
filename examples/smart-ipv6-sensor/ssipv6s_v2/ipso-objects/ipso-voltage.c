@@ -67,6 +67,7 @@ static int read_battery_voltage(int32_t *value);
 static int read_solar_voltage(int32_t *value);
 static void handle_periodic_timer_battery(void *ptr);
 static void handle_periodic_timer_solar(void *ptr);
+
 /*---------------------------------------------------------------------------*/
 static int
 battery_value(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
@@ -218,6 +219,24 @@ read_battery_voltage(int32_t *value)
 {
   uint16_t sensors_value;
 
+  if(USB_IS_PLUGGED()){
+
+    /**
+     * Couln't disable pin interrupt here with any of the following:
+     * - INTERRUPTS_DISABLE();
+     * - nvic_interrupt_unpend(USB_PLUG_DETECT_VECTOR);
+     * - nvic_interrupt_disable(USB_PLUG_DETECT_VECTOR);
+     * - GPIO_DISABLE_INTERRUPT(GPIO_PORT_TO_BASE(USB_PLUG_DETECT_PORT), GPIO_PIN_MASK(USB_PLUG_DETECT_PIN));
+     * - GPIO_DISABLE_POWER_UP_INTERRUPT(GPIO_PORT_TO_BASE(USB_PLUG_DETECT_PORT), GPIO_PIN_MASK(USB_PLUG_DETECT_PIN));
+     *
+     * Somehow, ...
+     * */
+
+    USB_REG_DISABLE();
+    reading_voltage = 1;
+    deep_sleep_ms(300, NO_GPIO_INTERRUPT, 0);
+  }
+
   // read sensor value here
   SENSORS_ACTIVATE(ina3221_sensor);
   SENSORS_MEASURE(ina3221_sensor);
@@ -244,11 +263,18 @@ read_solar_voltage(int32_t *value)
 {
   uint16_t sensors_value;
 
+  if(USB_IS_PLUGGED()){
+    USB_REG_DISABLE();
+    reading_voltage = 1;
+    deep_sleep_ms(300, NO_GPIO_INTERRUPT, 0);
+  }
+
   // read sensor value here
   SENSORS_ACTIVATE(ina3221_sensor);
   SENSORS_MEASURE(ina3221_sensor);
   sensors_value = ina3221_sensor.value(INA3221_CH1_BUS_VOLTAGE);
   SENSORS_DEACTIVATE(ina3221_sensor);
+
 
   /* Convert to fix float */
   *value = (sensors_value * LWM2M_FLOAT32_FRAC) / 1000;

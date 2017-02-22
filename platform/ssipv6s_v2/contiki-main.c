@@ -165,14 +165,21 @@ gpio_platform_init(void)
   ioc_set_over(GPIO_B_NUM, 6, IOC_OVERRIDE_PUE);  // TDI
   ioc_set_over(GPIO_B_NUM, 7, IOC_OVERRIDE_PUE);  // TDO
 
-  for(i=0;i<7;i++)
+
+  for(i=0;i<8;i++)
   {
     ioc_set_over(GPIO_C_NUM, i, IOC_OVERRIDE_DIS);
     GPIO_SET_OUTPUT( GPIO_PORT_TO_BASE(GPIO_C_NUM), GPIO_PIN_MASK(i));
-    GPIO_CLR_PIN( GPIO_PORT_TO_BASE(GPIO_C_NUM), GPIO_PIN_MASK(i));
+    if(i == 6)    // VDD CCS811 is active low
+    {
+      GPIO_SET_PIN( GPIO_PORT_TO_BASE(GPIO_C_NUM), GPIO_PIN_MASK(i));
+    }
+    else
+    {
+      GPIO_CLR_PIN( GPIO_PORT_TO_BASE(GPIO_C_NUM), GPIO_PIN_MASK(i));
+    }
   }
   ioc_set_over(GPIO_C_NUM, 7, IOC_OVERRIDE_PDE);  // en vdd usb (try input pulldown)
-
 
   ioc_set_over(GPIO_D_NUM, 0, IOC_OVERRIDE_DIS);  // button input (pull-up is external)
   ioc_set_over(GPIO_D_NUM, 1, IOC_OVERRIDE_DIS);  // led output
@@ -184,8 +191,11 @@ gpio_platform_init(void)
   ioc_set_over(GPIO_D_NUM, 3, IOC_OVERRIDE_DIS);  // multiplexer output
   GPIO_SET_OUTPUT( GPIO_PORT_TO_BASE(GPIO_D_NUM), GPIO_PIN_MASK(3));
   GPIO_SET_PIN( GPIO_PORT_TO_BASE(GPIO_D_NUM), GPIO_PIN_MASK(3));
-  ioc_set_over(GPIO_D_NUM, 4, IOC_OVERRIDE_PUE);  // user GPIO (input with pullup)
+  ioc_set_over(GPIO_D_NUM, 4, IOC_OVERRIDE_DIS);  // reset of ccs811
+  GPIO_SET_OUTPUT( GPIO_PORT_TO_BASE(GPIO_D_NUM), GPIO_PIN_MASK(4));
+  GPIO_CLR_PIN( GPIO_PORT_TO_BASE(GPIO_D_NUM), GPIO_PIN_MASK(4));
   ioc_set_over(GPIO_D_NUM, 5, IOC_OVERRIDE_PDE);  // 3REG3 input
+
 }
 
 

@@ -55,6 +55,8 @@ extern struct process shell_server_process;
 extern struct process serial_shell_process;
 #endif
 
+uint8_t reading_voltage;
+
 void
 deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
 {
@@ -130,11 +132,13 @@ uint16_t
 get_battery_voltage(void)
 {
   uint16_t level;
+  USB_REG_DISABLE();
   deep_sleep_ms(125, NO_GPIO_INTERRUPT, 0);
   SENSORS_ACTIVATE(ina3221_sensor);
   ina3221_sensor.configure(SENSORS_DO_MEASURE, CH2|VBUS);
   level = ina3221_sensor.value(INA3221_CH2_BUS_VOLTAGE);
   SENSORS_DEACTIVATE(ina3221_sensor);
+  USB_REG_ENABLE();
   return level;
 }
 

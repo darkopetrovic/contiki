@@ -49,7 +49,7 @@
 
 #include "sht21-sensor.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #define IPSO_TEMPERATURE_MIN (-30 * LWM2M_FLOAT32_FRAC)

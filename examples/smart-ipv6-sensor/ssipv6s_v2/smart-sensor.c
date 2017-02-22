@@ -49,6 +49,7 @@
 #include "mic-sensor.h"
 #include "platform-sensors.h"
 #include "dev/leds.h"
+#include "cpu.h"
 
 #include <string.h>
 
@@ -59,7 +60,7 @@
 
 #include "dev/button-sensor.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #if SHELL && !USB_SHELL_IN_NRMEM
@@ -487,6 +488,7 @@ PROCESS_THREAD(controller_process, ev, data)
       /* =========== USER BUTTON ============== */
       if(data == &button_user_sensor){
         PRINTF("Button user pushed.\n");
+
 #if RDC_SLEEPING_HOST
 #if USB_SERIAL_CONF_ENABLE
         if( !USB_IS_PLUGGED() ){
@@ -515,43 +517,51 @@ PROCESS_THREAD(controller_process, ev, data)
 
       /* =========== USB PLUG ============== */
       if(data == &usb_plug_detect){
-        if(USB_IS_PLUGGED()){
-          leds_on(LEDS_YELLOW);
 
-          if( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "router") )
-          {
-            blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
-          }
-
-#if RDC_SLEEPING_HOST
-          /* If RDC is already enabled when the USB cable is plugged, we clear the timer
-           * which is supposed to stop the RDC, and enable RDC indefinetely (while the usb
-           * is plugged in). */
-          crdc_clear_stop_rdc_timer();
-          crdc_disable_rdc(1);
-          lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_ROUTER, "U");
-#endif
+        if( reading_voltage ){
+          INTERRUPTS_DISABLE();
+          nvic_interrupt_disable(USB_PLUG_DETECT_VECTOR);
+          USB_REG_ENABLE();
+          nvic_interrupt_unpend(USB_PLUG_DETECT_VECTOR);
+          nvic_interrupt_enable(USB_PLUG_DETECT_VECTOR);
+          INTERRUPTS_ENABLE();
+          reading_voltage = 0;
         } else {
-          leds_off(LEDS_YELLOW);
 
-#if RDC_SLEEPING_HOST
-          if(NODE_TYPE_HOST){
-            crdc_disable_rdc(0);
-            lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_HOST, "UQ");
+          if(USB_IS_PLUGGED()){
+            leds_on(LEDS_YELLOW);
+            blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
+            if( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "router") )
+            {
+              blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
+            }
+
+  #if RDC_SLEEPING_HOST
+            /* If RDC is already enabled when the USB cable is plugged, we clear the timer
+             * which is supposed to stop the RDC, and enable RDC indefinetely (while the usb
+             * is plugged in). */
+            crdc_clear_stop_rdc_timer();
+            crdc_disable_rdc(1);
+            lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_ROUTER, "U");
+  #endif
           } else {
-            crdc_enable_rdc();
+            leds_off(LEDS_YELLOW);
+
+  #if RDC_SLEEPING_HOST
+            if(NODE_TYPE_HOST){
+              crdc_disable_rdc(0);
+              lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_HOST, "UQ");
+            } else {
+              crdc_enable_rdc();
+            }
+  #endif
           }
-#endif
-
-#if UIP_CONF_DYN_HOST_ROUTER
-#else /* UIP_CONF_DYN_HOST_ROUTER */
-
-#endif /* UIP_CONF_DYN_HOST_ROUTER */
-        }
 
 #if SHELL && USB_SERIAL_CONF_ENABLE && USB_SHELL_IN_NRMEM
         usb_shell_init();
 #endif
+
+        }
       }
 
       /* =========== MOTION DETECT ============== */

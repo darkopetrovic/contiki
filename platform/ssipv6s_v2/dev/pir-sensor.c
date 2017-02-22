@@ -12,7 +12,7 @@
 #include "pir-sensor.h"
 
 /** \cond */
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -125,8 +125,8 @@ configure(int type, int value)
        * we set the pin as input with the pull-up resistor. This is sufficient
        * to turn off the PMOS transistor.
        */
-      GPIO_SET_OUTPUT( PIR_PWR_PORT_BASE, PIR_PWR_PIN_MASK);	// set pin as output high (bad thing)
-      GPIO_CLR_PIN( PIR_PWR_PORT_BASE, PIR_PWR_PIN_MASK);
+      //GPIO_SET_OUTPUT( PIR_PWR_PORT_BASE, PIR_PWR_PIN_MASK);	// set pin as output high (bad thing)
+      //GPIO_CLR_PIN( PIR_PWR_PORT_BASE, PIR_PWR_PIN_MASK);
 
       break;
 
