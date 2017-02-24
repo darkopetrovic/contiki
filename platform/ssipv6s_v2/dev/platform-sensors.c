@@ -31,6 +31,11 @@
 //#include "cdc-acm.h"
 #include "usb/usb-serial.h"
 #include "dev/usb-regs.h" /* USB_CTRL */
+
+#if APPS_APPCONFIG
+#include "shell-config.h"
+#endif
+
 #endif
 
 #include <string.h>
@@ -62,13 +67,12 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
 {
   uint32_t i;
   uint32_t gpio_pi_en;
-
 #if RDC_SLEEPING_HOST
   uint8_t rdc_status = 0;
 #endif
 
   /* Prevent entering PM2 mode if USB is plugged. */
-  if( USB_IS_PLUGGED() ){
+  if( USB_IS_PLUGGED() && !reading_voltage){
     for(i=0;i<duration;i++){
       clock_delay_usec(1000);
     }
@@ -191,7 +195,9 @@ usb_shell_init(void)
     shell_ping_init();
     //shell_power_init();
     shell_ps_init();
-    //shell_config_init();
+#if APPS_APPCONFIG
+    shell_config_init();
+#endif
     shell_ifconfig_init();
     //shell_stackusage_init();
     shell_file_init();
@@ -204,7 +210,6 @@ usb_shell_init(void)
     /* Note that the PRINTF function in exit_process() is moved after the
      * process is tested to exist. Otherwise the code crashes here if the
      * process doesn't exist. */
-    leds_off(LEDS_YELLOW);
 
     process_exit(&shell_process);
     process_exit(&shell_server_process);

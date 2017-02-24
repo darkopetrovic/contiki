@@ -257,8 +257,8 @@ crdc_lpm_enter(void)
               float2str((float)(next_expiration-clock_time())/CLOCK_SECOND, 2),
               next_wakeup_time, RTIMER_NOW(), next_expiration);
 #else
-      PRINTF("CRDC: Next wake-up in %s second(s).\n",
-                    float2str((float)(next_expiration-clock_time())/CLOCK_SECOND, 2));
+      //PRINTF("CRDC: Next wake-up in %s second(s).\n",
+      //              float2str((float)(next_expiration-clock_time())/CLOCK_SECOND, 2));
 #endif
 
     } else {
@@ -329,7 +329,7 @@ crdc_lpm_enter(void)
 
 #endif
 
-    PRINTF("CRDC: *** Time: %lu *** \n", clock_time());
+    //PRINTF("CRDC: *** Time: %lu *** \n", clock_time());
   } else {
     /* RDC is enabled -> normal behaviour. */
 #if CONTIKI_TARGET_CC2538DK

@@ -126,7 +126,7 @@ client_chunk_handler(void *response)
 #if RDC_SLEEPING_HOST
   // start the rdc to receive message only in Queue mode
   if(strchr((const char*)lwm2m_client.binding, 'Q')){
-    crdc_period_start( 5 );
+    crdc_period_start( 10 );
   }
 #endif
 
@@ -200,8 +200,8 @@ lwm2m_engine_update_registration(uint32_t lifetime, const char* binding)
   }
 
   etimer_stop(&registration_update_timer);
-  process_poll(&lwm2m_rd_client);
-
+  // need immediate call to the process otherwise the callback client_chunk_handler() isn't called
+  process_post_synch(&lwm2m_rd_client, 0, NULL);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -433,9 +433,9 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
 
         coap_set_payload(request, (uint8_t *)rd_data, pos);
 
-        printf("Registering with [");
+        PRINTF("Registering with [");
         uip_debug_ipaddr_print(&server_ipaddr);
-        printf("]:%u lwm2m endpoint '%s': '%.*s'\n", uip_ntohs(server_port),
+        PRINTF("]:%u lwm2m endpoint '%s': '%.*s'\n", uip_ntohs(server_port),
                lwm2m_client.endpoint, pos, rd_data);
         COAP_BLOCKING_REQUEST(&server_ipaddr, server_port, request,
                               client_chunk_handler);
@@ -461,6 +461,7 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
         COAP_BLOCKING_REQUEST(&server_ipaddr, server_port, request,
                                       client_chunk_handler);
 
+        //blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
         if(!registered){
           // register again immediatelly
           etimer_set(&registration_update_timer, CLOCK_SECOND);

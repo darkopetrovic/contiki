@@ -47,11 +47,12 @@
 #include "lib/list.h"
 #include "lib/memb.h"
 
-#include <stdlib.h> /* strtol */
+#include <stdlib.h> /* strtol() */
+#include <ctype.h> /* isdigit() */
 
 #define MAYBE_SOMEDAY     0
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 LIST(parameters_list);
@@ -103,6 +104,16 @@ file_exist(const char* filepath)
 }
 #endif /* APP_CONFIG_STORAGE_COFFEE */
 
+static int
+numbers_only(const char *s)
+{
+    while (*s) {
+        if (isdigit(*s++) == 0) return 0;
+    }
+
+    return 1;
+}
+
 uint8_t
 app_config_create_parameter(const char* context, const char* name, const char* default_value, void* callback)
 {
@@ -114,7 +125,7 @@ app_config_create_parameter(const char* context, const char* name, const char* d
 #endif /* APP_CONFIG_STORAGE_COFFEE */
 
   struct parameter *p;
-  uint32_t value;
+  int32_t value;
 
   /* Avoid inserting duplicate entries. */
   p = app_config_parameter_lookup(context, name);
@@ -133,8 +144,9 @@ app_config_create_parameter(const char* context, const char* name, const char* d
   p->context = context;
   p->name = name;
   p->default_value = default_value;
+
   /* If default_value is numeric we set the value directly, otherwise the string
-   * value is stored in memory and retrieved from there.  */
+   * value is stored in memory and retrieved from there every time the program ask for.  */
   if((value=strtol(default_value, NULL, 10)) != 0 || !strncmp(default_value, "0", 1)){
     p->value = value;
     p->is_string = 0;
@@ -278,7 +290,7 @@ app_config_get_parameter_value(const char* context, const char* name)
 }
 
 int32_t
-app_config_edit_parameter(const char* context, const char* name, const char* strvalue, uint32_t intvalue)
+app_config_edit_parameter(const char* context, const char* name, const char* strvalue, int32_t intvalue)
 {
 #if APP_CONFIG_STORAGE_COFFEE
   static int fd = 0;
@@ -290,16 +302,25 @@ app_config_edit_parameter(const char* context, const char* name, const char* str
   struct parameter *p;
   uint8_t error = 0;
   static uint32_t current_value;
+  int32_t value;
 
   p = app_config_parameter_lookup(context, name);
   if( p != NULL ){
 
     current_value = p->value;
 
+    /* Sting value has priority on integer value. */
     if(strvalue != NULL){
-      /* The parameter value become a string. */
-      p->is_string = 1;
-      p->value = 0;
+
+      if((value=strtol(strvalue, NULL, 10)) != 0 || !strncmp(strvalue, "0", 1)){
+        p->value = value;
+        p->is_string = 0;
+      } else {
+        /* The parameter value become a string. */
+        p->is_string = 1;
+        p->value = 0;
+      }
+
     } else {
       /* The parameter value become an integer. */
       p->is_string = 0;

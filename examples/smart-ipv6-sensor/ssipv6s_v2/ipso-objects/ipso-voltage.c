@@ -222,19 +222,20 @@ read_battery_voltage(int32_t *value)
   if(USB_IS_PLUGGED()){
 
     /**
-     * Couln't disable pin interrupt here with any of the following:
+     * myTODO: Couln't disable pin interrupt here with any of the following:
      * - INTERRUPTS_DISABLE();
      * - nvic_interrupt_unpend(USB_PLUG_DETECT_VECTOR);
      * - nvic_interrupt_disable(USB_PLUG_DETECT_VECTOR);
      * - GPIO_DISABLE_INTERRUPT(GPIO_PORT_TO_BASE(USB_PLUG_DETECT_PORT), GPIO_PIN_MASK(USB_PLUG_DETECT_PIN));
      * - GPIO_DISABLE_POWER_UP_INTERRUPT(GPIO_PORT_TO_BASE(USB_PLUG_DETECT_PORT), GPIO_PIN_MASK(USB_PLUG_DETECT_PIN));
      *
-     * Somehow, ...
      * */
 
     USB_REG_DISABLE();
     reading_voltage = 1;
     deep_sleep_ms(300, NO_GPIO_INTERRUPT, 0);
+  } else {
+    deep_sleep_ms(125, NO_GPIO_INTERRUPT, 0);
   }
 
   // read sensor value here

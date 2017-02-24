@@ -113,7 +113,7 @@
 #define DEBUG_USB_WITH_UART                 0
 
 /** Enable USB (commands and print) */
-#define DBG_CONF_USB                        0
+#define DBG_CONF_USB                        1
 
 #define UIP_CONF_BUFFER_SIZE                370
 

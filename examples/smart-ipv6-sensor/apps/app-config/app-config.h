@@ -92,7 +92,7 @@ struct parameter {
   const char* context;
   const char* name;
   const char* default_value;
-  uint32_t value;
+  int32_t value;
   uint8_t is_string;
   uint8_t (*callback)(struct parameter *s);
 };
@@ -106,7 +106,7 @@ void app_config_init(void);
 uint8_t app_config_create_parameter(const char* folder, const char* name, const char* default_value, void* callback);
 struct parameter* app_config_parameter_lookup(const char* context, const char* name);
 void* app_config_get_parameter_value(const char* context, const char* name);
-int32_t app_config_edit_parameter(const char* context, const char* name, const char* strvalue, uint32_t intvalue);
+int32_t app_config_edit_parameter(const char* context, const char* name, const char* strvalue, int32_t intvalue);
 struct parameter* app_config_parameters_list_head(void);
 
 #endif /* _APP_CONFIG_H */

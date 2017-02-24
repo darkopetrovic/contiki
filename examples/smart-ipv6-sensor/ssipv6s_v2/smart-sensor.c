@@ -97,7 +97,7 @@
 #endif
 
 #ifndef LWM2M_SERVER_ADDRESS
-#define LWM2M_SERVER_ADDRESS "bbbb::72"
+#define LWM2M_SERVER_ADDRESS "2001::33"
 #endif
 
 #ifndef SMART_CONF_ALIVE_MSG
@@ -159,20 +159,28 @@ extern uint8_t res_micro_clap_counter;
 static struct ctimer alive_message_timer;
 #endif /* SMART_ALIVE_MSG */
 
+#if APPS_OMALWM2M
 static void
 setup_lwm2m_servers(void)
 {
-#ifdef LWM2M_SERVER_ADDRESS
+  const char *serverip;
+
+#if APPS_APPCONFIG
+  serverip = (const char *)app_config_get_parameter_value(APP_CONFIG_GENERAL, "lwm2m-server");
+#else
+  serverip = LWM2M_SERVER_ADDRESS;
+#endif /* APPS_APPCONFIG */
+
   uip_ipaddr_t addr;
-  if(uiplib_ipaddrconv(LWM2M_SERVER_ADDRESS, &addr)) {
+  if(uiplib_ipaddrconv(serverip, &addr)) {
     lwm2m_engine_register_with_bootstrap_server(&addr, 0);
     lwm2m_engine_register_with_server(&addr, 0);
   }
-#endif /* LWM2M_SERVER_ADDRESS */
 
   lwm2m_engine_use_bootstrap_server(REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER);
   lwm2m_engine_use_registration_server(REGISTER_WITH_LWM2M_SERVER);
 }
+#endif /* APPS_OMALWM2M */
 
 static void
 button_press_action( rtimer_clock_t delta )
@@ -197,6 +205,21 @@ button_press_action( rtimer_clock_t delta )
     }
 #endif
   }
+}
+
+static uint8_t
+radio_params(struct parameter *p)
+{
+  if( !strcmp(p->name, "PANID") ){
+    NETSTACK_RADIO.set_value(RADIO_PARAM_PAN_ID, p->value);
+  } else if( !strcmp(p->name, "channel") ) {
+    NETSTACK_RADIO.set_value(RADIO_PARAM_CHANNEL, p->value);
+  } else if( !strcmp(p->name, "txpower") ) {
+    NETSTACK_RADIO.set_value(RADIO_PARAM_TXPOWER, p->value);
+  } else if( !strcmp(p->name, "ccathreshold") ) {
+    NETSTACK_RADIO.set_value(RADIO_PARAM_CCA_THRESHOLD, p->value);
+  }
+  return 0;
 }
 
 #if RDC_SLEEPING_HOST
@@ -429,12 +452,19 @@ PROCESS_THREAD(controller_process, ev, data)
   app_config_create_parameter(APP_CONFIG_GENERAL, "alive_message_period", "30", change_alv_period);
 #endif
 
-  //app_config_create_parameter(APP_CONFIG_GENERAL, "bripaddr", "aaaa::212:4b00:40e:fadb", NULL);
+#if APPS_OMALWM2M
+  app_config_create_parameter(APP_CONFIG_GENERAL, "lwm2m-server", "bbbb::72", NULL);
+#endif
 
 #if CONF_6LOWPAN_ND
   /* The time the host will be registered to the router. */
   app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
 #endif
+
+  app_config_create_parameter("radio", "PANID", "43981", radio_params); // 0xABCD
+  app_config_create_parameter("radio", "channel", "25", radio_params);
+  app_config_create_parameter("radio", "txpower", "-24", radio_params);
+  app_config_create_parameter("radio", "ccathreshold", "175", radio_params); // -81dBm
 
 #endif /* APPS_APPCONFIG */
 
@@ -490,16 +520,16 @@ PROCESS_THREAD(controller_process, ev, data)
         PRINTF("Button user pushed.\n");
 
 #if RDC_SLEEPING_HOST
-#if USB_SERIAL_CONF_ENABLE
         if( !USB_IS_PLUGGED() ){
+#if APPS_OMALWM2M
+          // by pressing the user button we update the registration
+          // to receive the pending packets on the server
+          lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_HOST, "UQ");
+#else /* APPS_OMALWM2M */
           // the RDC is activated only for few seconds/minutes
           crdc_period_start( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
+#endif /* APPS_OMALWM2M */
         }
-#else /* USB_SERIAL_CONF_ENABLE */
-        if( !button_time_press ){
-          crdc_period_start(  *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
-        }
-#endif /* USB_SERIAL_CONF_ENABLE */
 #endif /* RDC_SLEEPING_HOST */
 
         if( !button_time_press ){
@@ -530,7 +560,7 @@ PROCESS_THREAD(controller_process, ev, data)
 
           if(USB_IS_PLUGGED()){
             leds_on(LEDS_YELLOW);
-            blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
+
             if( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "router") )
             {
               blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
