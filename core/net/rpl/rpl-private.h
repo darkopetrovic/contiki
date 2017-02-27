@@ -337,6 +337,7 @@ extern rpl_stats_t rpl_stats;
 /* Instances */
 extern rpl_instance_t instance_table[];
 extern rpl_instance_t *default_instance;
+extern uint16_t periodic_timer_period;
 
 /* ICMPv6 functions for RPL. */
 void dis_output(uip_ipaddr_t *addr);
@@ -391,6 +392,7 @@ void rpl_cancel_dao(rpl_instance_t *instance);
 void rpl_schedule_probing(rpl_instance_t *instance);
 
 void rpl_reset_dio_timer(rpl_instance_t *);
+void rpl_periodic_timer_update(uint16_t period);
 void rpl_reset_periodic_timer(void);
 uint16_t rpl_get_next_dis(void);
 

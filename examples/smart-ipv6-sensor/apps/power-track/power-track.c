@@ -189,7 +189,7 @@ PROCESS_THREAD(powertrack_process, ev, data)
     energest_compute();
 
     energest_data.avg_current = \
-      (energest_data.charge_consumed - charge_consumed_xago)/(*period/CLOCK_SECOND)*1e6;
+      (energest_data.charge_consumed - charge_consumed_xago)/(*period)*1e6;
 #ifdef PLATFORM_HAS_BATTERY
     energest_data.estimated_lifetime = \
         energest_data.remaining_charge*1e6 / energest_data.avg_current;

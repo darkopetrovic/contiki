@@ -120,6 +120,8 @@ write_power_state(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 
 #if APP_CONFIG_STORAGE_COFFEE
   if(value){
+    // when turned on, read the baseline from memory if present
+    // and configure the sensor with the value
     if(value && (fd = cfs_open("ccs811_baseline", CFS_READ))>0){
       cfs_seek(fd, 0, CFS_SEEK_SET);
       cfs_read(fd, buf, 10);

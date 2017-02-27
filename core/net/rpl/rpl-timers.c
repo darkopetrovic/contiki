@@ -67,6 +67,7 @@ clock_time_t RPL_PROBING_DELAY_FUNC(rpl_dag_t *dag);
 
 /*---------------------------------------------------------------------------*/
 static struct ctimer periodic_timer;
+uint16_t periodic_timer_period=1;
 
 static void handle_periodic_timer(void *ptr);
 static void new_dio_interval(rpl_instance_t *instance);
@@ -211,12 +212,19 @@ handle_dio_timer(void *ptr)
 }
 /*---------------------------------------------------------------------------*/
 void
+rpl_periodic_timer_update(uint16_t period)
+{
+  periodic_timer_period = period;
+  ctimer_set(&periodic_timer, periodic_timer_period*CLOCK_SECOND, handle_periodic_timer, NULL);
+}
+
+void
 rpl_reset_periodic_timer(void)
 {
   next_dis = RPL_DIS_INTERVAL / 2 +
     ((uint32_t)RPL_DIS_INTERVAL * (uint32_t)random_rand()) / RANDOM_RAND_MAX -
     RPL_DIS_START_DELAY;
-  ctimer_set(&periodic_timer, CLOCK_SECOND, handle_periodic_timer, NULL);
+  ctimer_set(&periodic_timer, periodic_timer_period*CLOCK_SECOND, handle_periodic_timer, NULL);
 }
 /*---------------------------------------------------------------------------*/
 /* Resets the DIO timer in the instance to its minimal interval. */

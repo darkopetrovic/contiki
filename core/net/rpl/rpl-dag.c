@@ -1167,8 +1167,10 @@ rpl_join_instance(uip_ipaddr_t *from, rpl_dio_t *dio)
 
   if(NODE_TYPE_HOST){
     dag->rank = INFINITE_RANK;
+    rpl_periodic_timer_update(60);
   } else {
     dag->rank = rpl_rank_via_parent(p);
+    rpl_periodic_timer_update(1);
   }
 
   /* So far this is the lowest rank we are aware of. */

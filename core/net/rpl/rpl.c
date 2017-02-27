@@ -319,7 +319,7 @@ rpl_purge_dags(void)
               rpl_free_dag(&instance->dag_table[i]);
             }
           } else {
-            instance->dag_table[i].lifetime--;
+            instance->dag_table[i].lifetime -= periodic_timer_period;
           }
         }
       }

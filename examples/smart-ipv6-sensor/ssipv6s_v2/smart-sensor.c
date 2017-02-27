@@ -51,6 +51,8 @@
 #include "dev/leds.h"
 #include "cpu.h"
 
+#include "rpl-private.h"
+
 #include <string.h>
 
 #if APPS_COAPSERVER
@@ -338,6 +340,7 @@ node_change_type(struct parameter *p)
 #if APPS_SMARTLED
       if(!starting){
         blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
+        rpl_periodic_timer_update(1);
       }
 #endif
 #if SMART_ALIVE_MSG
@@ -368,6 +371,7 @@ node_change_type(struct parameter *p)
      * the device is by default an host. */
     if(!starting){
       set_node_type(HOST);
+      rpl_periodic_timer_update(60);
 #if RDC_SLEEPING_HOST
       if(!USB_IS_PLUGGED()){
         crdc_disable_rdc(0);
@@ -378,6 +382,7 @@ node_change_type(struct parameter *p)
       blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 3);
 #endif
     }
+
 #if APPS_OMALWM2M
     lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_HOST, "UQ");
 #endif
@@ -524,7 +529,7 @@ PROCESS_THREAD(controller_process, ev, data)
 #if APPS_OMALWM2M
           // by pressing the user button we update the registration
           // to receive the pending packets on the server
-          lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_HOST, "UQ");
+          lwm2m_engine_update_registration(0, NULL);
 #else /* APPS_OMALWM2M */
           // the RDC is activated only for few seconds/minutes
           crdc_period_start( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
