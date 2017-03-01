@@ -98,7 +98,7 @@ handle_periodic_timer(void *ptr)
   /* handle DIS */
 #if RPL_DIS_SEND
   next_dis++;
-  if(dag == NULL && next_dis >= RPL_DIS_INTERVAL) {
+  if(dag == NULL && next_dis >= RPL_DIS_INTERVAL/periodic_timer_period) {
     next_dis = 0;
     dis_output(NULL);
     PRINTF("RPL: DIS output from periodic timer.\n");

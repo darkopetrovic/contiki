@@ -162,14 +162,7 @@ read_sensor_value(int32_t *value)
 static void
 handle_periodic_timer(void *ptr)
 {
-  static int32_t last_value = IPSO_PRESSURE_MIN;
-  int32_t v;
-
-  /* Only notify when the value has changed since last */
-  if(read_sensor_value(&v) && v != last_value) {
-    last_value = v;
-    lwm2m_object_notify_observers(&barometer, "/0/5700");
-  }
+  lwm2m_object_notify_observers(&barometer, "/0/5700");
   ctimer_reset(&periodic_timer);
 }
 /*---------------------------------------------------------------------------*/

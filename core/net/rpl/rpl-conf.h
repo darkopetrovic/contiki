@@ -330,6 +330,15 @@
 #endif
 
 /*
+ * Interval of the periodic timer for the sleeping node
+ */
+#ifdef  RPL_CONF_PERIODIC_INTERVAL
+#define RPL_PERIODIC_INTERVAL                RPL_CONF_PERIODIC_INTERVAL
+#else
+#define RPL_PERIODIC_INTERVAL                60   // in seconds
+#endif
+
+/*
  * Added delay of first DIS transmission after boot
  */
 #ifdef  RPL_CONF_DIS_START_DELAY

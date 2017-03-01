@@ -337,12 +337,14 @@ node_change_type(struct parameter *p)
   if(p->value==ROUTER && USB_IS_PLUGGED()){
     set_node_type(ROUTER);
     PRINTF("Node set as ROUTER.\n");
+
+    if(!starting){
 #if APPS_SMARTLED
-      if(!starting){
-        blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
-        rpl_periodic_timer_update(1);
-      }
+      blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
 #endif
+      rpl_periodic_timer_update(1);
+    }
+
 #if SMART_ALIVE_MSG
     ctimer_stop(&alive_message_timer);
 #endif
@@ -371,7 +373,7 @@ node_change_type(struct parameter *p)
      * the device is by default an host. */
     if(!starting){
       set_node_type(HOST);
-      rpl_periodic_timer_update(60);
+      rpl_periodic_timer_update(RPL_PERIODIC_INTERVAL);
 #if RDC_SLEEPING_HOST
       if(!USB_IS_PLUGGED()){
         crdc_disable_rdc(0);

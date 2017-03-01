@@ -98,9 +98,6 @@
 
 #define	WATCHDOG_CONF_ENABLE                0
 
-//#define UIP_CONF_ROUTER   1
-//#define RDC_CONF_SLEEPING_HOST 0
-
 /**
  * The USB is initiliazed only when the USB cable is plugged in. Therefore,
  * there is no extra current consumption on the battery due to the USB process.

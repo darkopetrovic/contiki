@@ -136,13 +136,13 @@ uint16_t
 get_battery_voltage(void)
 {
   uint16_t level;
-  USB_REG_DISABLE();
+  //USB_REG_DISABLE();
   deep_sleep_ms(125, NO_GPIO_INTERRUPT, 0);
   SENSORS_ACTIVATE(ina3221_sensor);
   ina3221_sensor.configure(SENSORS_DO_MEASURE, CH2|VBUS);
   level = ina3221_sensor.value(INA3221_CH2_BUS_VOLTAGE);
   SENSORS_DEACTIVATE(ina3221_sensor);
-  USB_REG_ENABLE();
+  //USB_REG_ENABLE();
   return level;
 }
 

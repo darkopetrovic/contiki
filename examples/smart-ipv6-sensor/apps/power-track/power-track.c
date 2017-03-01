@@ -31,6 +31,9 @@ static struct etimer periodic;
 energest_data_t energest_data;
 static double charge_consumed_xago;
 static uint32_t last_cpu, last_lpm, last_transmit, last_listen;
+#if CONTIKI_TARGET_SSIPV6S_V2
+static uint32_t last_ccs811, last_pir, last_mic;
+#endif
 #if CONTIKIMAC_CONF_COMPOWER
 static uint32_t last_idle_transmit, last_idle_listen;
 #endif
@@ -82,11 +85,33 @@ energest_compute(void)
 #if CONTIKI_TARGET_SSIPV6S_V2
   energest_data.all_sensors_ina3221 = energest_type_time(ENERGEST_TYPE_SENSORS_INA3221);
   energest_data.all_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
-  energest_data.all_sensors_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
   energest_data.all_sensors_bmp280 = energest_type_time(ENERGEST_TYPE_SENSORS_BMP280);
   energest_data.all_sensors_tsl2561 = energest_type_time(ENERGEST_TYPE_SENSORS_TSL2561);
+
+  // special treatment because they are constantly power on when activated
+  // and the variable overlaps after 131072 seconds (2^32 / RTIMER_SECOND)
   energest_data.all_sensors_ccs811 = energest_type_time(ENERGEST_TYPE_SENSORS_CCS811);
-  energest_data.all_sensors_mic = energest_type_time(ENERGEST_TYPE_SENSORS_MIC);
+
+  // variable has overlaped
+
+  if(last_ccs811 > energest_type_time(ENERGEST_TYPE_SENSORS_CCS811)){
+    energest_data.all_sensors_mic += ((0xFFFFFFFF-last_ccs811)+energest_type_time(ENERGEST_TYPE_SENSORS_CCS811))/RTIMER_SECOND;
+  } else {
+    energest_data.all_sensors_mic += (energest_type_time(ENERGEST_TYPE_SENSORS_CCS811)-last_ccs811)/RTIMER_SECOND;
+  }
+
+  if(last_pir > energest_type_time(ENERGEST_TYPE_SENSORS_PIR)){
+    energest_data.all_sensors_pir += ((0xFFFFFFFF-last_pir)+energest_type_time(ENERGEST_TYPE_SENSORS_PIR))/RTIMER_SECOND;
+  } else {
+    energest_data.all_sensors_pir += (energest_type_time(ENERGEST_TYPE_SENSORS_PIR)-last_pir)/RTIMER_SECOND;
+  }
+
+  if(last_mic > energest_type_time(ENERGEST_TYPE_SENSORS_MIC)){
+    energest_data.all_sensors_mic += ((0xFFFFFFFF-last_mic)+energest_type_time(ENERGEST_TYPE_SENSORS_MIC))/RTIMER_SECOND;
+  } else {
+    energest_data.all_sensors_mic += (energest_type_time(ENERGEST_TYPE_SENSORS_MIC)-last_mic)/RTIMER_SECOND;
+  }
+
 #endif
 
 
@@ -112,6 +137,11 @@ energest_compute(void)
   last_idle_transmit = compower_idle_activity.transmit;
 #endif
 
+#if CONTIKI_TARGET_SSIPV6S_V2
+  last_ccs811 = energest_type_time(ENERGEST_TYPE_SENSORS_CCS811);
+  last_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
+  last_mic = energest_type_time(ENERGEST_TYPE_SENSORS_MIC);
+#endif
   //time = energest_data.cpu + energest_data.lpm;
   energest_data.all_time = energest_data.all_cpu + energest_data.all_lpm;
   energest_data.all_leds = energest_data.all_led_red + energest_data.all_led_yellow;
@@ -149,14 +179,13 @@ energest_compute(void)
 #if CONTIKI_TARGET_SSIPV6S_V2
       + (float)energest_data.all_sensors_ina3221/RTIMER_SECOND * I_INA3221 \
       + (float)energest_data.all_sensors_sht21/RTIMER_SECOND * I_SHT21 \
-      + (float)energest_data.all_sensors_pir/RTIMER_SECOND * I_PIR \
       + (float)energest_data.all_sensors_bmp280/RTIMER_SECOND * I_BMP280 \
       + (float)energest_data.all_sensors_tsl2561/RTIMER_SECOND * I_TSL2561 \
-      + (float)energest_data.all_sensors_ccs811/RTIMER_SECOND * I_CCS811 \
-      + (float)energest_data.all_sensors_mic/RTIMER_SECOND * I_MIC
+      + (float)energest_data.all_sensors_ccs811 * I_CCS811 \
+      + (float)energest_data.all_sensors_pir * I_PIR \
+      + (float)energest_data.all_sensors_mic * I_MIC
 #endif
       + (float)energest_data.all_leds/RTIMER_SECOND * I_LED;
-
 
 #if PLATFORM_HAS_BATTERY && (CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2)
   /* Estimate the remaining battery capacity using simple relationship with the battery level:

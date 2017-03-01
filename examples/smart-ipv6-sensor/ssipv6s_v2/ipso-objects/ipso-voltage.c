@@ -219,6 +219,7 @@ read_battery_voltage(int32_t *value)
 {
   uint16_t sensors_value;
 
+#if 0
   if(USB_IS_PLUGGED()){
 
     /**
@@ -237,6 +238,7 @@ read_battery_voltage(int32_t *value)
   } else {
     deep_sleep_ms(125, NO_GPIO_INTERRUPT, 0);
   }
+#endif
 
   // read sensor value here
   SENSORS_ACTIVATE(ina3221_sensor);
@@ -264,18 +266,19 @@ read_solar_voltage(int32_t *value)
 {
   uint16_t sensors_value;
 
+#if 0
   if(USB_IS_PLUGGED()){
     USB_REG_DISABLE();
     reading_voltage = 1;
     deep_sleep_ms(300, NO_GPIO_INTERRUPT, 0);
   }
+#endif
 
   // read sensor value here
   SENSORS_ACTIVATE(ina3221_sensor);
   SENSORS_MEASURE(ina3221_sensor);
   sensors_value = ina3221_sensor.value(INA3221_CH1_BUS_VOLTAGE);
   SENSORS_DEACTIVATE(ina3221_sensor);
-
 
   /* Convert to fix float */
   *value = (sensors_value * LWM2M_FLOAT32_FRAC) / 1000;
@@ -295,28 +298,14 @@ read_solar_voltage(int32_t *value)
 static void
 handle_periodic_timer_battery(void *ptr)
 {
-  static int32_t last_value = IPSO_VOLTAGE_MIN;
-  int32_t v;
-
-  /* Only notify when the value has changed since last */
-  if(read_battery_voltage(&v) && v != last_value) {
-    last_value = v;
-    lwm2m_object_notify_observers(&voltage, "/0/5700");
-  }
+  lwm2m_object_notify_observers(&voltage, "/0/5700");
   ctimer_reset(&periodic_timer_battery);
 }
 
 static void
 handle_periodic_timer_solar(void *ptr)
 {
-  static int32_t last_value = IPSO_VOLTAGE_MIN;
-  int32_t v;
-
-  /* Only notify when the value has changed since last */
-  if(read_solar_voltage(&v) && v != last_value) {
-    last_value = v;
-    lwm2m_object_notify_observers(&voltage, "/1/5700");
-  }
+  lwm2m_object_notify_observers(&voltage, "/1/5700");
   ctimer_reset(&periodic_timer_solar);
 }
 /*---------------------------------------------------------------------------*/
