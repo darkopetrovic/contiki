@@ -130,6 +130,7 @@ read_battery_level(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
   return ctx->writer->write_int(ctx, outbuf, outsize, battery_soc);
 }
 
+#if CONF_6LOWPAN_ND
 static int
 read_node_router(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
@@ -159,7 +160,7 @@ write_node_router(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 
   return len;
 }
-
+#endif /* #if CONF_6LOWPAN_ND */
 /*---------------------------------------------------------------------------*/
 #ifdef PLATFORM_FACTORY_DEFAULT
 static int
@@ -182,7 +183,9 @@ LWM2M_RESOURCES(device_resources,
                 LWM2M_RESOURCE_INTEGER(6, 7),
                 LWM2M_RESOURCE_CALLBACK(4, { NULL, NULL, reboot }),
                 LWM2M_RESOURCE_CALLBACK(9, { read_battery_level, NULL, NULL }),
+#if CONF_6LOWPAN_ND
                 LWM2M_RESOURCE_CALLBACK(REURES_NODE_ROUTER, { read_node_router, write_node_router, NULL }),
+#endif
                 LWM2M_RESOURCE_CALLBACK(5, { NULL, NULL, factory_reset }),
                 /* Current Time */
                 LWM2M_RESOURCE_CALLBACK(13, { read_lwtime, set_lwtime, NULL }),

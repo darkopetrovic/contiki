@@ -355,7 +355,7 @@ app_config_edit_parameter(const char* context, const char* name, const char* str
       if(p->is_string){
         strcpy(buf, strvalue);
       } else {
-        sprintf(buf, "%lu", intvalue);
+        sprintf(buf, "%lu", p->value);
       }
       if(len>strlen(buf)){
         cfs_remove(filepath);

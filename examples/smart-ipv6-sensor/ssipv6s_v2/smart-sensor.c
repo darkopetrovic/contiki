@@ -326,7 +326,7 @@ change_alv_period(struct parameter *p)
 
 #endif /* SMART_ALIVE_MSG */
 
-#if UIP_CONF_DYN_HOST_ROUTER
+#if UIP_CONF_DYN_HOST_ROUTER && CONF_6LOWPAN_ND
 static uint8_t
 node_change_type(struct parameter *p)
 {
@@ -409,11 +409,15 @@ ds_notification_callback(int event,
     //blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 4);
   } else if ( event == UIP_DS6_NOTIFICATION_DEFRT_RM ) {
     //blink_leds(LEDS_RED, CLOCK_SECOND/4, 4);
-  } else if( event == UIP_DS6_NOTIFICATION_BR_ADD ) {
+  }
+#if CONF_6LOWPAN_ND
+  else if( event == UIP_DS6_NOTIFICATION_BR_ADD ) {
     blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 4);
   } else if ( event == UIP_DS6_NOTIFICATION_BR_RM ) {
     blink_leds(LEDS_RED, CLOCK_SECOND/4, 4);
   }
+#endif /* CONF_6LOWPAN_ND */
+
 }
 
 /*---------------------------------------------------------------------------*/
@@ -465,7 +469,7 @@ PROCESS_THREAD(controller_process, ev, data)
 
 #if CONF_6LOWPAN_ND
   /* The time the host will be registered to the router. */
-  app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
+  //app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
 #endif
 
   app_config_create_parameter("radio", "PANID", "43981", radio_params); // 0xABCD

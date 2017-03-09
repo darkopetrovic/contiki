@@ -74,7 +74,7 @@ NBR_TABLE_GLOBAL(uip_ds6_nbr_t, ds6_neighbors);
 #if CONF_6LOWPAN_ND && (UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
 uip_ds6_dar_t uip_ds6_dar_list[UIP_DS6_DAR_NB]; /* \brief Duplication addresse request list */
 static uip_ds6_dar_t *locdar;
-extern uint32_t aro_registration_lifetime;
+//extern uint32_t aro_registration_lifetime;
 #endif /* CONF_6LOWPAN_ND && UIP_CONF_ROUTER */
 
 /*---------------------------------------------------------------------------*/

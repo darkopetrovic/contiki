@@ -64,7 +64,7 @@
 #include "net/rpl/rpl.h"
 #endif /* UIP_CONF_IPV6_RPL */
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 #ifndef LWM2M_ENGINE_CLIENT_ENDPOINT_PREFIX
@@ -138,6 +138,7 @@ client_chunk_handler(void *response)
 
   else {
     PRINTF("LWM2M: Failed to update/register. Server not found.\n");
+    registered = 0;
   }
 
 #if (DEBUG) & DEBUG_PRINT
@@ -199,9 +200,10 @@ lwm2m_engine_update_registration(uint32_t lifetime, const char* binding)
     qs_len = 0;
   }
 
-  etimer_stop(&registration_update_timer);
-  // need immediate call to the process otherwise the callback client_chunk_handler() isn't called
-  process_post_synch(&lwm2m_rd_client, 0, NULL);
+  PROCESS_CONTEXT_BEGIN(&lwm2m_rd_client);
+  etimer_set(&registration_update_timer, CLOCK_SECOND/8);
+  PROCESS_CONTEXT_END(&lwm2m_rd_client);
+
 }
 
 /*---------------------------------------------------------------------------*/
@@ -458,10 +460,10 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
 
         PRINTF("LWM2M: Updating registration to the server with: %s%s.\n",
                     lwm2m_client.location, qs_len ? query_string : "");
+        qs_len = 0;
         COAP_BLOCKING_REQUEST(&server_ipaddr, server_port, request,
                                       client_chunk_handler);
 
-        //blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
         if(!registered){
           // register again immediatelly
           etimer_set(&registration_update_timer, CLOCK_SECOND);

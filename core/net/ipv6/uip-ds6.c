@@ -55,7 +55,7 @@
 #include "net/rpl/rpl.h"
 #endif
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 struct etimer uip_ds6_timer_periodic;                           /**< Timer for maintenance of data structures */
@@ -213,7 +213,7 @@ uip_ds6_periodic(void)
   uip_ds6_defrt_t *d;
 #endif
 
-  PRINTF("DS Periodic.\n");
+  //PRINTF("DS Periodic.\n");
 
 #if CONF_6LOWPAN_ND_OPTI_START && UIP_CONF_IPV6_RPL
   /* Start RPL only when the device has global IPv6 */
@@ -244,14 +244,11 @@ uip_ds6_periodic(void)
 #if CONF_6LOWPAN_ND
    d = uip_ds6_defrt_list_head();
 
-   /** 
-    * \needreview How the host should send RS when no more router? 
-    */
    /* whenever the default router list is empty we send RS */
-   /*if(d == NULL && etimer_expired(&uip_ds6_timer_rs)){
+   if(d == NULL && etimer_expired(&uip_ds6_timer_rs)){
      PRINTF("uip_ds6_defrt_periodic: default router list is empty we send RS\n");
      uip_ds6_send_rs();
-   }*/
+   }
 
    while(d != NULL) {
      if(!d->isinfinite &&

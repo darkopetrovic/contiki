@@ -151,7 +151,7 @@ write_sampling2(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 
   // setting value to 0 stop the timer but doesn't change the parameter
   if(value){
-    interval_battery = value;
+    interval_solar = value;
   }
 
   if(value && periodic_timer_solar.etimer.p != PROCESS_NONE){
