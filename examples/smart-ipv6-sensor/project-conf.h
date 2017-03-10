@@ -102,7 +102,7 @@
  * The USB is initiliazed only when the USB cable is plugged in. Therefore,
  * there is no extra current consumption on the battery due to the USB process.
  */
-#define CC2538_CONF_QUIET                   0
+#define CC2538_CONF_QUIET                   1
 
 /**
  * Useful to print debug message on the terminal while debuging USB features
@@ -110,7 +110,7 @@
 #define DEBUG_USB_WITH_UART                 0
 
 /** Enable USB (commands and print) */
-#define DBG_CONF_USB                        0
+#define DBG_CONF_USB                        1
 
 #define UIP_CONF_BUFFER_SIZE                370
 

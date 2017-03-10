@@ -827,6 +827,7 @@ uip_ds6_br_periodic(void)
               PRINT6ADDR(&locbr->ipaddr);
               PRINTF("\n");
               uip_ds6_defrt_rm(d);
+              locbr->rscount = 0;
             } else {
               /* Must send unicast RS */
               PRINTF("Scheduling RS to ");
@@ -840,6 +841,7 @@ uip_ds6_br_periodic(void)
         d = list_item_next(d);
       }
       if(list_head(defaultrouterlist) == NULL) {
+        PRINTF("default router list empty\n ");
         uip_ds6_send_rs();
         locbr->state = BR_ST_USED;
         return;
@@ -852,7 +854,7 @@ uip_ds6_br_periodic(void)
       } else {
         locbr->rscount++;
       }
-      stimer_set(&locbr->rs_timer, UIP_ND6_MAX_RTR_SOLICITATION_DELAY);
+      stimer_set(&locbr->rs_timer, UIP_ND6_RTR_SOLICITATION_INTERVAL);
     }
   }
 }

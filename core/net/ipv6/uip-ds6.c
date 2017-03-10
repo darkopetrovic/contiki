@@ -55,7 +55,7 @@
 #include "net/rpl/rpl.h"
 #endif
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 struct etimer uip_ds6_timer_periodic;                           /**< Timer for maintenance of data structures */

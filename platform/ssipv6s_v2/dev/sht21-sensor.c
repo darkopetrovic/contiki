@@ -327,10 +327,10 @@ configure(int type, int value)
         {
 #if SHT21_NO_HOLD_MODE
           ENERGEST_ON(ENERGEST_TYPE_SENSORS_SHT21);
-          deep_sleep_ms(85, NO_GPIO_INTERRUPT, 0);
+          deep_sleep_ms(90, NO_GPIO_INTERRUPT, 0);
           ENERGEST_OFF(ENERGEST_TYPE_SENSORS_SHT21);
 #else
-          sht21_hold_mode(max_measurement_time);
+          sht21_hold_mode(85);
 #endif
           temperature = sht21_read_register(175.72, 46.85);
         }
@@ -345,10 +345,10 @@ configure(int type, int value)
         {
 #if SHT21_NO_HOLD_MODE
           ENERGEST_ON(ENERGEST_TYPE_SENSORS_SHT21);
-          deep_sleep_ms(29, NO_GPIO_INTERRUPT, 0);
+          deep_sleep_ms(30, NO_GPIO_INTERRUPT, 0);
           ENERGEST_OFF(ENERGEST_TYPE_SENSORS_SHT21);
 #else
-          sht21_hold_mode(max_measurement_time);
+          sht21_hold_mode(29);
 #endif
           humidity = sht21_read_register(125.0, 6.0);
         }

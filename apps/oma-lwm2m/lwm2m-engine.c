@@ -64,7 +64,7 @@
 #include "net/rpl/rpl.h"
 #endif /* UIP_CONF_IPV6_RPL */
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #ifndef LWM2M_ENGINE_CLIENT_ENDPOINT_PREFIX
@@ -115,6 +115,8 @@ client_chunk_handler(void *response)
 {
   coap_packet_t *const coap_pkt = (coap_packet_t *)response;
 
+  // TODO: handle 4.00 Bad Request during Registration Update
+
   // get the registered path returned by the server
   if(coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == CREATED_2_01){
     snprintf(lwm2m_client.location, coap_pkt->location_path_len+2, "/%s", coap_pkt->location_path);
@@ -124,7 +126,7 @@ client_chunk_handler(void *response)
   } else if (coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == CHANGED_2_04){
     PRINTF("LWM2M: Successfully updated registration at: %s\n", lwm2m_client.location);
 #if RDC_SLEEPING_HOST
-  // start the rdc to receive message only in Queue mode
+  // start the rdc to receive queued messages on the server
   if(strchr((const char*)lwm2m_client.binding, 'Q')){
     crdc_period_start( 10 );
   }
@@ -136,7 +138,10 @@ client_chunk_handler(void *response)
     registered = 0;
   }
 
-  else {
+  /* While doing an Registration Update, we can receive an Empty ACK message
+   * from a Observer CONfirmable message. In this case we end up here but shouldn't
+   * deregister the device. The transaction would be retransmitted. */
+  else if ( !(coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == 0) ){
     PRINTF("LWM2M: Failed to update/register. Server not found.\n");
     registered = 0;
   }

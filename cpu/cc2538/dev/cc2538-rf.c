@@ -51,6 +51,11 @@
 #include "reg.h"
 
 #include <string.h>
+
+#if CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
+#include "dev/pir-sensor.h"
+#endif
+
 /*---------------------------------------------------------------------------*/
 #define CHECKSUM_LEN 2
 
@@ -544,9 +549,8 @@ init(void)
 
   process_start(&cc2538_rf_process, NULL);
 
-  rf_flags |= RF_ON;
-
-  ENERGEST_ON(ENERGEST_TYPE_LISTEN);
+  //rf_flags |= RF_ON;
+  //ENERGEST_ON(ENERGEST_TYPE_LISTEN);
 
   return 1;
 }
@@ -643,6 +647,11 @@ transmit(unsigned short transmit_len)
   /* Start the transmission */
   ENERGEST_OFF(ENERGEST_TYPE_LISTEN);
   ENERGEST_ON(ENERGEST_TYPE_TRANSMIT);
+
+  if( pir_sensor.status(PIR_ACTIVATED) ){
+    PRINTF("PIR sensor is ACTIVATED -> DEACTIVATE temporarily before packet sending.\n");
+    //pir_irq_delay( CLOCK_SECOND/2 );
+  }
 
   CC2538_RF_CSP_ISTXON();
 
@@ -1022,6 +1031,8 @@ PROCESS_THREAD(cc2538_rf_process, ev, data)
   int len;
   PROCESS_BEGIN();
 
+  off();
+
   while(1) {
     /* Only if we are not in poll mode oder we are in poll mode and transceiver has to be reset */
     PROCESS_YIELD_UNTIL((!poll_mode || (poll_mode && (rf_flags & RF_MUST_RESET))) && (ev == PROCESS_EVENT_POLL));
@@ -1031,6 +1042,14 @@ PROCESS_THREAD(cc2538_rf_process, ev, data)
       len = read(packetbuf_dataptr(), PACKETBUF_SIZE);
 
       if(len > 0) {
+#if CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
+       /* Due to the voltage drop of radio transmision, the motion
+        * detector can have false readings. */
+      /*if( pir_sensor.status(PIR_ACTIVATED) ){
+        PRINTF("PIR sensor is ACTIVATED -> DEACTIVATE temporarily before packet reading.\n");
+        pir_irq_delay( CLOCK_SECOND/2 );
+      }*/
+#endif
         packetbuf_set_datalen(len);
 
         NETSTACK_RDC.input();
