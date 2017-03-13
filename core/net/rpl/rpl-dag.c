@@ -58,7 +58,7 @@
 #include <limits.h>
 #include <string.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /* A configurable function called after every RPL parent switch */
@@ -1647,8 +1647,11 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
       rpl_schedule_dao(instance);
     }
     /* We received a new DIO from our preferred parent.
-     * Call uip_ds6_defrt_add to set a fresh value for the lifetime counter */
+     * Call uip_ds6_defrt_add to set a fresh value for the lifetime counter.
+     * Let the optimized NDP handle the route expiration. */
+#if !CONF_6LOWPAN_ND
     uip_ds6_defrt_add(from, RPL_DEFAULT_ROUTE_INFINITE_LIFETIME ? 0 : RPL_LIFETIME(instance, instance->default_lifetime));
+#endif
   }
   p->dtsn = dio->dtsn;
 }

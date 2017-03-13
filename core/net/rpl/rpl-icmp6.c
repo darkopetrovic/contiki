@@ -59,7 +59,7 @@
 #include <limits.h>
 #include <string.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -334,18 +334,18 @@ dio_input(void)
    * However the host can register to this router if the default route list isn't
    * full. 
    */
-// #if CONF_6LOWPAN_ND && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
-//   if(NODE_TYPE_HOST && uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr) == NULL){
-//     PRINTF("RPL: Received a DIO from ");
-//     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
-//     PRINTF(" but not a default router -> discard.\n");
-//     /** 
-//      * \feature From here we may send an NS to register to this router whether the
-//      *          router list is not full. 
-//      */
-//     return;
-//   }
-// #endif
+#if CONF_6LOWPAN_ND && (!UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER)
+     if(NODE_TYPE_HOST && uip_ds6_defrt_lookup(&UIP_IP_BUF->srcipaddr) == NULL){
+       PRINTF("RPL: Received a DIO from ");
+       PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
+       PRINTF(" but not a default router -> discard.\n");
+       /**
+        * \feature From here we may send an NS to register to this router whether the
+        *          router list is not full.
+        */
+       return;
+     }
+#endif
 
   memset(&dio, 0, sizeof(dio));
 
