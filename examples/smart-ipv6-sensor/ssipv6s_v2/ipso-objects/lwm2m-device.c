@@ -108,7 +108,7 @@ factory_reset(lwm2m_context_t *ctx, const uint8_t *arg, size_t argsize,
        uint8_t *outbuf, size_t outsize)
 {
   coap_clear_observers();
-
+  lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_ROUTER, "U");
   return 0;
 }
 
@@ -160,7 +160,7 @@ write_node_router(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 
   return len;
 }
-#endif /* #if CONF_6LOWPAN_ND */
+#endif /* CONF_6LOWPAN_ND */
 /*---------------------------------------------------------------------------*/
 #ifdef PLATFORM_FACTORY_DEFAULT
 static int

@@ -365,6 +365,9 @@ uip_ds6_neighbor_periodic(void)
          *                  must not exist for a 6lowpan-nd host and we wouldn't prevent 
          *                  the host to find new router via RPL, the host send an RS to 
          *                  add and register itself to this new router. 
+         *
+         *                  (this is dehactivated, the NCE is disabled in RPL. Not efficient
+         *                  when the router list is full.)
          */
         if(NODE_TYPE_HOST){
           nbr->state = NBR_TENTATIVE;

@@ -173,7 +173,7 @@ power_on(void)
   // the chip goes automatically in sleep mode after a power on reset
   // and when no performing measurement
 
-  /* Wait power-up sequence (value from datasheet) */
+  /* Wait power-up sequence (value from datasheet 15ms ) */
   deep_sleep_ms(15, NO_GPIO_INTERRUPT, 0);
   i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
   if( (err = set_resolution( currentResolution )) != SHT21_ERR_NONE ){
@@ -327,7 +327,7 @@ configure(int type, int value)
         {
 #if SHT21_NO_HOLD_MODE
           ENERGEST_ON(ENERGEST_TYPE_SENSORS_SHT21);
-          deep_sleep_ms(90, NO_GPIO_INTERRUPT, 0);
+          deep_sleep_ms(85, NO_GPIO_INTERRUPT, 0);
           ENERGEST_OFF(ENERGEST_TYPE_SENSORS_SHT21);
 #else
           sht21_hold_mode(85);

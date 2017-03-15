@@ -82,15 +82,18 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
 
 #if RDC_SLEEPING_HOST
     rdc_status = crdc_get_rdc_status();
+    if(rdc_status){
+      crdc_disable_rdc(0);
+    }
 #endif
 
     /* Ensure that the SoC sleeps during the whole duration and won't
      * be wake-up by the RDC. */
-    NETSTACK_RDC.off(0);
+    /*NETSTACK_RDC.off(0);
     rtimer_arch_schedule(0);
     nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
     nvic_interrupt_disable(NVIC_INT_SM_TIMER);
-    rtimer_run_next();
+    rtimer_run_next();*/
 
     /* Store and disable temporarily gpio power-up interrupts.
      * Writing to one register change the others. Thus we clear only

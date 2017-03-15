@@ -470,6 +470,9 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
                                       client_chunk_handler);
 
         if(!registered){
+          // A new device will be created on the server, then clear all registered observers.
+          coap_clear_observers();
+
           // register again immediatelly
           etimer_set(&registration_update_timer, CLOCK_SECOND);
         } else {

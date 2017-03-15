@@ -130,6 +130,7 @@
 static rtimer_clock_t button_time_press;
 static rtimer_clock_t button_time_release;
 static uint8_t starting;
+static uint32_t lwm2m_lifetime;
 
 #if APPS_COAPSERVER
 extern resource_t
@@ -583,6 +584,7 @@ PROCESS_THREAD(controller_process, ev, data)
              * is plugged in). */
             crdc_clear_stop_rdc_timer();
             crdc_disable_rdc(1);
+            lwm2m_lifetime = lwm2m_client.lifetime;
             lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_ROUTER, "U");
   #endif
           } else {
@@ -591,7 +593,7 @@ PROCESS_THREAD(controller_process, ev, data)
   #if RDC_SLEEPING_HOST
             if(NODE_TYPE_HOST){
               crdc_disable_rdc(0);
-              lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_HOST, "UQ");
+              lwm2m_engine_update_registration(lwm2m_lifetime, "UQ");
             } else {
               crdc_enable_rdc();
             }

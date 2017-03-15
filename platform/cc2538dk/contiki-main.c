@@ -234,10 +234,6 @@ main(void)
   watchdog_start();
   fade(LEDS_ORANGE);
 
-#if RDC_SLEEPING_HOST
-  crdc_init();
-#endif /* RDC_SLEEPING_HOST */
-
   while(1) {
     uint8_t r;
     do {
@@ -247,25 +243,8 @@ main(void)
       r = process_run();
     } while(r > 0);
 
-    /* We have serviced all pending events. Enter a Low-Power mode. */
-#if RDC_SLEEPING_HOST
-    if(NODE_TYPE_HOST && !USB_IS_PLUGGED()){
-      crdc_lpm_enter();
-    }
-#else
-    /* If USB cable is plugged, we don't enter in LPM mode so that we can receice
-     * command from a connected terminal. */
-#if USB_SERIAL_CONF_ENABLE
-    if( !USB_IS_PLUGGED() ){
-      lpm_enter();
-    }
-#else
-#if !SHELL
-      lpm_enter();
-#endif
-#endif
+    lpm_enter();
 
-#endif
   }
 }
 /*---------------------------------------------------------------------------*/

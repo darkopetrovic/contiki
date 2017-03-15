@@ -191,7 +191,19 @@ rpl_icmp6_update_nbr_table(uip_ipaddr_t *from, nbr_table_reason_t reason, void *
   /**
    * \sixlowpanndrpl  The 6lowpan-nd host doesn't go here because it discard
    *                  DIO from router not in the neighbor cache. 
+   *
+   *                  It is possible that we receive a DIO from a router not in the NC.
+   *                  Do not create the NC in that case with RPL. As the 6lowpan-nd is activated,
+   *                  the routers must register them self with that mechanism.
    */
+
+#if CONF_6LOWPAN_ND
+    if ( (nbr = uip_ds6_nbr_lookup(from)) == NULL )
+    {
+      // TODO: trigger registration if router's list not full
+      return NULL;
+    }
+#endif /* CONF_6LOWPAN_ND */
 
   if((nbr = uip_ds6_nbr_lookup(from)) == NULL) {
     if((nbr = uip_ds6_nbr_add(from, (uip_lladdr_t *)

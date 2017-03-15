@@ -648,10 +648,12 @@ transmit(unsigned short transmit_len)
   ENERGEST_OFF(ENERGEST_TYPE_LISTEN);
   ENERGEST_ON(ENERGEST_TYPE_TRANSMIT);
 
+#if CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
   if( pir_sensor.status(PIR_ACTIVATED) ){
     PRINTF("PIR sensor is ACTIVATED -> DEACTIVATE temporarily before packet sending.\n");
     //pir_irq_delay( CLOCK_SECOND/2 );
   }
+#endif
 
   CC2538_RF_CSP_ISTXON();
 
