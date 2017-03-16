@@ -99,7 +99,7 @@
 #endif
 
 #ifndef LWM2M_SERVER_ADDRESS
-#define LWM2M_SERVER_ADDRESS "2001::33"
+#define LWM2M_SERVER_ADDRESS "bbbb::41"
 #endif
 
 #ifndef SMART_CONF_ALIVE_MSG
@@ -338,6 +338,7 @@ node_change_type(struct parameter *p)
   if(p->value==ROUTER && USB_IS_PLUGGED()){
     set_node_type(ROUTER);
     PRINTF("Node set as ROUTER.\n");
+    NETSTACK_RADIO.set_value(RADIO_PARAM_TXPOWER, 7);
 
     if(!starting){
 #if APPS_SMARTLED
@@ -465,7 +466,7 @@ PROCESS_THREAD(controller_process, ev, data)
 #endif
 
 #if APPS_OMALWM2M
-  app_config_create_parameter(APP_CONFIG_GENERAL, "lwm2m-server", "bbbb::72", NULL);
+  app_config_create_parameter(APP_CONFIG_GENERAL, "lwm2m-server", "bbbb::41", NULL);
 #endif
 
 #if CONF_6LOWPAN_ND
@@ -474,7 +475,7 @@ PROCESS_THREAD(controller_process, ev, data)
 #endif
 
   app_config_create_parameter("radio", "PANID", "43981", radio_params); // 0xABCD
-  app_config_create_parameter("radio", "channel", "25", radio_params);
+  app_config_create_parameter("radio", "channel", "24", radio_params);
   app_config_create_parameter("radio", "txpower", "-24", radio_params);
   app_config_create_parameter("radio", "ccathreshold", "175", radio_params); // -81dBm
 
@@ -560,6 +561,10 @@ PROCESS_THREAD(controller_process, ev, data)
       /* =========== USB PLUG ============== */
       if(data == &usb_plug_detect){
 
+        if(!lwm2m_lifetime){
+          lwm2m_lifetime = LWM2M_REG_LIFETIME_HOST;
+        }
+
         if( reading_voltage ){
           INTERRUPTS_DISABLE();
           nvic_interrupt_disable(USB_PLUG_DETECT_VECTOR);
@@ -576,6 +581,7 @@ PROCESS_THREAD(controller_process, ev, data)
             if( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "router") )
             {
               blink_leds(LEDS_YELLOW, CLOCK_SECOND/4, 3);
+              NETSTACK_RADIO.set_value(RADIO_PARAM_TXPOWER, 7);
             }
 
   #if RDC_SLEEPING_HOST
@@ -588,6 +594,8 @@ PROCESS_THREAD(controller_process, ev, data)
             lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_ROUTER, "U");
   #endif
           } else {
+            // USB is unplugged
+
             leds_off(LEDS_YELLOW);
 
   #if RDC_SLEEPING_HOST
@@ -596,6 +604,9 @@ PROCESS_THREAD(controller_process, ev, data)
               lwm2m_engine_update_registration(lwm2m_lifetime, "UQ");
             } else {
               crdc_enable_rdc();
+              lwm2m_engine_update_registration(LWM2M_REG_LIFETIME_ROUTER, "U");
+              NETSTACK_RADIO.set_value(RADIO_PARAM_TXPOWER,
+                  *(uint32_t*)app_config_get_parameter_value("radio", "txpower"));
             }
   #endif
           }

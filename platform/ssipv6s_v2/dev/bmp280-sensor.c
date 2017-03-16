@@ -297,18 +297,18 @@ power_on(void)
 {
   uint16_t err;
 
-  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
-  //-------------------------------------------------------------------------------
   // power on chip and activate multiplexer channel
   GPIO_SET_PIN( BMP280_PWR_PORT_BASE, BMP280_PWR_PIN_MASK);
+  /* Wait power-up sequence (value from datasheet) 2 ms*/
+  deep_sleep_ms(2, NO_GPIO_INTERRUPT, 0);
+
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
   if((err = pca9546_channel_enable(PCA_9546_BMP280_SEL_POS)) != PCA9546_ERR_NONE)
   {
     return err;
   }
   // consumption in sleep mode: tbd
 
-  /* Wait power-up sequence (value from datasheet) 2 ms*/
-  deep_sleep_ms(2, NO_GPIO_INTERRUPT, 0);
   i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
   //-------------------------------------------------------------------------------
   // get chip ID for security

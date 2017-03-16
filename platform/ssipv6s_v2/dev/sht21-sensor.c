@@ -163,9 +163,12 @@ power_on(void)
 {
   uint16_t err;
 
-  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
   GPIO_SET_PIN( SHT21_PWR_PORT_BASE, SHT21_PWR_PIN_MASK);
-  if((err = pca9546_channel_enable(PCA_9546_SHT21_SEL_POS)) !=PCA9546_ERR_NONE)
+  /* Wait power-up sequence (value from datasheet) */
+  deep_sleep_ms(15, NO_GPIO_INTERRUPT, 0);
+
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
+  if((err = pca9546_channel_enable(PCA_9546_SHT21_SEL_POS)) != PCA9546_ERR_NONE)
   {
     return err;
   }
@@ -173,9 +176,6 @@ power_on(void)
   // the chip goes automatically in sleep mode after a power on reset
   // and when no performing measurement
 
-  /* Wait power-up sequence (value from datasheet 15ms ) */
-  deep_sleep_ms(15, NO_GPIO_INTERRUPT, 0);
-  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
   if( (err = set_resolution( currentResolution )) != SHT21_ERR_NONE ){
     return err | SHT21_ERR_SET_RESOLUTION<<8;
   }

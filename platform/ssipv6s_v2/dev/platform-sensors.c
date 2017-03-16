@@ -67,6 +67,8 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
 {
   uint32_t i;
   uint32_t gpio_pi_en;
+  uint32_t start;
+  int32_t duration_left;
 #if RDC_SLEEPING_HOST
   uint8_t rdc_status = 0;
 #endif
@@ -83,17 +85,11 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
 #if RDC_SLEEPING_HOST
     rdc_status = crdc_get_rdc_status();
     if(rdc_status){
+      /* Ensure that the SoC sleeps during the whole duration and won't
+       * be wake-up by the RDC. */
       crdc_disable_rdc(0);
     }
 #endif
-
-    /* Ensure that the SoC sleeps during the whole duration and won't
-     * be wake-up by the RDC. */
-    /*NETSTACK_RDC.off(0);
-    rtimer_arch_schedule(0);
-    nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
-    nvic_interrupt_disable(NVIC_INT_SM_TIMER);
-    rtimer_run_next();*/
 
     /* Store and disable temporarily gpio power-up interrupts.
      * Writing to one register change the others. Thus we clear only
@@ -103,18 +99,28 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
 
     /*  Enable only desired gpio power-up interrupts. */
     if(port >= 0){
-      GPIO_POWER_UP_ON_RISING(port, GPIO_PIN_MASK(interrupt_pin));
       GPIO_POWER_UP_ON_FALLING(port, GPIO_PIN_MASK(interrupt_pin));
+      GPIO_POWER_UP_ON_RISING(port, GPIO_PIN_MASK(interrupt_pin));
       GPIO_ENABLE_POWER_UP_INTERRUPT(port, GPIO_PIN_MASK(interrupt_pin));
       nvic_interrupt_enable(port);
     }
 
-    rtimer_arch_schedule(RTIMER_NOW()+(uint32_t)(((float)(duration)/1000.0)*RTIMER_SECOND));
-    REG(SYS_CTRL_PMCTL) = SYS_CTRL_PMCTL_PM2;
-    ENERGEST_OFF(ENERGEST_TYPE_CPU);
-    ENERGEST_ON(ENERGEST_TYPE_LPM);
+    duration_left = (int32_t)(((float)(duration)/1000.0)*RTIMER_SECOND);
+
     INTERRUPTS_ENABLE();
-    do { asm("wfi"::); } while(0);
+
+    // ensure that the SoC sleeps the complete duration
+    do {
+      start = RTIMER_NOW();
+      rtimer_arch_schedule(start+duration_left);
+      REG(SYS_CTRL_PMCTL) = SYS_CTRL_PMCTL_PM2;
+      ENERGEST_OFF(ENERGEST_TYPE_CPU);
+      ENERGEST_ON(ENERGEST_TYPE_LPM);
+      do { asm("wfi"::); } while(0);
+
+      duration_left -= RTIMER_NOW() - start;
+
+    } while(duration_left>0);
 
     /* Restore gpio power-up interrupts. */
     REG(GPIO_PORT_TO_BASE(0) + GPIO_PI_IEN) = gpio_pi_en;

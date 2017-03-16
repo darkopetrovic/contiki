@@ -143,7 +143,7 @@
 /* Even if CONTIKI_TARGET_CC2538DK is set with the ssipv6s platform in the
  * board.h file, this configuration file is included before. */
 #if CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
-#define CC2538_RF_CONF_CHANNEL              25
+#define CC2538_RF_CONF_CHANNEL              24
 #define LPM_CONF_MAX_PM                     2
 #define LPM_CONF_ENABLE                     1
 /* CFS Configuration */

@@ -194,16 +194,15 @@ power_on(void)
   uint16_t err;
   uint8_t data[2];
 
-  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
-  //-------------------------------------------------------------------------------
   // power on chip and activate multiplexer channel
   GPIO_SET_PIN( TSL2561_PWR_PORT_BASE, TSL2561_PWR_PIN_MASK);
+  deep_sleep_ms(5, NO_GPIO_INTERRUPT, 0); // for test because datasheet don't explain it !
+  // consumption in sleep mode: 3.2 to 15 uA
+
+  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
   if((err = pca9546_channel_enable(PCA_9546_TSL2561_SEL_POS)) !=PCA9546_ERR_NONE){
     return err;
   }
-  deep_sleep_ms(5, NO_GPIO_INTERRUPT, 0); // for test because datasheet don't explain it !
-  // consumption in sleep mode: 3.2 to 15 uA
-  i2c_init(I2C_SDA_PORT, I2C_SDA_PIN, I2C_SCL_PORT, I2C_SCL_PIN, I2C_SCL_FAST_BUS_SPEED);
 
   // the interrupt pin needs a pull-up
   ioc_set_over(TSL2561_INT_PORT, TSL2561_INT_PIN, IOC_OVERRIDE_PUE);

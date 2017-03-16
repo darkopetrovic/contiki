@@ -60,6 +60,10 @@
 
 #include "ipso-objects.h"
 
+#if APPS_SMARTLED
+#include "smart-led.h"
+#endif
+
 #if UIP_CONF_IPV6_RPL
 #include "net/rpl/rpl.h"
 #endif /* UIP_CONF_IPV6_RPL */
@@ -113,6 +117,7 @@ static const lwm2m_resource_t *get_resource(const lwm2m_instance_t *instance, lw
 static void
 client_chunk_handler(void *response)
 {
+  static uint8_t first_update = 0;
   coap_packet_t *const coap_pkt = (coap_packet_t *)response;
 
   // TODO: handle 4.00 Bad Request during Registration Update
@@ -122,13 +127,22 @@ client_chunk_handler(void *response)
     snprintf(lwm2m_client.location, coap_pkt->location_path_len+2, "/%s", coap_pkt->location_path);
     PRINTF("LWM2M: Successfully registered at: %s\n", lwm2m_client.location);
     registered = 1;
+    first_update = 0;
+    blink_leds(LEDS_YELLOW, CLOCK_SECOND/2, 2);
 
   } else if (coap_pkt->type == COAP_TYPE_ACK && coap_pkt->code == CHANGED_2_04){
     PRINTF("LWM2M: Successfully updated registration at: %s\n", lwm2m_client.location);
 #if RDC_SLEEPING_HOST
   // start the rdc to receive queued messages on the server
   if(strchr((const char*)lwm2m_client.binding, 'Q')){
-    crdc_period_start( 10 );
+
+    if(!first_update){
+      crdc_period_start( 30 );
+      first_update = 1;
+    } else {
+      crdc_period_start( 10 );
+    }
+
   }
 #endif
 
@@ -472,6 +486,7 @@ PROCESS_THREAD(lwm2m_rd_client, ev, data)
         if(!registered){
           // A new device will be created on the server, then clear all registered observers.
           coap_clear_observers();
+          lwm2m_client.lifetime = LWM2M_REG_LIFETIME_HOST;
 
           // register again immediatelly
           etimer_set(&registration_update_timer, CLOCK_SECOND);

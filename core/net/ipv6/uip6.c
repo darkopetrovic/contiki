@@ -1151,7 +1151,9 @@ uip_process(uint8_t flag)
     goto drop;
   }
 
-#if UIP_CONF_ROUTER
+#if UIP_CONF_ROUTER || UIP_CONF_DYN_HOST_ROUTER
+
+  if(NODE_TYPE_ROUTER) {
   /*
    * Next header field processing. In IPv6, we can have extension headers,
    * if present, the Hop-by-Hop Option must be processed before forwarding
@@ -1251,6 +1253,27 @@ uip_process(uint8_t flag)
       goto drop;
     }
   }
+
+  } // if(NODE_TYPE_ROUTER)
+#if UIP_CONF_DYN_HOST_ROUTER
+  else {
+    if(!uip_ds6_is_my_addr(&UIP_IP_BUF->destipaddr) &&
+       !uip_ds6_is_my_maddr(&UIP_IP_BUF->destipaddr) &&
+       !uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
+      PRINTF("Dropping packet, not for me\n");
+      UIP_STAT(++uip_stat.ip.drop);
+      goto drop;
+    }
+
+    /*
+     * Next header field processing. In IPv6, we can have extension headers,
+     * they are processed here
+     */
+    uip_next_hdr = &UIP_IP_BUF->proto;
+    uip_ext_len = 0;
+    uip_ext_bitmap = 0;
+  }
+#endif
 #else /* UIP_CONF_ROUTER */
   if(!uip_ds6_is_my_addr(&UIP_IP_BUF->destipaddr) &&
      !uip_ds6_is_my_maddr(&UIP_IP_BUF->destipaddr) &&
