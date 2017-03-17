@@ -43,10 +43,6 @@
 
 #include <stdint.h>
 #include "ipso-objects.h"
-#include "lwm2m-object.h"
-#include "lwm2m-engine.h"
-#include "er-coap-engine.h"
-
 #include "sht21-sensor.h"
 
 #define DEBUG DEBUG_NONE
@@ -60,10 +56,8 @@
 #define IPSO_HUMIDITY_MAX (100 * LWM2M_FLOAT32_FRAC)
 #endif
 
-static struct ctimer periodic_timer;
 static int32_t min_sensor_value;
 static int32_t max_sensor_value;
-static int32_t interval=10;
 static int read_sensor_value(int32_t *value);
 static void handle_periodic_timer(void *ptr);
 /*---------------------------------------------------------------------------*/
@@ -76,46 +70,6 @@ sensor_value(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
                                          value, LWM2M_FLOAT32_BITS);
   }
   return 0;
-}
-
-static int
-read_sampling(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
-{
-  return ctx->writer->write_int(ctx, outbuf, outsize, interval);
-}
-
-static int
-write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
-            uint8_t *outbuf, size_t outsize)
-{
-  int32_t value;
-  size_t len = 0;
-
-  if(ctx)
-    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  else
-    value = 0;
-
-  // setting value to 0 stop the timer but doesn't change the parameter
-  if(value){
-    interval = value;
-  }
-
-  if(value && periodic_timer.etimer.p != PROCESS_NONE){
-    ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
-  } else {
-    ctimer_stop(&periodic_timer);
-  }
-
-  return len;
-}
-
-static int
-exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
-               uint8_t *outbuf, size_t outlen)
-{
-  ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
-  return 1;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -168,8 +122,9 @@ read_sensor_value(int32_t *value)
 static void
 handle_periodic_timer(void *ptr)
 {
+  struct ctimer *periodic_timer = ptr;
   lwm2m_object_notify_observers(&humidity, "/0/5700");
-  ctimer_reset(&periodic_timer);
+  ctimer_reset(periodic_timer);
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -177,6 +132,8 @@ ipso_humidity_init(void)
 {
   min_sensor_value = IPSO_HUMIDITY_MAX;
   max_sensor_value = IPSO_HUMIDITY_MIN;
+
+  add_sampling(&humidity, 0, handle_periodic_timer);
 
   /* register this device and its handlers - the handlers automatically
      sends in the object to handle */

@@ -42,10 +42,6 @@
 
 #include <stdint.h>
 #include "ipso-objects.h"
-#include "lwm2m-object.h"
-#include "lwm2m-engine.h"
-#include "er-coap-engine.h"
-
 #include "ccs811-sensor.h"
 
 #include "app-config.h"
@@ -65,12 +61,11 @@
 #define CO2 0
 #define TVOC 1
 
-static struct ctimer periodic_timer;
 static int32_t min_co2_value;
 static int32_t max_co2_value;
 static int32_t min_tvoc_value;
 static int32_t max_tvoc_value;
-static int32_t interval=60;
+
 uint16_t co2_value;
 uint16_t tvoc_value;
 static int read_sensor_value(int32_t *value, uint8_t type);
@@ -134,48 +129,6 @@ write_power_state(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 #endif /* APP_CONFIG_STORAGE_COFFEE */
 
   return len;
-}
-
-static int
-read_sampling(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
-{
-  return ctx->writer->write_int(ctx, outbuf, outsize, interval);
-}
-
-static int
-write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
-            uint8_t *outbuf, size_t outsize)
-{
-  int32_t value;
-  size_t len = 0;
-
-  if(ctx)
-    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  else
-    value = 0;
-
-  // setting value to 0 stop the timer but doesn't change the parameter
-  if(value){
-    interval = value;
-  }
-
-  if(value && periodic_timer.etimer.p != PROCESS_NONE){
-    ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
-  } else {
-    ctimer_stop(&periodic_timer);
-  }
-
-  return len;
-}
-
-static int
-exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
-               uint8_t *outbuf, size_t outlen)
-{
-  if(periodic_timer.etimer.p == PROCESS_NONE){
-    ctimer_set(&periodic_timer, CLOCK_SECOND * interval, handle_periodic_timer, NULL);
-  }
-  return 1;
 }
 
 static int
@@ -310,6 +263,8 @@ handle_periodic_timer(void *ptr)
   //static uint16_t last_tvoc_value = IPSO_TVOC_MIN;
 
   uint16_t sensors_value[2];
+  struct ctimer *periodic_timer = ptr;
+
   SENSORS_MEASURE(ccs811_sensor);
   sensors_value[0] = ccs811_sensor.value(CCS811_SENSE_CO2);
   sensors_value[1] = ccs811_sensor.value(CCS811_SENSE_TVOC);
@@ -344,7 +299,7 @@ handle_periodic_timer(void *ptr)
     lwm2m_object_notify_observers(&concentration, "/1/5700");
   //}
 
-  ctimer_reset(&periodic_timer);
+  ctimer_reset(periodic_timer);
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -354,6 +309,8 @@ ipso_concentration_init(void)
   max_co2_value = IPSO_CO2_MIN;
   min_tvoc_value = IPSO_TVOC_MAX;
   max_tvoc_value = IPSO_TVOC_MIN;
+
+  add_sampling(&concentration, -1, handle_periodic_timer);
 
   /* register this device and its handlers - the handlers automatically
      sends in the object to handle */

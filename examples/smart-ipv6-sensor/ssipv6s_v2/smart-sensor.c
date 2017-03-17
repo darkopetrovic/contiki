@@ -90,6 +90,10 @@
 #include "ipso-objects.h"
 #endif
 
+// Stringification
+#define xstr(s) str(s)
+#define str(s) #s
+
 #ifndef REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER
 #define REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER 0
 #endif
@@ -99,7 +103,7 @@
 #endif
 
 #ifndef LWM2M_SERVER_ADDRESS
-#define LWM2M_SERVER_ADDRESS "bbbb::41"
+#define LWM2M_SERVER_ADDRESS "2001::21"
 #endif
 
 #ifndef SMART_CONF_ALIVE_MSG
@@ -466,7 +470,7 @@ PROCESS_THREAD(controller_process, ev, data)
 #endif
 
 #if APPS_OMALWM2M
-  app_config_create_parameter(APP_CONFIG_GENERAL, "lwm2m-server", "bbbb::41", NULL);
+  app_config_create_parameter(APP_CONFIG_GENERAL, "lwm2m-server", LWM2M_SERVER_ADDRESS, NULL);
 #endif
 
 #if CONF_6LOWPAN_ND
@@ -474,8 +478,8 @@ PROCESS_THREAD(controller_process, ev, data)
   //app_config_create_parameter(APP_CONFIG_GENERAL, "aro-registration", "10", NULL);
 #endif
 
-  app_config_create_parameter("radio", "PANID", "43981", radio_params); // 0xABCD
-  app_config_create_parameter("radio", "channel", "24", radio_params);
+  app_config_create_parameter("radio", "PANID", xstr(IEEE802154_PANID), radio_params);
+  app_config_create_parameter("radio", "channel", xstr(CC2538_RF_CONF_CHANNEL), radio_params);
   app_config_create_parameter("radio", "txpower", "-24", radio_params);
   app_config_create_parameter("radio", "ccathreshold", "175", radio_params); // -81dBm
 
@@ -539,8 +543,10 @@ PROCESS_THREAD(controller_process, ev, data)
           // to receive the pending packets on the server
           lwm2m_engine_update_registration(0, NULL);
 #else /* APPS_OMALWM2M */
+#if APPS_APPCONFIG
           // the RDC is activated only for few seconds/minutes
           crdc_period_start( *(uint32_t*)app_config_get_parameter_value(APP_CONFIG_GENERAL, "rdc_enable_period") );
+#endif
 #endif /* APPS_OMALWM2M */
         }
 #endif /* RDC_SLEEPING_HOST */

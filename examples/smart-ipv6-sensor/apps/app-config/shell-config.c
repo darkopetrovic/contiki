@@ -84,13 +84,20 @@ PROCESS_THREAD(shell_config_process, ev, data)
         if( !strcmp (pch1, p->context) )
         {
           if(!strncmp(p->context, "radio", 5) && !strcmp(p->name, "PANID")){
-            snprintf(outputbuf, 100, "    %-20s %-20s 0x%04X", p->context, p->name, (unsigned int)p->value);
+            NETSTACK_RADIO.get_value(RADIO_PARAM_PAN_ID, &radioval);
+            snprintf(outputbuf, 100, "    %-20s %-20s 0x%04X", p->context, p->name, radioval);
           } else if(!strncmp(p->context, "radio", 5) && !strcmp(p->name, "txpower")){
             NETSTACK_RADIO.get_value(RADIO_PARAM_TXPOWER, &radioval);
             snprintf(outputbuf, 100, "    %-20s %-20s %ddBm", p->context, p->name, radioval);
           } else if(!strncmp(p->context, "radio", 5) && !strcmp(p->name, "ccathreshold")){
-            snprintf(outputbuf, 100, "    %-20s %-20s %ddBm", p->context, p->name, (int8_t)p->value);
-          } else {
+            NETSTACK_RADIO.get_value(RADIO_PARAM_CCA_THRESHOLD, &radioval);
+            snprintf(outputbuf, 100, "    %-20s %-20s %ddBm", p->context, p->name, (int8_t)radioval);
+          } else if(!strncmp(p->context, "radio", 5) && !strcmp(p->name, "channel")){
+            NETSTACK_RADIO.get_value(RADIO_PARAM_CHANNEL, &radioval);
+            snprintf(outputbuf, 100, "    %-20s %-20s %d", p->context, p->name, (uint8_t)radioval);
+          }
+
+          else {
             if(p->is_string){
               snprintf(outputbuf, 100, "    %-20s %-20s %s", p->context, p->name,
                   (const char*)app_config_get_parameter_value(p->context, p->name));
@@ -116,13 +123,20 @@ PROCESS_THREAD(shell_config_process, ev, data)
       for(p = app_config_parameters_list_head(); p != NULL; p = list_item_next(p))
       {
         if(!strncmp(p->context, "radio", 5) && !strcmp(p->name, "PANID")){
-          snprintf(outputbuf, 100, "    %-20s %-20s 0x%04X", p->context, p->name, (unsigned int)p->value);
+          NETSTACK_RADIO.get_value(RADIO_PARAM_PAN_ID, &radioval);
+          snprintf(outputbuf, 100, "    %-20s %-20s 0x%04X", p->context, p->name, radioval);
         } else if(!strncmp(p->context, "radio", 5) && !strcmp(p->name, "txpower")){
           NETSTACK_RADIO.get_value(RADIO_PARAM_TXPOWER, &radioval);
           snprintf(outputbuf, 100, "    %-20s %-20s %ddBm", p->context, p->name, radioval);
         } else if(!strncmp(p->context, "radio", 5) && !strcmp(p->name, "ccathreshold")){
-          snprintf(outputbuf, 100, "    %-20s %-20s %ddBm", p->context, p->name, (int8_t)p->value);
-        } else {
+          NETSTACK_RADIO.get_value(RADIO_PARAM_CCA_THRESHOLD, &radioval);
+          snprintf(outputbuf, 100, "    %-20s %-20s %ddBm", p->context, p->name, (int8_t)radioval);
+        } else if(!strncmp(p->context, "radio", 5) && !strcmp(p->name, "channel")){
+          NETSTACK_RADIO.get_value(RADIO_PARAM_CHANNEL, &radioval);
+          snprintf(outputbuf, 100, "    %-20s %-20s %d", p->context, p->name, (uint8_t)radioval);
+        }
+
+        else {
           if(p->is_string){
             snprintf(outputbuf, 100, "    %-20s %-20s %s", p->context, p->name,
                 (const char*)app_config_get_parameter_value(p->context, p->name));

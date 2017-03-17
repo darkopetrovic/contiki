@@ -147,7 +147,7 @@ app_config_create_parameter(const char* context, const char* name, const char* d
 
   /* If default_value is numeric we set the value directly, otherwise the string
    * value is stored in memory and retrieved from there every time the program ask for.  */
-  if((value=strtol(default_value, NULL, 10)) != 0 || !strncmp(default_value, "0", 1)){
+ if((value=strtol(default_value, NULL, 0)) != 0 || !strncmp(default_value, "0", 1)){
     p->value = value;
     p->is_string = 0;
   } else {
@@ -166,16 +166,17 @@ app_config_create_parameter(const char* context, const char* name, const char* d
     len = cfs_read(fd, buf, MAX_PARAM_VALUE_LEN);
     cfs_close(fd);
 
+    // parameter exists in memory
     if(len > 0) {
       // update the parameter value with stored value
-      if((value=strtol(buf, NULL, 10)) != 0 || !strncmp(buf, "0", 1)){
+      if((value=strtol(buf, NULL, 0)) != 0 || !strncmp(buf, "0", 1)){
         p->value = value;
         p->is_string = 0;
-        PRINTF("APPCFG: Parameter updated with value from memory: %lu.\n", p->value);
+        PRINTF("APPCFG: Parameter '%s' updated with value from memory: %lu.\n", p->name, p->value);
       } else {
         p->value = 0;
         p->is_string = 1;
-        PRINTF("APPCFG: Parameter updated with value from memory: '%s'.\n", buf);
+        PRINTF("APPCFG: Parameter '%s' updated with value from memory: '%s' (string).\n", p->name, buf);
       }
     } else {
       PRINTF("APPCFG: (error) Couldn't read parameter value.\n");

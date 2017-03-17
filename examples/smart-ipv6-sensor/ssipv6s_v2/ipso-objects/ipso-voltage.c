@@ -43,10 +43,6 @@
 
 #include <stdint.h>
 #include "ipso-objects.h"
-#include "lwm2m-object.h"
-#include "lwm2m-engine.h"
-#include "er-coap-engine.h"
-
 #include "ina3221-sensor.h"
 
 #define DEBUG DEBUG_NONE
@@ -55,14 +51,11 @@
 #define IPSO_VOLTAGE_MIN (0 * LWM2M_FLOAT32_FRAC)
 #define IPSO_VOLTAGE_MAX (4 * LWM2M_FLOAT32_FRAC)
 
-static struct ctimer periodic_timer_battery;
-static struct ctimer periodic_timer_solar;
 static int32_t min_battery_value;
 static int32_t max_battery_value;
 static int32_t min_solar_value;
 static int32_t max_solar_value;
-static int32_t interval_battery=10;
-static int32_t interval_solar=10;
+
 static int read_battery_voltage(int32_t *value);
 static int read_solar_voltage(int32_t *value);
 static void handle_periodic_timer_battery(void *ptr);
@@ -91,86 +84,6 @@ solar_value(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
   return 0;
 }
 
-static int
-read_sampling1(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
-{
-  return ctx->writer->write_int(ctx, outbuf, outsize, interval_battery);
-}
-
-static int
-write_sampling1(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
-            uint8_t *outbuf, size_t outsize)
-{
-  int32_t value;
-  size_t len = 0;
-
-  if(ctx)
-    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  else
-    value = 0;
-
-  // setting value to 0 stop the timer but doesn't change the parameter
-  if(value){
-    interval_battery = value;
-  }
-
-  if(value && periodic_timer_battery.etimer.p != PROCESS_NONE){
-    ctimer_set(&periodic_timer_battery, CLOCK_SECOND * interval_battery, handle_periodic_timer_battery, NULL);
-  } else {
-    ctimer_stop(&periodic_timer_battery);
-  }
-
-  return len;
-}
-
-static int
-exec_sampling1(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
-               uint8_t *outbuf, size_t outlen)
-{
-  ctimer_set(&periodic_timer_battery, CLOCK_SECOND * interval_battery, handle_periodic_timer_battery, NULL);
-  return 1;
-}
-
-static int
-read_sampling2(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
-{
-  return ctx->writer->write_int(ctx, outbuf, outsize, interval_solar);
-}
-
-static int
-write_sampling2(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
-            uint8_t *outbuf, size_t outsize)
-{
-  int32_t value;
-  size_t len = 0;
-
-  if(ctx)
-    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
-  else
-    value = 0;
-
-  // setting value to 0 stop the timer but doesn't change the parameter
-  if(value){
-    interval_solar = value;
-  }
-
-  if(value && periodic_timer_solar.etimer.p != PROCESS_NONE){
-    ctimer_set(&periodic_timer_solar, CLOCK_SECOND * interval_solar, handle_periodic_timer_solar, NULL);
-  } else {
-    ctimer_stop(&periodic_timer_solar);
-  }
-
-  return len;
-}
-
-static int
-exec_sampling2(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
-               uint8_t *outbuf, size_t outlen)
-{
-  ctimer_set(&periodic_timer_solar, CLOCK_SECOND * interval_solar, handle_periodic_timer_solar, NULL);
-  return 1;
-}
-
 /*---------------------------------------------------------------------------*/
 LWM2M_RESOURCES(voltage_resources_battery,
                 /* Temperature (Current) */
@@ -187,7 +100,7 @@ LWM2M_RESOURCES(voltage_resources_battery,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_battery_value),
 
-                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_sampling1, write_sampling1, exec_sampling1 })
+                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling })
                 );
 
 LWM2M_RESOURCES(voltage_resources_solar,
@@ -205,7 +118,7 @@ LWM2M_RESOURCES(voltage_resources_solar,
                 /* Max Measured Value */
                 LWM2M_RESOURCE_FLOATFIX_VAR(5602, &max_solar_value),
 
-                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_sampling2, write_sampling2, exec_sampling2 })
+                LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, { read_sampling, write_sampling, exec_sampling })
                 );
 
 
@@ -298,15 +211,17 @@ read_solar_voltage(int32_t *value)
 static void
 handle_periodic_timer_battery(void *ptr)
 {
+  struct ctimer *periodic_timer = ptr;
   lwm2m_object_notify_observers(&voltage, "/0/5700");
-  ctimer_reset(&periodic_timer_battery);
+  ctimer_reset(periodic_timer);
 }
 
 static void
 handle_periodic_timer_solar(void *ptr)
 {
+  struct ctimer *periodic_timer = ptr;
   lwm2m_object_notify_observers(&voltage, "/1/5700");
-  ctimer_reset(&periodic_timer_solar);
+  ctimer_reset(periodic_timer);
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -316,6 +231,9 @@ ipso_voltage_init(void)
   max_battery_value = IPSO_VOLTAGE_MIN;
   min_solar_value = IPSO_VOLTAGE_MAX;
   max_solar_value = IPSO_VOLTAGE_MIN;
+
+  add_sampling(&voltage, 0, handle_periodic_timer_battery);
+  add_sampling(&voltage, 1, handle_periodic_timer_solar);
 
   /* register this device and its handlers - the handlers automatically
      sends in the object to handle */

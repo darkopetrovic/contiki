@@ -44,11 +44,138 @@
 #include "contiki.h"
 #include "ipso-objects.h"
 /*---------------------------------------------------------------------------*/
+
+#define DEBUG DEBUG_NONE
+#include "net/ip/uip-debug.h"
+
+struct sampler {
+  uint8_t isused;
+  uint8_t object_id;
+  int8_t instance_id;
+  int32_t interval;
+  struct ctimer periodic_timer;
+  void (* callback)(void *param);
+};
+
+#define LWM2M_MAX_SAMPLER       9
+
+static struct sampler sampling_timers[LWM2M_MAX_SAMPLER];
+
+void
+add_sampling(const lwm2m_object_t *object, int8_t instance_id, void *callback)
+{
+  uint8_t i;
+  struct sampler *smpl;
+
+  for(i=0; i<LWM2M_MAX_SAMPLER; i++){
+    if(sampling_timers[i].isused == 0){
+      smpl = &sampling_timers[i];
+      smpl->isused = 1;
+      smpl->object_id = object->id;
+      smpl->instance_id = instance_id;
+      smpl->interval = 10;
+      smpl->callback = callback;
+      PRINTF("Add sampler for /%d/%d.\n", object->id, instance_id);
+      break;
+    }
+  }
+}
+
+struct sampler*
+lookup_sampler(uint8_t object_id, int8_t instance_id)
+{
+  uint8_t i;
+  for(i=0; i<LWM2M_MAX_SAMPLER; i++){
+    if(sampling_timers[i].isused)
+    {
+      if(sampling_timers[i].instance_id<0){
+        if(sampling_timers[i].object_id == object_id)
+        {
+          return &sampling_timers[i];
+        }
+      } else {
+        if(sampling_timers[i].object_id == object_id &&
+           sampling_timers[i].instance_id == instance_id)
+        {
+          return &sampling_timers[i];
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
+
+int
+read_sampling(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+{
+  struct sampler *smpl;
+  smpl = lookup_sampler(ctx->object_id, ctx->object_instance_id);
+  if(smpl==NULL){
+    return 0;
+  }
+
+  return ctx->writer->write_int(ctx, outbuf, outsize, smpl->interval);
+  return 1;
+}
+
+int
+write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
+            uint8_t *outbuf, size_t outsize)
+{
+  int32_t value;
+  size_t len = 0;
+  struct sampler *smpl;
+
+  smpl = lookup_sampler(ctx->object_id, ctx->object_instance_id);
+  if(smpl==NULL){
+    return 0;
+  }
+
+  len = ctx->reader->read_int(ctx, inbuf, insize, &value);
+
+  /*if(ctx)
+    len = ctx->reader->read_int(ctx, inbuf, insize, &value);
+  else
+    value = 0;
+*/
+  // setting value to 0 stop the timer but doesn't change the parameter
+  if(value){
+    smpl->interval = value;
+  }
+
+  // change the sampling only if the timer is already started
+  if(value && smpl->periodic_timer.etimer.p != PROCESS_NONE){
+    ctimer_set(&smpl->periodic_timer, CLOCK_SECOND * smpl->interval, smpl->callback, &smpl->periodic_timer);
+  } else {
+    ctimer_stop(&smpl->periodic_timer);
+  }
+
+  return len;
+  return 1;
+}
+
+// used to start the sampling automatically when receiving GET with observation
+int
+exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
+               uint8_t *outbuf, size_t outlen)
+{
+  struct sampler *smpl;
+
+  smpl = lookup_sampler(ctx->object_id, ctx->object_instance_id);
+  if(smpl==NULL){
+    return 0;
+  }
+
+  ctimer_set(&smpl->periodic_timer, CLOCK_SECOND * smpl->interval, smpl->callback, &smpl->periodic_timer);
+  return 1;
+}
+
+
 void
 ipso_objects_init(void)
 {
   /* initialize any relevant object for the IPSO Objects */
-
   ipso_temperature_init();
   ipso_humidity_init();
   ipso_illuminance_init();

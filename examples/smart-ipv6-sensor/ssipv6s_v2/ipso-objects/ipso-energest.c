@@ -40,19 +40,9 @@
  *
  */
 
-#include "lwm2m-object.h"
-#include "lwm2m-engine.h"
+
 #include "ipso-objects.h"
-
 #include "power-track.h"
-
-#define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
 
 #define REPR_TIME 1e3 // in miliseconds
 
@@ -97,13 +87,13 @@ static uint8_t power_state;
 static energest_data_repr_t energest_data_repr;
 
 static int
-read_samping(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
+r_sampling(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize)
 {
   return ctx->writer->write_int(ctx, outbuf, outsize, sampling_interval);
 }
 
 static int
-write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
+w_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
             uint8_t *outbuf, size_t outsize)
 {
   int32_t value;
@@ -126,7 +116,7 @@ write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 }
 
 static int
-exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
+e_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
                uint8_t *outbuf, size_t outlen)
 {
   powertrack_start(sampling_interval);
@@ -183,7 +173,7 @@ LWM2M_RESOURCES(energest_resources,
           LWM2M_RESOURCE_INTEGER_VAR(8042, &energest_data_repr.all_sensors_pir),
           LWM2M_RESOURCE_INTEGER_VAR(8046, &energest_data_repr.all_sensors_mic),
           LWM2M_RESOURCE_CALLBACK(5850, {read_power_state, write_power_state, NULL}),
-          LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, {read_samping, write_sampling, exec_sampling}),
+          LWM2M_RESOURCE_CALLBACK(REURES_SAMPLING_INTERVAL, {r_sampling, w_sampling, e_sampling}),
           LWM2M_RESOURCE_CALLBACK(8100, {NULL, NULL, reset_counter})
                 );
 LWM2M_INSTANCES(energest_instances, LWM2M_INSTANCE(0, energest_resources));
