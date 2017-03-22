@@ -221,6 +221,7 @@ observer_periodic(void)
   const lwm2m_object_t **objects;
   const lwm2m_resource_t *resource;
   char path[30];
+  lwm2m_context_t ctx;
 
   objects = (const lwm2m_object_t **)lwm2m_engine_get_object_array();
 
@@ -244,6 +245,7 @@ observer_periodic(void)
                   sprintf(path, "%d/%d/", objects[i]->id, objects[i]->instances[j].id);
                   if( !strncmp(obs->url, path, strlen(path)) )
                   {
+                    // found an observer for the resource url
                     obsfound = 1;
                     break;
                   }
@@ -255,7 +257,9 @@ observer_periodic(void)
                   PRINTF("REST: (observer periodic) Observer not found for the resource '/%sxxxx' -> Stop sampling.\n",
                       path);
                   if(resource->value.callback.write != NULL) {
-                    resource->value.callback.write(NULL, NULL, 0, NULL, 0);
+                    ctx.object_id = objects[i]->id;
+                    ctx.object_instance_id = objects[i]->instances[j].id;
+                    resource->value.callback.write(&ctx, NULL, 0, NULL, 0);
                   }
                 }
               }

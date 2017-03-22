@@ -162,6 +162,37 @@ extern resource_t
 
 extern uint8_t res_micro_clap_counter;
 
+#if DEBUG
+static char *
+float2str(float num, uint8_t preci)
+{
+  int integer=(int)num, decimal=0;
+  static char buf[20];
+  preci = preci > 10 ? 10 : preci;
+  num -= integer;
+  while((num != 0) && (preci-- > 0)) {
+    decimal *= 10;
+    num *= 10;
+    decimal += (int)num;
+    num -= (int)num;
+  }
+  switch(preci){
+    case 1:
+      sprintf(buf, "%d.%01d", integer, decimal);
+      break;
+    case 2:
+      sprintf(buf, "%d.%02d", integer, decimal);
+      break;
+    case 3:
+      sprintf(buf, "%d.%03d", integer, decimal);
+      break;
+    default:
+      sprintf(buf, "%d.%01d", integer, decimal);
+  }
+  return buf;
+}
+#endif
+
 #if SMART_ALIVE_MSG
 static struct ctimer alive_message_timer;
 #endif /* SMART_ALIVE_MSG */
@@ -196,8 +227,8 @@ button_press_action( rtimer_clock_t delta )
 
   button_press_duration = (float)(delta)/RTIMER_SECOND;
 
-  /*PRINTF("Button pressed during %s second(s).\n",
-        float2str(button_press_duration, 2));*/
+  PRINTF("Button pressed during %s second(s).\n",
+        float2str(button_press_duration, 2));
 
   if( button_press_duration >= 8){
     // reset the device
@@ -534,7 +565,20 @@ PROCESS_THREAD(controller_process, ev, data)
     if(ev == sensors_event) {
       /* =========== USER BUTTON ============== */
       if(data == &button_user_sensor){
-        PRINTF("Button user pushed.\n");
+
+        if( USER_BTN_PRESSED() ){
+          button_time_press = RTIMER_NOW();
+          button_time_release = 0;
+          PRINTF("Button USER pushed.\n");
+        } else {
+          button_time_release = RTIMER_NOW();
+          PRINTF("Button USER released.\n");
+        }
+
+        if( button_time_release && !USER_BTN_PRESSED() ){
+          button_press_action( (button_time_release - button_time_press) );
+          button_time_press = 0;
+        }
 
 #if RDC_SLEEPING_HOST
         if( !USB_IS_PLUGGED() ){
@@ -551,17 +595,6 @@ PROCESS_THREAD(controller_process, ev, data)
         }
 #endif /* RDC_SLEEPING_HOST */
 
-        if( !button_time_press ){
-          button_time_press = RTIMER_NOW();
-        } else {
-          button_time_release = RTIMER_NOW();
-        }
-
-        if( button_time_release ){
-          button_press_action( (button_time_release - button_time_press) );
-          button_time_press = 0;
-          button_time_release = 0;
-        }
       }
 
       /* =========== USB PLUG ============== */

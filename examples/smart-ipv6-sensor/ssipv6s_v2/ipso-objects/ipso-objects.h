@@ -66,8 +66,8 @@
 #define OBJ_ENERGEST          27000
 #define OBJ_MICROCLAP         27200
 
-void add_sampling(const lwm2m_object_t *object, int8_t instance_id, void *callback);
-struct sampler* lookup_sampler(uint8_t object_id, int8_t instance_id);
+void add_sampling(const lwm2m_object_t *object, int16_t instance_id, void *callback);
+struct sampler* lookup_sampler(uint16_t object_id, int16_t instance_id);
 int read_sampling(lwm2m_context_t *ctx, uint8_t *outbuf, size_t outsize);
 int write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize, uint8_t *outbuf, size_t outsize);
 int exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len, uint8_t *outbuf, size_t outlen);

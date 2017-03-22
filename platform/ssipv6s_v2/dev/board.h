@@ -104,6 +104,9 @@
 #define BUTTON_USER_PIN         0
 #define BUTTON_USER_VECTOR      NVIC_INT_GPIO_PORT_D
 
+#define USER_BTN_PRESSED()    !GPIO_READ_PIN(GPIO_PORT_TO_BASE(BUTTON_USER_PORT), \
+                              GPIO_PIN_MASK(BUTTON_USER_PIN))
+
 /* USB Plug detection */
 #define	USB_PLUG_DETECT_PORT    GPIO_D_NUM
 #define	USB_PLUG_DETECT_PIN     5
