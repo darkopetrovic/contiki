@@ -60,11 +60,17 @@
 #define LWM2M_REG_LIFETIME_ROUTER     3600
 #define LWM2M_REG_LIFETIME_HOST       30
 
-#define REURES_SAMPLING_INTERVAL   6000
-#define REURES_NODE_ROUTER         6100
+#define DEFAULT_SAMPLING_INTERVAL     120 // seconds
 
-#define OBJ_ENERGEST          27000
-#define OBJ_MICROCLAP         27200
+#define REURES_SAMPLING_INTERVAL      6000
+#define REURES_NODE_ROUTER            6100
+
+#define OBJ_ENERGEST                  27000
+#define OBJ_MICROCLAP                 27200
+
+#define IS_USED                       (1<<0)
+#define IS_RUNNING                    (1<<1)
+
 
 void add_sampling(const lwm2m_object_t *object, int16_t instance_id, void *callback);
 struct sampler* lookup_sampler(uint16_t object_id, int16_t instance_id);

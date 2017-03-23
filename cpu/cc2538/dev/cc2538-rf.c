@@ -651,7 +651,7 @@ transmit(unsigned short transmit_len)
 #if CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
   if( pir_sensor.status(PIR_ACTIVATED) ){
     PRINTF("PIR sensor is ACTIVATED -> DEACTIVATE temporarily before packet sending.\n");
-    //pir_irq_delay( CLOCK_SECOND/2 );
+    pir_irq_delay( CLOCK_SECOND/2 );
   }
 #endif
 
@@ -1047,10 +1047,10 @@ PROCESS_THREAD(cc2538_rf_process, ev, data)
 #if CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
        /* Due to the voltage drop of radio transmision, the motion
         * detector can have false readings. */
-      /*if( pir_sensor.status(PIR_ACTIVATED) ){
+      if( pir_sensor.status(PIR_ACTIVATED) ){
         PRINTF("PIR sensor is ACTIVATED -> DEACTIVATE temporarily before packet reading.\n");
         pir_irq_delay( CLOCK_SECOND/2 );
-      }*/
+      }
 #endif
         packetbuf_set_datalen(len);
 

@@ -86,7 +86,7 @@
 
 static struct ctimer ct_rdc;
 static struct ctimer disable_rdc_delay_timer;
-static rtimer_clock_t finish_time;
+static unsigned long finish_time;
 static uint8_t rdc_is_on;
 
 // we restart the engine once the CRDC is initilized
@@ -94,7 +94,16 @@ extern struct process rest_engine_process;
 extern struct process tcpip_process;
 
 #if ENERGEST_CONF_ON && CONTIKI_TARGET_CC2538DK
-static unsigned long irq_energest;
+static unsigned long irq_energest = 0;
+
+#define ENERGEST_IRQ_SAVE(a) do { \
+    a = energest_type_time(ENERGEST_TYPE_IRQ); } while(0)
+#define ENERGEST_IRQ_RESTORE(a) do { \
+    energest_type_set(ENERGEST_TYPE_IRQ, a); } while(0)
+#else
+#define ENERGEST_IRQ_SAVE(a) do {} while(0)
+#define ENERGEST_IRQ_RESTORE(a) do {} while(0)
+
 #endif /* CONTIKI_TARGET_CC2538DK */
 
 #if DEBUG
@@ -224,7 +233,6 @@ crdc_lpm_enter(void)
 {
   clock_time_t next_expiration;
   rtimer_clock_t next_wakeup_time;
-  //uip_ds6_nbr_t *nbr;
 
   if(!rdc_is_on){
 #ifdef CONTIKI_TARGET_CC2538DK
@@ -261,17 +269,21 @@ crdc_lpm_enter(void)
       //              float2str((float)(next_expiration-clock_time())/CLOCK_SECOND, 2));
 #endif
 
-    } else {
+    }
+#if DEBUG
+    else {
       PRINTF("CRDC: Sleep indefinitely...\n");
     }
+#endif
+
 #if CONTIKI_TARGET_CC2538DK
 #if DEBUG
     clock_delay_usec(5000); // to display correctly PRINTF before sleep
 #endif
-#if ENERGEST_CONF_ON
+
+    ENERGEST_IRQ_RESTORE(irq_energest);
     ENERGEST_SWITCH(ENERGEST_TYPE_CPU, ENERGEST_TYPE_LPM);
-    energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
-#endif /* ENERGEST_CONF_ON */
+
 #endif /* CONTIKI_TARGET_CC2538DK */
 
 #ifdef CONTIKI_TARGET_CC2538DK
@@ -288,48 +300,11 @@ crdc_lpm_enter(void)
      * The wake-up can come from the rtimer or the gpio, nothing else.
      * ZzZZzZZzZZZzzzZzzZZzzzzzzzZzZZzZzzzzzzzzzzzZZzZZZzzZZzZZZzzzZZzzzz */
 
-#if ENERGEST_CONF_ON && CONTIKI_TARGET_CC2538DK
-    irq_energest = energest_type_time(ENERGEST_TYPE_IRQ);
-    ENERGEST_SWITCH(ENERGEST_TYPE_LPM, ENERGEST_TYPE_CPU);
-#endif /* ENERGEST_CONF_ON && CONTIKI_TARGET_CC2538DK */
+    ENERGEST_IRQ_SAVE(irq_energest);
+    /* lpm_exit() is doing:
+        ENERGEST_SWITCH(ENERGEST_TYPE_LPM, ENERGEST_TYPE_CPU);
+     */
 
-#if 0
-    /* Enable RDC for some seconds to receive RA in response to RS or ... */
-    if(timer_remaining(&(uip_ds6_timer_rs.timer)) < CLOCK_SECOND){
-      PRINTF("CRDC: Sending RS...\n");
-      crdc_period_start(3);
-    }
-#if UIP_ND6_SEND_NA
-    else {
-      /* ... to receive NA in response to NS. */
-      nbr = nbr_table_head(ds6_neighbors);
-      while(nbr != NULL) {
-#if CONF_6LOWPAN_ND
-        if(nbr->state == NBR_TENTATIVE && stimer_remaining(&nbr->sendns) < CLOCK_SECOND)
-#else /* CONF_6LOWPAN_ND */
-        if((nbr->state == NBR_INCOMPLETE || nbr->state == NBR_PROBE)
-            && stimer_remaining(&nbr->sendns) < CLOCK_SECOND)
-#endif /* CONF_6LOWPAN_ND */
-        {
-          PRINTF("CRDC: Sending NS...\n");
-          crdc_period_start(3);
-          break;
-        }
-        nbr = nbr_table_next(ds6_neighbors, nbr);
-      }
-    }
-#endif /* UIP_ND6_SEND_NA */
-
-#if UIP_CONF_IPV6_RPL
-    if(rpl_get_any_dag() == NULL && rpl_get_next_dis() >= RPL_DIS_INTERVAL-1) {
-      PRINTF("CRDC: Sending DIS...\n");
-      crdc_period_start(3);
-    } 
-#endif
-
-#endif
-
-    //PRINTF("CRDC: *** Time: %lu *** \n", clock_time());
   } else {
     /* RDC is enabled -> normal behaviour. */
 #if CONTIKI_TARGET_CC2538DK
@@ -451,13 +426,13 @@ crdc_period_start(uint32_t seconds)
   }
 
   if( !rdc_is_on ){
-    finish_time = RTIMER_NOW() + seconds*RTIMER_SECOND;
+    finish_time = clock_seconds() + seconds;
     crdc_enable_rdc();
     ctimer_set(&ct_rdc, CLOCK_SECOND * seconds, stop_rdc, NULL);
     PRINTF("CRDC: The RDC is ENABLED (for %lu seconds).\n", seconds);
-  } else if( seconds && rdc_is_on && (RTIMER_NOW() + seconds*RTIMER_SECOND) > finish_time ) {
+  } else if( seconds && rdc_is_on && (clock_seconds() + seconds) > finish_time) {
     // prolong the actual RDC
-    finish_time = RTIMER_NOW() + seconds*RTIMER_SECOND;
+    finish_time = clock_seconds() + seconds;
     ctimer_set(&ct_rdc, CLOCK_SECOND * seconds, stop_rdc, NULL);
     PRINTF("CRDC: The RDC is PROLONGED (for %lu seconds).\n", seconds);
   }

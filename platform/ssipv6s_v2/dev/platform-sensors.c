@@ -60,6 +60,19 @@ extern struct process shell_server_process;
 extern struct process serial_shell_process;
 #endif
 
+#if ENERGEST_CONF_ON
+static unsigned long irq_energest = 0;
+
+#define ENERGEST_IRQ_SAVE(a) do { \
+    a = energest_type_time(ENERGEST_TYPE_IRQ); } while(0)
+#define ENERGEST_IRQ_RESTORE(a) do { \
+    energest_type_set(ENERGEST_TYPE_IRQ, a); } while(0)
+#else
+#define ENERGEST_IRQ_SAVE(a) do {} while(0)
+#define ENERGEST_IRQ_RESTORE(a) do {} while(0)
+
+#endif
+
 uint8_t reading_voltage;
 
 void
@@ -114,11 +127,18 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
       start = RTIMER_NOW();
       rtimer_arch_schedule(start+duration_left);
       REG(SYS_CTRL_PMCTL) = SYS_CTRL_PMCTL_PM2;
-      ENERGEST_OFF(ENERGEST_TYPE_CPU);
-      ENERGEST_ON(ENERGEST_TYPE_LPM);
-      do { asm("wfi"::); } while(0);
 
-      duration_left -= RTIMER_NOW() - start;
+      ENERGEST_IRQ_RESTORE(irq_energest);
+      ENERGEST_SWITCH(ENERGEST_TYPE_CPU, ENERGEST_TYPE_LPM);
+      ENTER_SLEEP_MODE();
+      ENERGEST_IRQ_SAVE(irq_energest);
+
+      // sleep timer overflow!
+      if(start >= RTIMER_NOW()){
+        duration_left -= 0xFFFFFFFF - start - RTIMER_NOW();
+      } else {
+        duration_left -= RTIMER_NOW() - start;
+      }
 
     } while(duration_left>0);
 

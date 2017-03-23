@@ -123,7 +123,17 @@ timer_expired(struct timer *t)
 {
   /* Note: Can not return diff >= t->interval so we add 1 to diff and return
      t->interval < diff - required to avoid an internal error in mspgcc. */
-  clock_time_t diff = (clock_time() - t->start) + 1;
+
+  /* Because we use etimer_adjust() with which we delay the first
+   * resource notification (for the resources desynchronisation),
+   * the diff below become negative and the timer appears to be expired. */
+  clock_time_t diff;
+  if( (int32_t)(clock_time() - t->start) < 0){
+    diff = 0;
+  } else{
+    diff = (clock_time() - t->start) + 1;
+  }
+
   return t->interval < diff;
 
 }

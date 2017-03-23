@@ -50,7 +50,7 @@
 #define ENABLE_RESOURCE_DESYNCHRONISATION   1
 
 struct sampler {
-  uint8_t isused;
+  uint8_t flags;
   uint16_t object_id;
   int16_t instance_id;
   int32_t interval;
@@ -96,13 +96,15 @@ float2str(float num, uint8_t preci)
 
 #if ENABLE_RESOURCE_DESYNCHRONISATION
 static int
-gcd( int a, int b )
-{
-  int c;
-  while ( a != 0 ) {
-     c = a; a = b%a;  b = c;
-  }
-  return b;
+gcd(int x, int y){
+  int wk;
+    if(x<y){ wk=x;x=y;y=wk; }
+    while(y){
+        wk = x%y;
+        x=y;
+        y=wk;
+    }
+    return x;
 }
 
 static int
@@ -111,7 +113,7 @@ gcd_a(int n, int a[n])
     if(n==1) return a[0];
     if(n==2) return gcd(a[0], a[1]);
     int h = n / 2;
-    return gcd(gcd_a(h, &a[h-1]), gcd_a(n - h, &a[h]));
+    return gcd(gcd_a(h, &a[0]), gcd_a(n - h, &a[h]));
 }
 
 static void
@@ -131,11 +133,11 @@ desynch_samplers(void *ptr)
   active_periodic_resources = 0;
 
   for(i=0; i<LWM2M_MAX_SAMPLER; i++){
-    if(sampling_timers[i].isused == 1){
+    if(sampling_timers[i].flags & IS_USED){
       smpl = &sampling_timers[i];
-      if(smpl->periodic_timer.etimer.p != PROCESS_NONE){
+      if(smpl->flags & IS_RUNNING){
         intervals[active_periodic_resources] = smpl->interval*CLOCK_SECOND;
-        PRINTF("Resource interval %lu\n", smpl->interval);
+        PRINTF("Resource interval %lu (%lu)\n", smpl->interval, intervals[active_periodic_resources]);
         samplers[active_periodic_resources++] = smpl;
       }
     }
@@ -161,19 +163,28 @@ desynch_samplers(void *ptr)
       }
     }
 
-    /* Adjust resources periodic wake-up */
-    for (i = 0; i < active_periodic_resources-1; ++i)
+#if DEBUG
+    for (i = 0; i < active_periodic_resources; ++i)
     {
-      tdiff = timer_remaining(&(samplers[i+1]->periodic_timer.etimer.timer)) - \
-          timer_remaining(&(samplers[i]->periodic_timer.etimer.timer));
+      PRINTF("RES: Resource '/%d/%d' ORIGINAL wakes-up in %s seconds.\n", samplers[i]->object_id,  samplers[i]->instance_id,
+              float2str((float)timer_remaining(&(samplers[i]->periodic_timer.etimer.timer))/CLOCK_SECOND, 1));
+    }
+#endif
+
+    /* Adjust resources periodic wake-up */
+    for (i = 1; i < active_periodic_resources; ++i)
+    {
+      tdiff = timer_remaining(&(samplers[i]->periodic_timer.etimer.timer)) - \
+          timer_remaining(&(samplers[0]->periodic_timer.etimer.timer));
 
       if((int32_t)tdiff < 0){
         tdiff = 0;
       }
-      etimer_adjust(&samplers[i+1]->periodic_timer.etimer, best_interval-tdiff);
-    } /* for() */
 
-  } /* if() */
+      etimer_adjust(&samplers[i]->periodic_timer.etimer, i*best_interval-tdiff);
+    }
+
+  }
 
 #if DEBUG
   PRINTF("RES: Best interval between resources (%d) is %lu (%s seconds).\n", active_periodic_resources,
@@ -193,14 +204,17 @@ add_sampling(const lwm2m_object_t *object, int16_t instance_id, void *callback)
   struct sampler *smpl;
 
   for(i=0; i<LWM2M_MAX_SAMPLER; i++){
-    if(sampling_timers[i].isused == 0){
+    if(!(sampling_timers[i].flags & IS_USED)){
       smpl = &sampling_timers[i];
-      smpl->isused = 1;
+      smpl->flags = IS_USED | IS_RUNNING;
       smpl->object_id = object->id;
       smpl->instance_id = instance_id;
-      smpl->interval = 10;
+      smpl->interval = DEFAULT_SAMPLING_INTERVAL;
       smpl->callback = callback;
       PRINTF("Add sampler for /%d/%d.\n", smpl->object_id, smpl->instance_id);
+#if DEBUG
+    clock_delay_usec(5000); // to display correctly PRINTF before sleep
+#endif
       break;
     }
   }
@@ -212,7 +226,7 @@ lookup_sampler(uint16_t object_id, int16_t instance_id)
   uint8_t i;
   PRINTF("Looking for sampler /%d/%d.\n", object_id, instance_id);
   for(i=0; i<LWM2M_MAX_SAMPLER; i++){
-    if(sampling_timers[i].isused)
+    if(sampling_timers[i].flags & IS_USED)
     {
       if(sampling_timers[i].instance_id<0){
         if(sampling_timers[i].object_id == object_id)
@@ -281,12 +295,11 @@ write_sampling(lwm2m_context_t *ctx, const uint8_t *inbuf, size_t insize,
 #endif /* ENABLE_RESOURCE_DESYNCHRONISATION */
   } else {
     ctimer_stop(&smpl->periodic_timer);
+    smpl->flags &= ~IS_RUNNING;
   }
 
   return len;
 }
-
-
 
 // used to start the sampling automatically when receiving GET with observation
 int
@@ -301,9 +314,10 @@ exec_sampling(lwm2m_context_t *ctx, const uint8_t *arg, size_t len,
   }
 
   ctimer_set(&smpl->periodic_timer, CLOCK_SECOND * smpl->interval, smpl->callback, &smpl->periodic_timer);
+  smpl->flags |= IS_RUNNING;
 
 #if ENABLE_RESOURCE_DESYNCHRONISATION
-  ctimer_set(&desynch_delay, CLOCK_SECOND *10, desynch_samplers, NULL);
+  ctimer_set(&desynch_delay, CLOCK_SECOND * 10, desynch_samplers, NULL);
 #endif /* ENABLE_RESOURCE_DESYNCHRONISATION */
 
   return 1;

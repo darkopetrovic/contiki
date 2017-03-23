@@ -51,6 +51,7 @@ energest_compute(void)
 #endif
 
   uint32_t sup_lpm = 0;
+  uint32_t lpm;
 
   PRINTF("Compute energest.\n");
 
@@ -161,13 +162,27 @@ energest_compute(void)
 #endif
 
 #if CONTIKI_TARGET_SSIPV6S_V2
+  /* When performing sensor measurement, the SoC is put in LPM2 mode,
+   * therefore the consumption of the sensors contains the LPM consumption.
+   * We need to substract all sensors from the lpm to consider only the LPM alone.
+   */
   sup_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21
       + energest_data.all_sensors_bmp280 + energest_data.all_sensors_tsl2561;
 #endif
 
+  /* Normally sensors measurement duration shouldn't be bigger than the LPM duration
+   * since the LPM is activated during measurement, but since in ROUTER mode the LPM
+   * isn't activated and measurement are performed, we must not substract from a 0 value.
+   */
+  if( energest_data.all_lpm > (energest_data.all_leds+sup_lpm)){
+    lpm = energest_data.all_lpm-(energest_data.all_leds+sup_lpm);
+  } else {
+    lpm = 0;
+  }
+
   energest_data.charge_consumed =
       (float)(energest_data.all_cpu-energest_data.all_transmit-energest_data.all_listen)/RTIMER_SECOND * I_CPU \
-      + (float)(energest_data.all_lpm-energest_data.all_leds-sup_lpm)/RTIMER_SECOND * I_LPM \
+      + (float)(lpm)/RTIMER_SECOND * I_LPM \
       + (float)energest_data.all_transmit/RTIMER_SECOND * I_TX \
       + (float)energest_data.all_listen/RTIMER_SECOND * I_RX
 #if CONTIKI_TARGET_SSIPV6S_V1
