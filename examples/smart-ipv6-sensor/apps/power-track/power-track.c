@@ -50,17 +50,17 @@ energest_compute(void)
   battery_volt = (float)battery_volt_mv/1000;
 #endif
 
-  uint32_t sup_lpm = 0;
-  uint32_t lpm;
+  uint32_t all_sensors_with_lpm = 0;
+  uint32_t all_lpm;
 
   PRINTF("Compute energest.\n");
 
   energest_flush();
 
-  /* ALL values calculation */
+  /******************* ALL values calculation ****************************/
 
   energest_data.all_cpu = energest_type_time(ENERGEST_TYPE_CPU);
-  energest_data.all_lpm = energest_type_time(ENERGEST_TYPE_LPM);
+  all_lpm = energest_type_time(ENERGEST_TYPE_LPM);
   energest_data.all_transmit = energest_type_time(ENERGEST_TYPE_TRANSMIT);
   energest_data.all_listen = energest_type_time(ENERGEST_TYPE_LISTEN);
 #if CONTIKIMAC_CONF_COMPOWER
@@ -74,6 +74,9 @@ energest_compute(void)
   energest_data.all_flash_write = energest_type_time(ENERGEST_TYPE_FLASH_WRITE);
   energest_data.all_flash_erase = energest_type_time(ENERGEST_TYPE_FLASH_ERASE);
 
+  energest_data.all_time = energest_data.all_cpu + energest_data.all_lpm;
+  energest_data.all_leds = energest_data.all_led_red + energest_data.all_led_yellow;
+
   /* Add here the new types */
 
 #if CONTIKI_TARGET_SSIPV6S_V1
@@ -81,6 +84,10 @@ energest_compute(void)
   energest_data.all_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
   energest_data.all_sensors_tmp100 = energest_type_time(ENERGEST_TYPE_SENSORS_TMP100);
   energest_data.all_sensors_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
+
+  all_sensors_with_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21 +
+        energest_data.all_sensors_tmp100;
+
 #endif
 
 #if CONTIKI_TARGET_SSIPV6S_V2
@@ -88,6 +95,13 @@ energest_compute(void)
   energest_data.all_sensors_sht21 = energest_type_time(ENERGEST_TYPE_SENSORS_SHT21);
   energest_data.all_sensors_bmp280 = energest_type_time(ENERGEST_TYPE_SENSORS_BMP280);
   energest_data.all_sensors_tsl2561 = energest_type_time(ENERGEST_TYPE_SENSORS_TSL2561);
+
+  /* When performing sensor measurement, the SoC is put in LPM2 mode,
+    * therefore the consumption of the sensors contains the LPM consumption.
+    * We need to substract all sensors from the lpm to consider only the LPM alone.
+    */
+  all_sensors_with_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21
+       + energest_data.all_sensors_bmp280 + energest_data.all_sensors_tsl2561;
 
   // special treatment because they are constantly power on when activated
   // and the variable overlaps after 131072 seconds (2^32 / RTIMER_SECOND)
@@ -115,11 +129,24 @@ energest_compute(void)
 
 #endif
 
+  /* Normally sensors measurement duration shouldn't be bigger than the LPM duration
+   * since the LPM is activated during measurement, but since in ROUTER mode the LPM
+   * isn't activated and measurement are performed, we must not substract from a 0 value.
+   */
+  if( all_lpm > (energest_data.all_leds+all_sensors_with_lpm)){
+    all_lpm -= (energest_data.all_leds+all_sensors_with_lpm);
+  }
 
-  /* CURRENT values calculation */
+  if(last_lpm > all_lpm){
+    energest_data.all_lpm += ((0xFFFFFFFF-last_lpm)+all_lpm)/RTIMER_SECOND;
+  } else {
+    energest_data.all_lpm += (all_lpm-last_lpm)/RTIMER_SECOND;
+  }
+
+  /**************** CURRENT values calculation **************************/
 
   energest_data.cpu = energest_data.all_cpu - last_cpu;
-  energest_data.lpm = energest_data.all_lpm - last_lpm;
+  energest_data.lpm = energest_type_time(ENERGEST_TYPE_LPM) - last_lpm;
   energest_data.transmit = energest_data.all_transmit - last_transmit;
   energest_data.listen = energest_data.all_listen - last_listen;
 #if CONTIKIMAC_CONF_COMPOWER
@@ -127,10 +154,10 @@ energest_compute(void)
   energest_data.idle_listen = compower_idle_activity.listen - last_idle_listen;
 #endif
 
-  /* LAST values calculation */
+  /**************** LAST values calculation *************************/
 
   last_cpu = energest_type_time(ENERGEST_TYPE_CPU);
-  last_lpm = energest_type_time(ENERGEST_TYPE_LPM);
+  last_lpm = all_lpm;
   last_transmit = energest_type_time(ENERGEST_TYPE_TRANSMIT);
   last_listen = energest_type_time(ENERGEST_TYPE_LISTEN);
 #if CONTIKIMAC_CONF_COMPOWER
@@ -143,9 +170,6 @@ energest_compute(void)
   last_pir = energest_type_time(ENERGEST_TYPE_SENSORS_PIR);
   last_mic = energest_type_time(ENERGEST_TYPE_SENSORS_MIC);
 #endif
-  //time = energest_data.cpu + energest_data.lpm;
-  energest_data.all_time = energest_data.all_cpu + energest_data.all_lpm;
-  energest_data.all_leds = energest_data.all_led_red + energest_data.all_led_yellow;
 
   /*
    * LPM and CPU states covers all other states.
@@ -153,36 +177,9 @@ energest_compute(void)
    * TX and RX currents takes in account the CPU current.
    * */
 
-  /* myBUG: sometimes, especially during the first minute of the device,
-   * RX+TX duration is greater than CPU which shouldn't be possible. */
-
-#if CONTIKI_TARGET_SSIPV6S_V1
-  sup_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21 +
-      energest_data.all_sensors_tmp100;
-#endif
-
-#if CONTIKI_TARGET_SSIPV6S_V2
-  /* When performing sensor measurement, the SoC is put in LPM2 mode,
-   * therefore the consumption of the sensors contains the LPM consumption.
-   * We need to substract all sensors from the lpm to consider only the LPM alone.
-   */
-  sup_lpm = energest_data.all_sensors_ina3221 + energest_data.all_sensors_sht21
-      + energest_data.all_sensors_bmp280 + energest_data.all_sensors_tsl2561;
-#endif
-
-  /* Normally sensors measurement duration shouldn't be bigger than the LPM duration
-   * since the LPM is activated during measurement, but since in ROUTER mode the LPM
-   * isn't activated and measurement are performed, we must not substract from a 0 value.
-   */
-  if( energest_data.all_lpm > (energest_data.all_leds+sup_lpm)){
-    lpm = energest_data.all_lpm-(energest_data.all_leds+sup_lpm);
-  } else {
-    lpm = 0;
-  }
-
   energest_data.charge_consumed =
       (float)(energest_data.all_cpu-energest_data.all_transmit-energest_data.all_listen)/RTIMER_SECOND * I_CPU \
-      + (float)(lpm)/RTIMER_SECOND * I_LPM \
+      + (float)energest_data.all_lpm * I_LPM \
       + (float)energest_data.all_transmit/RTIMER_SECOND * I_TX \
       + (float)energest_data.all_listen/RTIMER_SECOND * I_RX
 #if CONTIKI_TARGET_SSIPV6S_V1

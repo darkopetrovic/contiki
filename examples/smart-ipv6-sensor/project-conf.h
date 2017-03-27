@@ -42,7 +42,7 @@
 /* ******************************************************************************* */
 
 #define LWM2M_DEVICE_MODEL_NUMBER                   "SG_"
-#define LWM2M_SERVER_ADDRESS                        "bbbb::72"
+#define LWM2M_SERVER_ADDRESS                        "bbbb::41"
 
 #define LWM2M_CONF_REGISTRATION_RETRY_PERIOD        15
 
@@ -63,7 +63,7 @@
 
 #define UIP_CONF_DYN_HOST_ROUTER            1
 
-#define COAP_MAX_OBSERVERS                  12
+#define COAP_MAX_OBSERVERS                  15
 #define LWM2M_ENGINE_CONF_MAX_OBJECTS       15
 
 /* ********************************************************************** */
@@ -122,7 +122,7 @@
 #define UIP_CONF_MAX_ROUTES                 4
 
 /* Expected reassembly requirements   */
-#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    2
+#define SICSLOWPAN_CONF_FRAGMENT_BUFFERS    3
 
 /** Maximum neighbors to store in the Neighbors Table */
 #if CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
@@ -144,7 +144,7 @@
 /* Even if CONTIKI_TARGET_CC2538DK is set with the ssipv6s platform in the
  * board.h file, this configuration file is included before. */
 #if CONTIKI_TARGET_CC2538DK || CONTIKI_TARGET_SSIPV6S_V1 || CONTIKI_TARGET_SSIPV6S_V2
-#define CC2538_RF_CONF_CHANNEL              25
+#define CC2538_RF_CONF_CHANNEL              24
 #define LPM_CONF_MAX_PM                     2
 #define LPM_CONF_ENABLE                     1
 /* CFS Configuration */

@@ -60,7 +60,7 @@
 #define APP_CONFIG_MAX_FILEPATH_LEN       COFFEE_NAME_LENGTH
 #define MAX_PARAM_NAME_LEN                40
 #define MAX_PARAM_VALUE_LEN               40
-#define MAX_PARAM_LIST                    20
+#define MAX_PARAM_LIST                    10
 
 #define APP_CONFIG_HOME           "cfg"
 #define APP_CONFIG_GENERAL        "main"

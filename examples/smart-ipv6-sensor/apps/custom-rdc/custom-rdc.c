@@ -250,9 +250,10 @@ crdc_lpm_enter(void)
 #ifdef CONTIKI_TARGET_CC2538DK
       REG(SYS_CTRL_PMCTL) = LPM_CONF_MAX_PM;
       /* Check whether the next wake-up time is effectively planned in
-       * the future and if it's not too small. */
+       * the future, if it's not too small and less than 1 hour (handle overflow) */
       if(next_wakeup_time <= RTIMER_NOW() ||
-          next_wakeup_time-RTIMER_NOW() < DEEP_SLEEP_PM2_THRESHOLD){
+          next_wakeup_time-RTIMER_NOW() < DEEP_SLEEP_PM2_THRESHOLD ||
+          next_wakeup_time > RTIMER_NOW() + RTIMER_SECOND*3600){
         next_wakeup_time = RTIMER_NOW() + RTIMER_SECOND;
       }
 #endif /* CONTIKI_TARGET_CC2538DK */
