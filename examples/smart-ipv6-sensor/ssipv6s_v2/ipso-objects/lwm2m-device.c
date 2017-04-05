@@ -174,10 +174,10 @@ factory_reset(lwm2m_context_t *ctx, const uint8_t *arg, size_t arg_size,
 #endif /* PLATFORM_FACTORY_DEFAULT */
 /*---------------------------------------------------------------------------*/
 LWM2M_RESOURCES(device_resources,
-                LWM2M_RESOURCE_STRING(0, "HES-SO"),
+                LWM2M_RESOURCE_STRING(0, "HES-SO//Vs"),
                 LWM2M_RESOURCE_STRING(17, "Sensor"),
-                LWM2M_RESOURCE_STRING(1, "SSIPV6_v2"),
-                LWM2M_RESOURCE_STRING(3, "2.0"),
+                LWM2M_RESOURCE_STRING(1, "SSIPV6S_v2"),
+                LWM2M_RESOURCE_STRING(3, "2.1.3"),
                 LWM2M_RESOURCE_STRING(18, "2.1"),
                 LWM2M_RESOURCE_STRING(16, "UQ"),
                 LWM2M_RESOURCE_INTEGER(6, 7),

@@ -63,7 +63,7 @@
 
 #define UIP_CONF_DYN_HOST_ROUTER            1
 
-#define COAP_MAX_OBSERVERS                  15
+#define COAP_MAX_OBSERVERS                  14
 #define LWM2M_ENGINE_CONF_MAX_OBJECTS       15
 
 /* ********************************************************************** */

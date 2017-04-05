@@ -79,7 +79,7 @@ void
 deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
 {
   uint32_t i;
-  uint32_t gpio_pi_en;
+  //uint32_t gpio_pi_en;
   uint32_t start;
   int32_t duration_left;
 #if RDC_SLEEPING_HOST
@@ -104,19 +104,22 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
     }
 #endif
 
+    // Unable to know which PIN triggers a wake-up.
+    // Functionnality not fully tested.
+
     /* Store and disable temporarily gpio power-up interrupts.
      * Writing to one register change the others. Thus we clear only
      * the register for port A. */
-    gpio_pi_en = REG(GPIO_PORT_TO_BASE(0) + GPIO_PI_IEN);
-    REG(GPIO_PORT_TO_BASE(0) + GPIO_PI_IEN) = 0;
+    //gpio_pi_en = REG(GPIO_PORT_TO_BASE(0) + GPIO_PI_IEN);
+    //REG(GPIO_PORT_TO_BASE(0) + GPIO_PI_IEN) = 0;
 
     /*  Enable only desired gpio power-up interrupts. */
-    if(port >= 0){
+    /*if(port >= 0){
       GPIO_POWER_UP_ON_FALLING(port, GPIO_PIN_MASK(interrupt_pin));
       GPIO_POWER_UP_ON_RISING(port, GPIO_PIN_MASK(interrupt_pin));
       GPIO_ENABLE_POWER_UP_INTERRUPT(port, GPIO_PIN_MASK(interrupt_pin));
       nvic_interrupt_enable(port);
-    }
+    }*/
 
     duration_left = (int32_t)(((float)(duration)/1000.0)*RTIMER_SECOND);
 
@@ -124,6 +127,7 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
 
     // ensure that the SoC sleeps the complete duration
     do {
+      watchdog_periodic();
       start = RTIMER_NOW();
       rtimer_arch_schedule(start+duration_left);
       REG(SYS_CTRL_PMCTL) = SYS_CTRL_PMCTL_PM2;
@@ -143,10 +147,10 @@ deep_sleep_ms(uint32_t duration, int8_t port, uint8_t interrupt_pin)
     } while(duration_left>0);
 
     /* Restore gpio power-up interrupts. */
-    REG(GPIO_PORT_TO_BASE(0) + GPIO_PI_IEN) = gpio_pi_en;
+    //REG(GPIO_PORT_TO_BASE(0) + GPIO_PI_IEN) = gpio_pi_en;
 
     if(port >= 0){
-      nvic_interrupt_disable(port);
+      //nvic_interrupt_disable(port);
     }
 
 #if RDC_SLEEPING_HOST

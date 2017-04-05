@@ -50,6 +50,7 @@
 #include "platform-sensors.h"
 #include "dev/leds.h"
 #include "cpu.h"
+#include "sys-ctrl.h"
 
 #include "rpl-private.h"
 
@@ -135,6 +136,8 @@ static rtimer_clock_t button_time_press;
 static rtimer_clock_t button_time_release;
 static uint8_t starting;
 static uint32_t lwm2m_lifetime;
+static struct ctimer enter_infinite_sleep_timeout;
+static uint8_t infinite_sleep;
 
 #if APPS_COAPSERVER
 extern resource_t
@@ -197,6 +200,25 @@ float2str(float num, uint8_t preci)
 static struct ctimer alive_message_timer;
 #endif /* SMART_ALIVE_MSG */
 
+static void
+fade(unsigned char l)
+{
+  volatile int i;
+  int k, j;
+  for(k = 0; k < 800; ++k) {
+    j = k > 400 ? 800 - k : k;
+
+    leds_on(l);
+    for(i = 0; i < j; ++i) {
+      asm("nop");
+    }
+    leds_off(l);
+    for(i = 0; i < 400 - j; ++i) {
+      asm("nop");
+    }
+  }
+}
+
 #if APPS_OMALWM2M
 static void
 setup_lwm2m_servers(void)
@@ -220,6 +242,26 @@ setup_lwm2m_servers(void)
 }
 #endif /* APPS_OMALWM2M */
 
+static
+void enter_infinite_sleep_mode(void *ptr)
+{
+  INTERRUPTS_DISABLE();
+  crdc_disable_rdc(0);
+  nvic_interrupt_unpend(BUTTON_USER_VECTOR);
+  nvic_interrupt_disable(BUTTON_USER_VECTOR);
+  nvic_interrupt_unpend(NVIC_INT_SM_TIMER);
+  nvic_interrupt_disable(NVIC_INT_SM_TIMER);
+  REG(GPIO_PORT_TO_BASE(0) + GPIO_PI_IEN) = 0;
+  REG(GPIO_PORT_TO_BASE(1) + GPIO_PI_IEN) = 0;
+  REG(GPIO_PORT_TO_BASE(2) + GPIO_PI_IEN) = 0;
+  REG(GPIO_PORT_TO_BASE(3) + GPIO_PI_IEN) = 0;
+  REG(SYS_CTRL_PMCTL) = SYS_CTRL_PMCTL_PM3;
+  ENTER_SLEEP_MODE();
+
+  // nothing should wake-up the device from here
+  leds_on(LEDS_YELLOW);
+}
+
 static void
 button_press_action( rtimer_clock_t delta )
 {
@@ -230,10 +272,11 @@ button_press_action( rtimer_clock_t delta )
   PRINTF("Button pressed during %s second(s).\n",
         float2str(button_press_duration, 2));
 
-  if( button_press_duration >= 8){
-    // reset the device
-    // ...
-  } else if ( button_press_duration < 8 && button_press_duration >= 3) {
+  if( button_press_duration >= 6){
+    // enter infinite sleep mode
+    fade(LEDS_RED);
+    ctimer_set(&enter_infinite_sleep_timeout, CLOCK_SECOND*2, enter_infinite_sleep_mode, NULL);
+  } else if ( button_press_duration < 6 && button_press_duration >= 3) {
     // become a router or an host
 #if UIP_CONF_DYN_HOST_ROUTER
     if(NODE_TYPE_HOST){
